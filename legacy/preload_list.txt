@@ -1,0 +1,3 @@
+/usr/lib/libappcore-efl.so
+/usr/lib/libappcore-common.so
+/usr/lib/ecore/immodules/libisf-imf-module.so

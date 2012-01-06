@@ -1,0 +1,7 @@
+aul-1 (0.0.154-3) unstable; urgency=low
+
+  * Initial release
+  * Git: pkgs/a/aul-1
+  * Tag: aul-1_0.0.154-3
+
+ -- Jaeho Lee <jaeho81.lee@samsung.com>  Wed, 07 Dec 2011 14:05:55 +0900

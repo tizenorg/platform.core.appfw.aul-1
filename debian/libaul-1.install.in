@@ -1,0 +1,5 @@
+@PREFIX@/lib/libaul.*
+@PREFIX@/bin/aul_service.sh
+@PREFIX@/bin/aul_service_test.sh
+@PREFIX@/bin/aul_mime.sh
+/opt/share/*
