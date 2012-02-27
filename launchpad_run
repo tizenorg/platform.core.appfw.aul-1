@@ -1,5 +1,14 @@
 #!/bin/sh
 mkdir /tmp/alaunch
 chmod 1777 /tmp/alaunch
+
+j=0
+while [ ! -f /opt/etc/.profile_ready ];
+do
+        let j++
+        echo -ne "Waiting profile_ready $j\r"
+        sleep 0.1
+done
+
 /usr/bin/launchpad_preloading_preinitializing_daemon "                                                                                                                                                                                                         " &
 /usr/bin/ac_daemon &

@@ -67,10 +67,12 @@
 #define PATH_APP_ROOT "/opt/apps"
 #define PATH_DATA "/data"
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
+#define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
+#define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
+
 
 static double root_width;
 static double root_height;
-static int scale_factor_init = 0;
 static char *launchpad_cmdline;
 static int initialized = 0;
 
@@ -78,8 +80,9 @@ static int initialized = 0;
 
 _static_ void __set_oom();
 _static_ void __set_env(app_info_from_db * menu_info, bundle * kb);
-_static_ int __prepare_exec(const char *pkg_name, 
-	const char *app_path, app_info_from_db * menu_info, bundle * kb);
+_static_ int __prepare_exec(const char *pkg_name,
+			    const char *app_path, app_info_from_db * menu_info,
+			    bundle * kb);
 _static_ int __fake_launch_app(int cmd, int pid, bundle * kb);
 static void __fill_argv(const char *key, const char *value, void *data);
 _static_ char **__create_argc_argv(bundle * kb, int *margc);
@@ -121,34 +124,35 @@ _static_ void __set_oom()
 	fclose(fp);
 }
 
-_static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
-{
+_static_ void __set_sdk_env(app_info_from_db* menu_info, char* str) {
 	char buf[MAX_LOCAL_BUFSZ];
-	const char *str;
 	int ret;
 
-	if (scale_factor_init) {
-		if (_is_app_scalable_with_height(menu_info)) {
-			if (_get_app_height(menu_info) == 0)
-				snprintf(buf, MAX_LOCAL_BUFSZ, "%lf", 1.0);
-			else
-				snprintf(buf, MAX_LOCAL_BUFSZ, "%lf",
-					 root_height /
-					 _get_app_height(menu_info));
-		} else {
-			if (_get_app_width(menu_info) == 0)
-				snprintf(buf, MAX_LOCAL_BUFSZ, "%lf", 1.0);
-			else
-				snprintf(buf, MAX_LOCAL_BUFSZ, "%lf",
-					 root_width /
-					 _get_app_width(menu_info));
-		}
-
-		_D("changed scale factor = %s", buf);
-
-		setenv("ELM_SCALE", buf, 1);
-		setenv("SCALE_FACTOR", buf, 1);
+	_D("key : %s / value : %s", AUL_K_SDK, str);
+	/* http://gcc.gnu.org/onlinedocs/gcc/Cross_002dprofiling.html*/
+	/* GCOV_PREFIX contains the prefix to add to the absolute paths in the object file. */
+	/*		Prefix can be absolute, or relative. The default is no prefix.  */
+	/* GCOV_PREFIX_STRIP indicates the how many initial directory names */
+	/*		to stripoff the hardwired absolute paths. Default value is 0. */
+	if (strncmp(str, SDK_CODE_COVERAGE, strlen(str)) == 0) {
+		snprintf(buf, MAX_LOCAL_BUFSZ, PATH_APP_ROOT"/%s"PATH_DATA, _get_pkgname(menu_info));
+		ret = setenv("GCOV_PREFIX", buf, 1);
+		_D("GCOV_PREFIX : %d", ret);
+		ret = setenv("GCOV_PREFIX_STRIP", "4096", 1);
+		_D("GCOV_PREFIX_STRIP : %d", ret);
+	} else if (strncmp(str, SDK_DYNAMIC_ANALYSIS, strlen(str)) == 0) {
+		ret = setenv("LD_PRELOAD", PATH_DA_SO, 1);
+		_D("LD_PRELOAD : %d", ret);
 	}
+}
+
+
+_static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
+{
+	const char *str;
+	const char **str_array;
+	int len;
+	int i;
 
 	setenv("PKG_NAME", _get_pkgname(menu_info), 1);
 
@@ -158,27 +162,25 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 	if (str != NULL)
 		setenv("APP_START_TIME", str, 1);
 
-	str = bundle_get_val(kb, AUL_K_SDK);
-	if(str != NULL) {
-		_D("key : %s / value : %s",AUL_K_SDK,str);
-		/* http://gcc.gnu.org/onlinedocs/gcc/Cross_002dprofiling.html*/
-		/* GCOV_PREFIX contains the prefix to add to the absolute paths in the object file. */
-		/*		Prefix can be absolute, or relative. The default is no prefix.  */
-		/* GCOV_PREFIX_STRIP indicates the how many initial directory names */
-		/*		to stripoff the hardwired absolute paths. Default value is 0. */
-		if (strncmp(str, SDK_CODE_COVERAGE, strlen(str)) == 0) {
-			snprintf(buf, MAX_LOCAL_BUFSZ, PATH_APP_ROOT"/%s"PATH_DATA, _get_pkgname(menu_info));
-			ret = setenv("GCOV_PREFIX", buf, 1);
-			_D("GCOV_PREFIX : %d", ret);
-			ret = setenv("GCOV_PREFIX_STRIP", "4096", 1);
-			_D("GCOV_PREFIX_STRIP : %d", ret);
+	if(bundle_get_type(kb, AUL_K_SDK) & BUNDLE_TYPE_ARRAY) {
+		str_array = bundle_get_str_array(kb, AUL_K_SDK, &len);
+		if(str_array != NULL) {
+			for (i = 0; i < len; i++) {
+				_D("index : [%d]", i);
+				__set_sdk_env(menu_info, str_array[i]);
+			}
+		}
+	} else {
+		str = bundle_get_val(kb, AUL_K_SDK);
+		if(str != NULL) {
+			__set_sdk_env(menu_info, str);
 		}
 	}
-
 }
 
-_static_ int __prepare_exec(const char *pkg_name, 
-	const char *app_path, app_info_from_db * menu_info, bundle * kb)
+_static_ int __prepare_exec(const char *pkg_name,
+			    const char *app_path, app_info_from_db * menu_info,
+			    bundle * kb)
 {
 	char *file_name;
 	char process_name[AUL_PR_NAME];
@@ -784,10 +786,10 @@ _static_ void __launchpad_main_loop(int main_fd)
 			PERF("prepare exec - first done");
 			_E("lock up test log(no error) : prepare exec - first done");
 
-			if (__prepare_exec(pkg_name, app_path, 
-				menu_info, kb) < 0) {
+			if (__prepare_exec(pkg_name, app_path,
+					   menu_info, kb) < 0) {
 				_E("preparing work fail to launch - "
-					"can not launch %s\n", pkg_name);
+				   "can not launch %s\n", pkg_name);
 				exit(-1);
 			}
 
@@ -870,12 +872,6 @@ _static_ int __launchpad_post_init()
 		initialized++;
 		return 0;
 	}
-
-	x_util_init();
-
-	/* get root window size   */
-	x_util_get_default_size(&root_width, &root_height);
-	scale_factor_init = 1;
 
 	preinit_init();
 	if (__signal_set_sigchld() < 0)

@@ -1,3 +1,11 @@
+aul-1 (0.0.154-4) unstable; urgency=low
+
+  * Updated Code
+  * Git: pkgs/a/aul-1
+  * Tag: aul-1_0.0.154-4
+
+ -- Sewook Park <sewook7.park@samsung.com>  Sat, 25 Feb 2012 17:41:50 +0900
+
 aul-1 (0.0.154-3) unstable; urgency=low
 
   * Initial release

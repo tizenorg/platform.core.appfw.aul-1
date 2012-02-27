@@ -163,6 +163,16 @@ static int __app_launch_local(bundle *b)
 		return AUL_R_ERROR;
 }
 
+static int __app_resume_local()
+{
+	if (!aul_is_initialized())
+		return AUL_R_ENOINIT;
+
+	app_resume();
+
+	return 0;
+}
+
 /**
  * @brief	start caller with kb
  * @return	callee's pid
@@ -186,8 +196,20 @@ int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
 		_E("app_request_to_launchpad : Same Process Send Local");
 		bundle *b;
 
-		b = bundle_dup(kb);
-		ret = __app_launch_local(b);
+		switch (cmd) {
+			case APP_START:
+			case APP_START_RES:
+				b = bundle_dup(kb);
+				ret = __app_launch_local(b);
+				break;
+			case APP_RESUME:
+			case APP_RESUME_BY_PID:
+				ret = __app_resume_local();
+				break;
+			default:
+				_E("no support packet");
+		}
+
 	}
 
 	/* cleanup */
