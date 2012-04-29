@@ -34,8 +34,10 @@
 #include "app_sock.h"
 #include "perf.h"
 #include "simple_util.h"
+#include "launch.h"
 
 static int aul_initialized = 0;
+static int aul_fd;
 
 static int (*_aul_handler) (aul_type type, bundle *kb, void *data) = NULL;
 static void *_aul_data;
@@ -357,22 +359,32 @@ int aul_register_init_callback(
 
 int aul_initialize()
 {
-	int fd;
-
 	if (aul_initialized) {
 		_E("aul already initialized");
 		return AUL_R_ECANCELED;
 	}
 
-	fd = __create_server_sock(getpid());
-	if (fd < 0) {
+	aul_fd = __create_server_sock(getpid());
+	if (aul_fd < 0) {
 		_E("aul_init create sock failed");
 		return AUL_R_ECOMM;
 	}
 	aul_initialized = 1;
 
-	return fd;
+	return aul_fd;
 }
+
+SLPAPI void aul_finalize()
+{
+	int ret;
+
+	if (aul_initialized) {
+		ret = close(aul_fd);
+	}
+
+	return;
+}
+
 
 SLPAPI int aul_launch_app(const char *pkgname, bundle *kb)
 {

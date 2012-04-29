@@ -39,7 +39,13 @@ static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, sockl
 static inline void __set_sock_option(int fd, int cli)
 {
 	int size;
-	struct timeval tv = { 1, 200 * 1000 };	/*  1.2 sec */
+#ifdef __i386__
+	struct timeval tv = { 5, 200 * 1000 };	/*  5.2 sec */
+	_D("time out : 5.2 sec");
+#else
+	struct timeval tv = { 1, 200 * 1000 };  /*  1.2 sec */
+	_D("time out : 1.2 sec");
+#endif
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
@@ -350,4 +356,54 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 
 	return pkt;
 }
+
+app_pkt_t *__app_send_cmd_with_result(int pid, int cmd)
+{
+	int fd;
+	int len;
+	app_pkt_t *pkt = NULL;
+
+	fd = __create_client_sock(pid);
+	if (fd < 0)
+		return NULL;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if (NULL == pkt) {
+		_E("Malloc Failed!");
+		return NULL;
+	}
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = cmd;
+	pkt->len = 0;
+
+	if ((len = send(fd, pkt, 8, 0)) != 8) {
+		_E("sendto() failed - %d", len);
+		if (errno == EPIPE) {
+			_E("pid:%d, fd:%d\n", pid, fd);
+		}
+		close(fd);
+
+		free(pkt);
+		return NULL;
+	}
+
+	len = recv(fd, pkt, AUL_SOCK_MAXBUFF, 0);
+	if (len == -1) {
+		if (errno == EAGAIN) {
+			_E("recv timeout \n");
+			free(pkt);
+			return NULL;
+		} else {
+			_E("recv error\n");
+			free(pkt);
+			return NULL;
+		}
+	} else
+		_D("recv result  = %d", len);
+	close(fd);
+
+	return pkt;
+}
+
 

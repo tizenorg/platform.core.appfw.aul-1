@@ -135,7 +135,8 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		return -1;
 
 	/* In case of aul_forward_app, update the callback data */
-	if( is_cancel == 1 && (fwdpid_str = bundle_get_val(kb, AUL_K_FWD_CALLEE_PID)) )
+	if(is_cancel == 1 &&
+	(fwdpid_str = (char *)bundle_get_val(kb, AUL_K_FWD_CALLEE_PID)))
 	{
 		app_resultcb_info_t newinfo;
 		newinfo.launched_pid = atoi(fwdpid_str);
@@ -281,7 +282,7 @@ SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
 	if(pkgname == NULL || kb == NULL)
 		return AUL_R_EINVAL;
 	
-	caller = bundle_get_val(kb, AUL_K_CALLER_PID);
+	caller = (char *)bundle_get_val(kb, AUL_K_CALLER_PID);
 	if(caller == NULL) {
 		_E("original msg doest not have caller pid");
 		return AUL_R_EINVAL;

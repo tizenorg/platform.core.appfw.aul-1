@@ -20,8 +20,8 @@
  */
 
 
-#ifndef __APP_PKT_T_
-#define __APP_PKT_T_
+#ifndef __APP_PKT_H_
+#define __APP_PKT_H_
 
 #include <unistd.h>
 #define __USE_GNU
@@ -36,7 +36,11 @@ enum app_cmd {
 	APP_RESULT,
 	APP_START_RES,
 	APP_CANCEL,
-	APP_KILL_BY_PID
+	APP_KILL_BY_PID,
+	ADD_HISTORY,
+	RUNNING_INFO,
+	RUNNING_INFO_RESULT,
+	IS_RUNNING
 };
 
 #define AUL_SOCK_PREFIX "/tmp/alaunch"
@@ -54,6 +58,7 @@ int __create_server_sock(int pid);
 int __create_client_sock(int pid);
 int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen);
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr);
+app_pkt_t *__app_send_cmd_with_result(int pid, int cmd);
 
 #endif
 

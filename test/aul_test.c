@@ -19,6 +19,7 @@
  *
  */
 
+
 #include <poll.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -337,8 +338,6 @@ static void print_menu_db_info(const app_info_from_db *info)
 	printf("\t==========================\n");
 	printf("\t pkg_name: %s\n", info->pkg_name);
 	printf("\t app_path: %s\n", info->app_path);
-	printf("\t w: %d\n", info->width);
-	printf("\t h: %d\n", info->height);
 	printf("\t is_minst: %d\n", 0);
 	printf("\t==========================\n");
 }
@@ -539,7 +538,7 @@ static test_func_t test_func[] = {
 		"[usage] all <pkgname>"},
 
 	{"is_run", is_run_test,"aul_is_running test",
-		"[usage] is_run_test <pkgname>"},
+		"[usage] is_run <pkgname>"},
 	{"getallpkg", get_allpkg_test, "aul_app_get_running_app_info test",
 		"[usage] getallpkg all"},
 	{"getpkgpid", get_pkgpid_test, "aul_app_get_pkgname_bypid test",

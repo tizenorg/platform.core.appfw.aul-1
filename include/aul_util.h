@@ -20,25 +20,23 @@
  */
 
 
-#ifndef __APP_LAUNCH_H_
-#define __APP_LAUNCH_H_
+#ifndef __AUL_UTIL_H_
+#define __AUL_UTIL_H_
 
-int aul_initialize();
-int aul_register_init_callback(
-	int (*aul_handler)(aul_type type, bundle *, void *), void *data);
-int aul_is_initialized();
-int aul_sock_handler(int fd);
-int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb);
+#define AUL_UTIL_PID -2
 
-int app_start(bundle *kb);
-int app_send_cmd(int pid, int cmd, bundle *kb);
-int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb);
+#define MAX_PACKAGE_STR_SIZE 512
+#define MAX_PACKAGE_APP_PATH_SIZE 512
+#define MAX_RUNNING_APP_INFO 512
 
-int _app_start_res_prepare(bundle *kb);
-int app_result(int cmd, bundle *kb, int launched_pid);
-int aul_send_result(bundle *kb, int is_cancel);
-int aul_launch_app_with_result(const char *pkgname, bundle *kb,
-			       void (*cbfunc) (bundle *, int, void *),
-			       void *data);
+struct history_data {
+	char pkg_name[MAX_PACKAGE_STR_SIZE];
+	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
+	int len;
+	unsigned char data[1];
+};
 
 #endif
+
+
+

@@ -28,6 +28,8 @@
 
 #include <Ecore.h>
 
+extern int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
+
 void do_create()
 {
 	/* call real create callback*/

@@ -47,9 +47,6 @@ typedef struct {
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *app_type;		/* x_slp_packagetype */
-	int width;		/* x_slp_baselayoutwidth */
-	int height;		/* x_slp_baselayoutheight */
-	int vertical;		/* x_slp_ishorizontalscale */
 	int multiple;		/* x_slp_multiple */
 	int task_manage;	/* x_slp_taskmanage */
 	char *pkg_type;
@@ -104,24 +101,6 @@ static inline char *_get_original_app_path(app_info_from_db *menu_info)
 static inline char *_get_app_app_type(app_info_from_db *menu_info)
 {
 	return menu_info->app_type;
-}
-
-static inline int _get_app_width(app_info_from_db *menu_info)
-{
-	return menu_info->width;
-}
-
-static inline int _get_app_height(app_info_from_db *menu_info)
-{
-	return menu_info->height;
-}
-
-static inline int _is_app_scalable_with_height(app_info_from_db *menu_info)
-{
-	if (menu_info->vertical)
-		return 0;
-	else
-		return 1;
 }
 
 static inline int _is_app_multi_inst(app_info_from_db *menu_info)
@@ -186,15 +165,11 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	if (menu_info->app_path != NULL)
 		menu_info->original_app_path = strdup(menu_info->app_path);
 
-	ret = ail_appinfo_get_int(handle, AIL_PROP_X_SLP_BASELAYOUTWIDTH_INT, &menu_info->width);
-	
-	ret = ail_appinfo_get_int(handle, AIL_PROP_X_SLP_BASELAYOUTHEIGHT_INT, &menu_info->height);
-	
-	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL, &menu_info->vertical);
-	
-	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_MULTIPLE_BOOL, &menu_info->multiple);
-	
-	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_TASKMANAGE_BOOL, &menu_info->task_manage);
+	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_MULTIPLE_BOOL,
+		(bool *)&menu_info->multiple);
+
+	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_TASKMANAGE_BOOL,
+		(bool *)&menu_info->task_manage);
 	
 	ret = ail_appinfo_get_str(handle, AIL_PROP_TYPE_STR, &str);
 	if (str) {

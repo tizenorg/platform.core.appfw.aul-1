@@ -2,7 +2,7 @@ Source: aul-1
 Section: devel
 Priority: extra
 Maintainer: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>, Yoonkyong Lee <yk6629.lee@samsung.com>, Youmin Ha <youmin.ha@samsung.com>, Kunhoon Baik <knhoon.baik@samsung.com>
-Build-Depends: debhelper (>= 5), libdbus-glib-1-dev, libsqlite3-dev, libx11-dev, libecore-dev, libbundle-dev, libail-0-dev, dlog-dev, libxdgmime-dev, libprivilege-control-dev, sqlite3, libapp-checker-dev, libapp-checker-server-dev
+Build-Depends: debhelper (>= 5), libdbus-glib-1-dev, libsqlite3-dev, libx11-dev, libecore-dev, libbundle-dev, libail-0-dev, dlog-dev, libxdgmime-dev, libprivilege-control-dev, sqlite3, libapp-checker-dev, libapp-checker-server-dev, librua-dev
 Standards-Version: 0.1.0 
 
 Package: libaul-1

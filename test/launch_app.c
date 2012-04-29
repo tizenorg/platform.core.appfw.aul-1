@@ -48,14 +48,18 @@ static bundle *create_internal_bundle(int start)
 			int j = 1;
 			strncpy(arg, gargv[i + 1], 1024);
 			val_array[0] = strtok(arg,",");
-			while(val_array[j] = strtok(NULL,","))
+			while(1)
 			{
+				val_array[j] = strtok(NULL,",");
+				if(val_array[j] == NULL)
+					break;
 				j++;
 			}
 			if(j==1)
 				bundle_add(kb, gargv[i], gargv[i + 1]);
 			else if(j>1)
-				bundle_add_str_array(kb, gargv[i], val_array, j);
+				bundle_add_str_array(kb, gargv[i],
+					(const char**)val_array, j);
 		}
 	}
 

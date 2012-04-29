@@ -28,98 +28,57 @@
 #include "aul_api.h"
 #include "menu_db_util.h"
 #include "simple_util.h"
+#include "app_sock.h"
+#include "aul_util.h"
 
 typedef struct _internal_param_t {
 	aul_app_info_iter_fn enum_fn;
 	void *user_param;
 } internal_param_t;
 
-static int __get_pkginfo(const char *dname, const char *cmdline, void *priv);
 static int __get_pkgname_bypid(int pid, char *pkgname, int len);
-
 
 SLPAPI int aul_app_is_running(const char *pkgname)
 {
-	char *apppath = NULL;
-	ail_appinfo_h handle;
-	ail_error_e ail_ret;
-
 	int ret = 0;
-	int i = 0;
 
 	if (pkgname == NULL)
 		return 0;
 
-	ail_ret = ail_package_get_appinfo(pkgname, &handle);
-	if (ail_ret != AIL_ERROR_OK) {
-		_E("ail_package_get_appinfo with %s failed", pkgname);
-		return ret;
-	}
+	ret = __app_send_raw(AUL_UTIL_PID, IS_RUNNING, (unsigned char*)pkgname, strlen(pkgname));
 
-	ail_ret = ail_appinfo_get_str(handle, AIL_PROP_EXEC_STR, &apppath);
-	if (ail_ret != AIL_ERROR_OK) {
-		_E("ail_appinfo_get_str failed");
-		goto out;
-	}
-	
-	if (apppath == NULL)
-		goto out;
-
-	/*truncate apppath if it includes default bundles */
-	while (apppath[i] != 0) {
-		if (apppath[i] == ' ' || apppath[i] == '\t') {
-			apppath[i]='\0';
-			break;
-		}
-		i++;
-	}
-	
-	if (__proc_iter_cmdline(NULL, apppath) > 0)
-		ret = 1;
-	else
-		ret = 0;
-
- out:
-	if (ail_package_destroy_appinfo(handle) != AIL_ERROR_OK)
-		_E("ail_destroy_rs failed");
 	return ret;
-}
-
-static int __get_pkginfo(const char *dname, const char *cmdline, void *priv)
-{
-	internal_param_t *p;
-	app_info_from_db *menu_info;
-	aul_app_info info;
-
-	p = (internal_param_t *) priv;
-	if ((menu_info = _get_app_info_from_db_by_apppath(cmdline)) == NULL)
-		goto out;
-	else {
-		info.pid = atoi(dname);
-		info.pkg_name = _get_pkgname(menu_info);
-		info.app_path = _get_app_path(menu_info);
-		_D("get pkginfo - %d %s", info.pid, info.app_path);
-		p->enum_fn(&info, p->user_param);
-	}
-
- out:
-	if (menu_info != NULL)
-		_free_app_info_from_db(menu_info);
-	return 0;
 }
 
 SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 					void *user_param)
 {
-	internal_param_t param;
+	app_pkt_t *pkt = NULL;
+	char *saveptr1, *saveptr2;
+	char *token;
+	char *pkt_data;
+	aul_app_info info;
 
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	param.enum_fn = enum_fn;
-	param.user_param = user_param;
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, RUNNING_INFO);
 
-	__proc_iter_cmdline(__get_pkginfo, &param);
+	if (pkt == NULL)
+		return AUL_R_ERROR;
+
+	for( pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
+		token = strtok_r(pkt_data, ";", &saveptr1);
+		if (token == NULL)
+			break;
+		info.pid = atoi(strtok_r(token, ":", &saveptr2));
+		info.pkg_name = strtok_r(NULL, ":", &saveptr2);
+		info.app_path = strtok_r(NULL, ":", &saveptr2);
+
+		enum_fn(&info, user_param);
+	}
+
+	free(pkt);
 
 	return AUL_R_OK;
 }

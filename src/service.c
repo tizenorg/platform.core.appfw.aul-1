@@ -34,6 +34,7 @@
 #include "mida.h"
 #include "menu_db_util.h"
 #include "simple_util.h"
+#include "launch.h"
 
 static int __get_defapp_from_desktop(const char *svcname, 
 					char *defapp, int len);

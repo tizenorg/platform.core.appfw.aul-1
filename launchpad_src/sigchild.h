@@ -82,7 +82,7 @@ static inline int __send_app_dead_signal(int dead_pid)
 	return 0;
 }
 
-static void *__sigchild_thread(void *data)
+static int __sigchild_action(void *data)
 {
 	pid_t dead_pid;
 	char buf[MAX_LOCAL_BUFSZ];
@@ -98,7 +98,6 @@ static void *__sigchild_thread(void *data)
 
 	__socket_garbage_collector();
  end:
-	pthread_exit(0);
 	return 0;
 }
 
@@ -115,12 +114,7 @@ static void __launchpad_sig_child(int signo, siginfo_t *info, void *data)
 	while ((child_pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		if (child_pid == child_pgid)
 			killpg(child_pgid, SIGKILL);
-		if (pthread_create(&thid, NULL,
-				   __sigchild_thread, (void *)child_pid) != 0) {
-			printf("Failed to create thread\n");
-			return;
-		}
-		pthread_detach(thid);
+		__sigchild_action((void *)child_pid);
 	}
 
 	return;

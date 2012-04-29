@@ -49,6 +49,7 @@
 #include "preload.h"
 #include "perf.h"
 #include "sigchild.h"
+#include "aul_util.h"
 
 #include "heap_dbg.h"
 
@@ -57,7 +58,7 @@
 #include "gl.h"
 
 #include <app-checker.h>
-
+#include <sqlite3.h>
 
 #define _static_ static inline
 #define POLLFD_MAX 1
@@ -71,11 +72,8 @@
 #define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
 
 
-static double root_width;
-static double root_height;
 static char *launchpad_cmdline;
 static int initialized = 0;
-
 
 
 _static_ void __set_oom();
@@ -84,11 +82,11 @@ _static_ int __prepare_exec(const char *pkg_name,
 			    const char *app_path, app_info_from_db * menu_info,
 			    bundle * kb);
 _static_ int __fake_launch_app(int cmd, int pid, bundle * kb);
-static void __fill_argv(const char *key, const char *value, void *data);
 _static_ char **__create_argc_argv(bundle * kb, int *margc);
 _static_ int __normal_fork_exec(int argc, char **argv);
 _static_ void __real_launch(const char *app_path, bundle * kb);
-_static_ int __add_history(int caller, int callee, const char *pkgname);
+_static_ void __add_history(int caller, int callee, const char *pkgname,
+				bundle *b, const char *app_path);
 static inline int __parser(const char *arg, char *out, int out_size);
 _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			    app_info_from_db * menu_info, int cmd);
@@ -106,6 +104,7 @@ _static_ void __launchpad_main_loop(int main_fd);
 _static_ int __launchpad_pre_init(int argc, char **argv);
 _static_ int __launchpad_post_init();
 
+extern ail_error_e ail_db_close(void);
 
 
 
@@ -167,13 +166,13 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 		if(str_array != NULL) {
 			for (i = 0; i < len; i++) {
 				_D("index : [%d]", i);
-				__set_sdk_env(menu_info, str_array[i]);
+				__set_sdk_env(menu_info, (char *)str_array[i]);
 			}
 		}
 	} else {
 		str = bundle_get_val(kb, AUL_K_SDK);
 		if(str != NULL) {
-			__set_sdk_env(menu_info, str);
+			__set_sdk_env(menu_info, (char *)str);
 		}
 	}
 }
@@ -194,7 +193,7 @@ _static_ int __prepare_exec(const char *pkg_name,
 	__set_oom();
 
 	/* SET SMACK LABEL */
-	__set_smack(app_path);
+	__set_smack((char *)app_path);
 
 	/* SET DAC*/
 	if (__set_dac(pkg_name) < 0) {
@@ -235,18 +234,6 @@ _static_ int __fake_launch_app(int cmd, int pid, bundle * kb)
 		_E("error request fake launch - error code = %d", ret);
 	free(kb_data);
 	return ret;
-}
-
-static int __g_argv_pos = 0;
-static void __fill_argv(const char *key, const char *value, void *data)
-{
-	char **argv;
-	argv = (char **)data;
-
-	argv[__g_argv_pos] = (char *)key;
-	argv[__g_argv_pos + 1] = (char *)value;
-
-	__g_argv_pos += 2;
 }
 
 _static_ char **__create_argc_argv(bundle * kb, int *margc)
@@ -298,15 +285,45 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	__normal_fork_exec(app_argc, app_argv);
 }
 
-_static_ int __add_history(int caller, int callee, const char *pkgname)
+_static_ void __add_history(int caller, int callee, const char *pkgname, 
+				bundle *b, const char *app_path)
 {
-	/* TODO - make real history */
+	struct history_data *hd;
+	bundle_raw *kb_data;
+	int len;
+
 	_D("***** HISTORY *****\n");
 	_D("%d ==> %d(%s) \n", caller, callee, pkgname);
 	_D("*******************\n");
 
-	return 0;
+	if (b) {
+		bundle_encode(b, (bundle_raw **)&kb_data, &len);
+		hd = (struct history_data *)malloc(sizeof(char) * (len+1029));
+
+		strncpy(hd->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
+		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
+		hd->len = len;
+		memcpy(hd->data, kb_data, len);
+
+		__app_send_raw(AUL_UTIL_PID, ADD_HISTORY, (unsigned char *)hd,
+			hd->len+1029);
+		free(kb_data);
+		free(hd);
+	} else {
+		hd = (struct history_data *)malloc(sizeof(char) * 1029);
+
+		strncpy(hd->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
+		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
+		hd->len = 0;
+
+		__app_send_raw(AUL_UTIL_PID, ADD_HISTORY, (unsigned char *)hd,
+			1029);
+		free(hd);
+	}
+
+	return;
 }
+
 
 /*
  * Parsing original app path to retrieve default bundle
@@ -696,8 +713,8 @@ _static_ void __launchpad_main_loop(int main_fd)
 	app_pkt_t *pkt = NULL;
 	app_info_from_db *menu_info = NULL;
 
-	const char *pkg_name;
-	const char *app_path;
+	const char *pkg_name = NULL;
+	const char *app_path = NULL;
 	int pid = -1;
 	int clifd = -1;
 	struct ucred cr;
@@ -804,15 +821,23 @@ _static_ void __launchpad_main_loop(int main_fd)
 	}
 
  end:
-	if (pid > 0)
-		__add_history(cr.pid, pid, pkg_name);
-
 	__send_result_to_caller(clifd, pid);
 
 	if (pid > 0) {
 		int ret;
 		ret = ac_check_launch_privilege(pkg_name, menu_info->pkg_type, pid);
 		_D("ac_check_launch_privilege : %d", ret);
+		switch (pkt->cmd) {
+		case APP_RESUME:
+			__add_history(cr.pid, pid, pkg_name, NULL, app_path);
+			break;
+		case APP_START:
+		case APP_START_RES:
+			__add_history(cr.pid, pid, pkg_name, kb, app_path);
+			break;
+		default:
+			_D("no launch case");
+		}
 	}
 
 	if (menu_info != NULL)

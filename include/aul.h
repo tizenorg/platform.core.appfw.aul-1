@@ -776,7 +776,7 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
  *	None
  * 
  */
-int aul_open_file(const char* filename);
+int aul_open_file(const char* filename) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -825,7 +825,7 @@ int aul_open_file(const char* filename);
  * @remark
  *	None
  */
-int aul_open_file_with_mimetype(const char *filename, const char *mimetype);
+int aul_open_file_with_mimetype(const char *filename, const char *mimetype) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -871,7 +871,7 @@ int aul_open_file_with_mimetype(const char *filename, const char *mimetype);
  *	None
  * 
  */
-int aul_open_content(const char* content);
+int aul_open_content(const char* content) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -910,7 +910,7 @@ int aul_open_content(const char* content);
  *	None
  * 
  */
-int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
+int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -947,7 +947,7 @@ int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
  * @remark
  *	None
 */
-int aul_set_defapp_with_mime(const char *mimetype, const char *defapp);
+int aul_set_defapp_with_mime(const char *mimetype, const char *defapp) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -1250,7 +1250,7 @@ typedef void (*aul_service_res_fn)(bundle *b, int reserved, void *user_data);
  *	To see kinds of default service provided by platform, see "aul_service.h" header file
  * 
  */
-int aul_open_service(const char *svcname, bundle *b, aul_service_res_fn cbfunc, void *data);
+int aul_open_service(const char *svcname, bundle *b, aul_service_res_fn cbfunc, void *data) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -1383,7 +1383,7 @@ int aul_send_service_result(bundle *b);
  *	None
  * 
  */
-int aul_set_defapp_for_service(const char *svcname, const char *defapp);
+int aul_set_defapp_for_service(const char *svcname, const char *defapp) __attribute__((deprecated));
 
 /**
  * @par Description:
@@ -1423,7 +1423,7 @@ int aul_set_defapp_for_service(const char *svcname, const char *defapp);
  *	None
  * 
  */
-int aul_get_defapp_for_service(const char *svcname, char *defapp, int len);
+int aul_get_defapp_for_service(const char *svcname, char *defapp, int len) __attribute__((deprecated));
 
 
 /** @} */
