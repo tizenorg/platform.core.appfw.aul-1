@@ -5,6 +5,7 @@ Release:    2
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
+Source1001: packaging/aul.manifest 
 
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
@@ -39,6 +40,7 @@ Application utility library (devel)
 %setup -q
 
 %build
+cp %{SOURCE1001} .
 cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
 
 make %{?jobs:-j%jobs}
@@ -76,6 +78,7 @@ chmod 664 /opt/dbspace/.mida.db-journal
 %postun -p /sbin/ldconfig
 
 %files
+%manifest aul.manifest
 /usr/lib/*.so.*
 /etc/init.d/launchpad_run
 /usr/bin/aul_service.sh
@@ -91,6 +94,7 @@ chmod 664 /opt/dbspace/.mida.db-journal
 /usr/bin/ac_daemon
 
 %files devel
+%manifest aul.manifest
 /usr/include/aul/*.h
 /usr/lib/*.so
 /usr/lib/pkgconfig/*.pc
