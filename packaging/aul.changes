@@ -1,2 +1,6 @@
+* Mon Jul 2 2012 Brad Peters <brad.t.peters@intel.com> 7730828
+- Removing systemd CPU and IO prio. Seems to be causing random
+  service failures. Will re-add once we have a base image working
+
 * Thu Jun 21 2012 William Douglas <william.douglas@intel.com> 7730828
 - Add systemd unit files.

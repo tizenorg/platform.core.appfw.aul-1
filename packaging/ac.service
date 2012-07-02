@@ -10,9 +10,6 @@ ExecStartPre=-/bin/mkdir -m 1777 /tmp/alaunch
 ExecStart=/usr/bin/ac_daemon
 
 OOMScoreAdjust=-100
-IOSchedulingClass=realtime
-IOSchedulingPriority=1
-CPUSchedulingPriority=50
 
 [Install]
 WantedBy=multi-user.target
