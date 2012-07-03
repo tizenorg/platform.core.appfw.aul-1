@@ -1,3 +1,6 @@
+* Mon Jul 3 2012 Brad Peters <brad.t.peters@intel.com> 7730828
+- Adding a build tag
+
 * Mon Jul 2 2012 Brad Peters <brad.t.peters@intel.com> 7730828
 - Removing systemd CPU and IO prio. Seems to be causing random
   service failures. Will re-add once we have a base image working
