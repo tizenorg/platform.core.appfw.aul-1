@@ -1,3 +1,9 @@
+* Mon Jul 23 2012 Brad Peters <brad.t.peters@intel.com> 7730828
+- Updating oom_score setting function to use new systemd interface. 
+  Changing child oom_scores from very low (unlikely to be killed) to
+  very high (likely to be killed). This helps us avoid a priority 
+  inversion, where OS services are killed off before applications.
+
 * Mon Jul 3 2012 Brad Peters <brad.t.peters@intel.com> 7730828
 - Adding a build tag
 

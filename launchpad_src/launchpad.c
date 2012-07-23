@@ -114,12 +114,15 @@ _static_ void __set_oom()
 	FILE *fp;
 
 	/* we should reset oomadj value as default because child 
-	inherits from parent oom_adj*/
-	snprintf(buf, MAX_LOCAL_BUFSZ, "/proc/%d/oom_adj", getpid());
+	inherits from parent oom_score_adj*/
+	snprintf(buf, MAX_LOCAL_BUFSZ, "/proc/%d/oom_score_adj", getpid());
 	fp = fopen(buf, "w");
 	if (fp == NULL)
 		return;
-	fprintf(fp, "%d", -16);
+	/* Logically, the children processes being launched should be MORE
+           likely to be killed than the launcher and the rest of the OS. So
+           we need to set a high OOM score here */
+	fprintf(fp, "%d", 900);
 	fclose(fp);
 }
 
