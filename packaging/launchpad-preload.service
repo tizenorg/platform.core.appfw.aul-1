@@ -1,0 +1,10 @@
+[Unit]
+Description=Start the preload/preinit daemon
+
+[Service]
+EnvironmentFile=/etc/sysconfig/tizen-mobile-ui
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/launchpad_preloading_preinitializing_daemon
+
+[Install]
+WantedBy=multi-user.target
