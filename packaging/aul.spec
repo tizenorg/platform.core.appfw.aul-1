@@ -83,7 +83,7 @@ fi
 %post
 /sbin/ldconfig
 systemctl daemon-reload
-if [ $1 == 1 ]; then
+if [ $1 == 2 ]; then
     systemctl restart launchpad-preload.service
     systemctl restart ac.service
 fi

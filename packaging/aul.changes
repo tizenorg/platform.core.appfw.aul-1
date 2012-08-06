@@ -1,3 +1,7 @@
+* Mon Aug 06 2012 Yan Yin <yan.yin@intel.com> 2cffaf8
+[ Yan Yin ]
+- service should only be restarted when post upgrade, not post install.
+
 * Mon Jul 23 2012 Brad Peters <brad.t.peters@intel.com> 7730828
 - Updating oom_score setting function to use new systemd interface. 
   Changing child oom_scores from very low (unlikely to be killed) to
