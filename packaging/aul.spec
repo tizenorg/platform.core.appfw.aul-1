@@ -5,7 +5,7 @@ Release:    2
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
-Source101:  launchpad-preload.service
+Source101:  launchpad-preload@.service
 Source102:  ac.service
 Source1001: packaging/aul.manifest 
 
@@ -68,15 +68,15 @@ sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/opt/share/mida_db.sql
 rm -rf %{buildroot}/opt/share/mida_db.sql
 
 mkdir -p %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants
-install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload.service
+install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
 install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/system/ac.service
-ln -s ../launchpad-preload.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload.service
+ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
 ln -s ../ac.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/ac.service
 
 
 %preun
 if [ $1 == 0 ]; then
-    systemctl stop launchpad-preload.service
+    systemctl stop launchpad-preload@app.service
     systemctl stop ac.service
 fi
 
@@ -84,12 +84,14 @@ fi
 /sbin/ldconfig
 systemctl daemon-reload
 if [ $1 == 2 ]; then
-    systemctl restart launchpad-preload.service
+    systemctl restart launchpad-preload@app.service
     systemctl restart ac.service
 fi
 
-%postun -p /sbin/ldconfig
+%postun
+/sbin/ldconfig
 systemctl daemon-reload
+
 
 %files
 %manifest aul.manifest
@@ -110,9 +112,9 @@ systemctl daemon-reload
 /opt/share/preload_list.txt
 %{_bindir}/launchpad_preloading_preinitializing_daemon
 %{_bindir}/ac_daemon
-%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload.service
+%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
 %{_libdir}/systemd/system/multi-user.target.wants/ac.service
-%{_libdir}/systemd/system/launchpad-preload.service
+%{_libdir}/systemd/system/launchpad-preload@.service
 %{_libdir}/systemd/system/ac.service
 
 %files devel

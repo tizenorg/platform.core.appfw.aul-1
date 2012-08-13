@@ -1,3 +1,6 @@
+* Mon Aug 13 2012 Patrick McCarty <patrick.mccarty@linux.intel.com> 0619cd8
+- systemd: make launchpad use the existing dbus session bus
+
 * Mon Aug 06 2012 Yan Yin <yan.yin@intel.com> 2cffaf8
 [ Yan Yin ]
 - service should only be restarted when post upgrade, not post install.
