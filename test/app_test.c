@@ -125,6 +125,12 @@ int app_dead_handler(int pid, void *data)
 	return 0;
 }
 
+int app_launch_handler(int pid, void *data)
+{
+	printf("===> %s : %d\n", __FUNCTION__, pid);
+	return 0;
+}
+
 __attribute__ ((visibility("default")))
 int main(int argc, char **argv)
 {
@@ -138,6 +144,8 @@ int main(int argc, char **argv)
 		printf("error argv\n");
 
 	aul_listen_app_dead_signal(app_dead_handler, NULL);
+
+	aul_listen_app_launch_signal(app_launch_handler, NULL);
 
 	if (fork() == 0) {
 		printf("child test\n");

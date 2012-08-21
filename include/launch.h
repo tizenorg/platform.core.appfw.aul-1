@@ -23,6 +23,8 @@
 #ifndef __APP_LAUNCH_H_
 #define __APP_LAUNCH_H_
 
+#include <glib.h>
+
 int aul_initialize();
 int aul_register_init_callback(
 	int (*aul_handler)(aul_type type, bundle *, void *), void *data);
@@ -40,5 +42,8 @@ int aul_send_result(bundle *kb, int is_cancel);
 int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data);
+
+gboolean __aul_glib_handler(gpointer data);
+
 
 #endif

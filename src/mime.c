@@ -364,7 +364,7 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 		ail_ret = ail_package_get_appinfo(defapp, &handle);
 
 		if (ail_ret == AIL_ERROR_OK) {
-			ail_package_destroy_appinfo(handle);
+			ail_destroy_appinfo(handle);
 			_D("mimetype : %s, unaliased mimetype : %s, "
 				"mime_content : %s, defapp : %s", mime_type, 
 					unaliased_mime_type, 
@@ -377,10 +377,10 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 				"does NOT exist", defapp, 
 					mime_type, mime_content);
 			mida_delete_with_pkgname(defapp);
-			ail_package_destroy_appinfo(handle);
+			ail_destroy_appinfo(handle);
 			goto retry;
 		} else {
-			_E("ail_package_get_appinfo with %s failed", defapp);
+			_E("ail_get_appinfo with %s failed", defapp);
 			if (kb) {
 				bundle_free(kb);
 				kb = NULL;

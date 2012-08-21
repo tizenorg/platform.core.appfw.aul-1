@@ -28,11 +28,12 @@
 #include "launch.h"
 #include "simple_util.h"
 
+static GSource *src;
+
 static gboolean __aul_glib_check(GSource *src);
 static gboolean __aul_glib_dispatch(GSource *src, GSourceFunc callback,
 				  gpointer data);
 static gboolean __aul_glib_prepare(GSource *src, gint *timeout);
-static gboolean __aul_glib_handler(gpointer data);
 static gboolean __app_start_internal(gpointer data);
 
 static gboolean __aul_glib_check(GSource *src)
@@ -63,14 +64,14 @@ static gboolean __aul_glib_prepare(GSource *src, gint *timeout)
 	return FALSE;
 }
 
-static GSourceFuncs funcs = {
+GSourceFuncs funcs = {
 	.prepare = __aul_glib_prepare,
 	.check = __aul_glib_check,
 	.dispatch = __aul_glib_dispatch,
 	.finalize = NULL
 };
 
-static gboolean __aul_glib_handler(gpointer data)
+gboolean __aul_glib_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
 	aul_sock_handler(gpollfd->fd);
@@ -93,7 +94,6 @@ SLPAPI int aul_launch_init(
 {
 	int fd;
 	GPollFD *gpollfd;
-	GSource *src;
 	int ret;
 
 	if (aul_handler != NULL)
@@ -112,7 +112,7 @@ SLPAPI int aul_launch_init(
 	g_source_add_poll(src, gpollfd);
 	g_source_set_callback(src, (GSourceFunc) __aul_glib_handler,
 			      (gpointer) gpollfd, NULL);
-	g_source_set_priority(src, G_PRIORITY_LOW);
+	g_source_set_priority(src, G_PRIORITY_DEFAULT);
 
 	ret = g_source_attach(src, NULL);
 	if (ret == 0)
@@ -121,6 +121,11 @@ SLPAPI int aul_launch_init(
 	g_source_unref(src);
 
 	return AUL_R_OK;
+}
+
+SLPAPI int aul_launch_fini()
+{
+	g_source_destroy(src);
 }
 
 SLPAPI int aul_launch_argv_handler(int argc, char **argv)

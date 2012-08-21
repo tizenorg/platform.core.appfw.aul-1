@@ -38,14 +38,14 @@ typedef struct _internal_param_t {
 
 static int __get_pkgname_bypid(int pid, char *pkgname, int len);
 
-SLPAPI int aul_app_is_running(const char *pkgname)
+SLPAPI int aul_app_is_running(const char *appid)
 {
 	int ret = 0;
 
-	if (pkgname == NULL)
+	if (appid == NULL)
 		return 0;
 
-	ret = __app_send_raw(AUL_UTIL_PID, IS_RUNNING, (unsigned char*)pkgname, strlen(pkgname));
+	ret = __app_send_raw(AUL_UTIL_PID, APP_IS_RUNNING, (unsigned char*)appid, strlen(appid));
 
 	return ret;
 }
@@ -62,7 +62,7 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, RUNNING_INFO);
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_RUNNING_INFO);
 
 	if (pkt == NULL)
 		return AUL_R_ERROR;
@@ -72,12 +72,14 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 		if (token == NULL)
 			break;
 		info.pid = atoi(strtok_r(token, ":", &saveptr2));
-		info.pkg_name = strtok_r(NULL, ":", &saveptr2);
+		info.appid = strtok_r(NULL, ":", &saveptr2);
 		info.app_path = strtok_r(NULL, ":", &saveptr2);
+		info.pkg_name = strdup(info.appid);
 
 		enum_fn(&info, user_param);
 	}
 
+	free(info.pkg_name);
 	free(pkt);
 
 	return AUL_R_OK;
@@ -106,13 +108,18 @@ static int __get_pkgname_bypid(int pid, char *pkgname, int len)
 
 SLPAPI int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
 {
+	return aul_app_get_appid_bypid(pid, pkgname, len);
+}
+
+SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
+{
 	int pgid;
 
-	if (pkgname == NULL)
+	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	if (__get_pkgname_bypid(pid, pkgname, len) == 0) {
-		_D("Pkg name for %d is %s", pid, pkgname);
+	if (__get_pkgname_bypid(pid, appid, len) == 0) {
+		_D("appid for %d is %s", pid, appid);
 		return AUL_R_OK;
 	}
 	/* support app launched by shell script*/
@@ -122,9 +129,10 @@ SLPAPI int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
 		return AUL_R_ERROR;
 
 	_D("second change pgid = %d, pid = %d", pgid, pid);
-	if (__get_pkgname_bypid(pgid, pkgname, len) == 0)
+	if (__get_pkgname_bypid(pgid, appid, len) == 0)
 		return AUL_R_OK;
 
 	return AUL_R_ERROR;
 }
+
 

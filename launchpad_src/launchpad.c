@@ -47,6 +47,7 @@
 #include "simple_util.h"
 #include "access_control.h"
 #include "preload.h"
+#include "preexec.h"
 #include "perf.h"
 #include "sigchild.h"
 #include "aul_util.h"
@@ -189,6 +190,8 @@ _static_ int __prepare_exec(const char *pkg_name,
 	/* TODO : should be add to check permission in the kernel*/
 	setsid();
 
+	__preexec_run(menu_info->pkg_type, pkg_name, app_path);
+
 	/* SET OOM*/
 	__set_oom();
 
@@ -305,7 +308,7 @@ _static_ void __add_history(int caller, int callee, const char *pkgname,
 		hd->len = len;
 		memcpy(hd->data, kb_data, len);
 
-		__app_send_raw(AUL_UTIL_PID, ADD_HISTORY, (unsigned char *)hd,
+		__app_send_raw(AUL_UTIL_PID, APP_ADD_HISTORY, (unsigned char *)hd,
 			hd->len+1029);
 		free(kb_data);
 		free(hd);
@@ -316,7 +319,7 @@ _static_ void __add_history(int caller, int callee, const char *pkgname,
 		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
 		hd->len = 0;
 
-		__app_send_raw(AUL_UTIL_PID, ADD_HISTORY, (unsigned char *)hd,
+		__app_send_raw(AUL_UTIL_PID, APP_ADD_HISTORY, (unsigned char *)hd,
 			1029);
 		free(hd);
 	}
@@ -432,7 +435,7 @@ _static_ void __modify_bundle(bundle * kb, int caller_pid,
 		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
 
 	/* Parse app_path to retrieve default bundle*/
-	if (cmd == APP_START || cmd == APP_START_RES || cmd == APP_RESUME) {
+	if (cmd == APP_START || cmd == APP_START_RES || cmd == APP_OPEN || cmd == APP_RESUME) {
 		char *ptr;
 		char exe[MAX_PATH_LEN];
 		int flag;
@@ -630,6 +633,7 @@ _static_ int __nofork_processing(int cmd, int pid, bundle * kb)
 {
 	int ret = -1;
 	switch (cmd) {
+	case APP_OPEN:
 	case APP_RESUME:
 		_D("resume app's pid : %d\n", pid);
 		if ((ret = __resume_app(pid)) < 0)
@@ -693,7 +697,7 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 		_D("-- now wait to change cmdline --");
 		usleep(50 * 1000);	/* 50ms sleep*/
 		wait_count++;
-	} while (wait_count <= 10);	/* max 50*10ms will be sleep*/
+	} while (wait_count <= 20);	/* max 50*20ms will be sleep*/
 
 	if ((!cmdline_exist) && (!cmdline_changed)) {
 		__real_send(clifd, -1);	/* abnormally launched*/
@@ -718,6 +722,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 	int pid = -1;
 	int clifd = -1;
 	struct ucred cr;
+	int is_real_launch = 0;
 
 	char sock_path[UNIX_PATH_MAX] = {0,};
 
@@ -785,7 +790,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 			pid = -ELOCALLAUNCH_ID;
 		} else if ((ret = __nofork_processing(pkt->cmd, pid, kb)) < 0)
 			pid = ret;
-	} else {
+	} else if (pkt->cmd != APP_RESUME) {
 		pid = fork();
 		if (pid == 0) {
 			PERF("fork done");
@@ -818,6 +823,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 			exit(-1);
 		}
 		_D("==> real launch pid : %d %s\n", pid, app_path);
+		is_real_launch = 1;
 	}
 
  end:
@@ -828,6 +834,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 		ret = ac_check_launch_privilege(pkg_name, menu_info->pkg_type, pid);
 		_D("ac_check_launch_privilege : %d", ret);
 		switch (pkt->cmd) {
+		case APP_OPEN:
 		case APP_RESUME:
 			__add_history(cr.pid, pid, pkg_name, NULL, app_path);
 			break;
@@ -837,6 +844,12 @@ _static_ void __launchpad_main_loop(int main_fd)
 			break;
 		default:
 			_D("no launch case");
+		}
+		if (is_real_launch) {
+			/*TODO: retry*/
+			__signal_block_sigchld();
+			__send_app_launch_signal(pid);
+			__signal_unblock_sigchld();
 		}
 	}
 
@@ -884,6 +897,8 @@ _static_ int __launchpad_pre_init(int argc, char **argv)
 
 	__preload_init(argc, argv);
 
+	__preexec_init(argc, argv);
+
 	return fd;
 }
 
@@ -898,7 +913,6 @@ _static_ int __launchpad_post_init()
 		return 0;
 	}
 
-	preinit_init();
 	if (__signal_set_sigchld() < 0)
 		return -1;
 

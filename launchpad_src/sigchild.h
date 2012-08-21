@@ -25,6 +25,7 @@
 
 static struct sigaction old_sigchild;
 static DBusConnection *bus = NULL;
+sigset_t oldmask;
 
 static inline void __socket_garbage_collector()
 {
@@ -82,6 +83,37 @@ static inline int __send_app_dead_signal(int dead_pid)
 	return 0;
 }
 
+static inline int __send_app_launch_signal(int launch_pid)
+{
+	DBusMessage *message;
+
+	if (bus == NULL)
+		return -1;
+
+	message = dbus_message_new_signal(AUL_DBUS_PATH,
+					  AUL_DBUS_SIGNAL_INTERFACE,
+					  AUL_DBUS_APPLAUNCH_SIGNAL);
+
+	if (dbus_message_append_args(message,
+				     DBUS_TYPE_UINT32, &launch_pid,
+				     DBUS_TYPE_INVALID) == FALSE) {
+		_E("Failed to load data error");
+		return -1;
+	}
+
+	if (dbus_connection_send(bus, message, NULL) == FALSE) {
+		_E("dbus send error");
+		return -1;
+	}
+
+	dbus_connection_flush(bus);
+	dbus_message_unref(message);
+
+	_D("send launch signal done\n");
+
+	return 0;
+}
+
 static int __sigchild_action(void *data)
 {
 	pid_t dead_pid;
@@ -105,7 +137,6 @@ static void __launchpad_sig_child(int signo, siginfo_t *info, void *data)
 {
 	int status;
 	pid_t child_pid;
-	pthread_t thid;
 	pid_t child_pgid;
 
 	child_pgid = getpgid(info->si_pid);
@@ -180,6 +211,34 @@ static inline int __signal_unset_sigchld(void)
 	if (sigaction(SIGCHLD, &old_sigchild, &dummy) < 0)
 		return -1;
 
+	return 0;
+}
+
+static inline int __signal_block_sigchld(void)
+{
+	sigset_t newmask;
+
+	sigemptyset(&newmask);
+	sigaddset(&newmask, SIGCHLD);
+
+	if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) < 0) {
+		_E("SIG_BLOCK error");
+		return -1;
+	}
+
+	_D("SIGCHLD blocked");
+
+	return 0;
+}
+
+static inline int __signal_unblock_sigchld(void)
+{
+	if(sigprocmask(SIG_SETMASK, &oldmask, NULL) < 0) {
+		_E("SIG_SETMASK error");
+		return -1;
+	}
+
+	_D("SIGCHLD unblocked");
 	return 0;
 }
 

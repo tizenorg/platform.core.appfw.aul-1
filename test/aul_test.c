@@ -126,12 +126,20 @@ static void cb_func(bundle *kb, int is_cancel, void *data)
 		ecore_main_loop_quit();
 }
 
-int resume_test()
+int open_test()
 {
 	static int num = 0;
 
 	printf("[aul_open_app %d test] %s \n", num++, gargv[2]);
 	return aul_open_app(gargv[2]);
+}
+
+int resume_test()
+{
+	static int num = 0;
+
+	printf("[aul_open_app %d test] %s \n", num++, gargv[2]);
+	return aul_resume_app(gargv[2]);
 }
 
 int resume_pid_test()
@@ -206,7 +214,7 @@ int is_run_test()
 int iterfunc(const aul_app_info *info, void *data)
 {
 	printf("\t==========================\n");
-	printf("\t pkg_name: %s\n", info->pkg_name);
+	printf("\t pkg_name: %s\n", info->appid);
 	printf("\t app_path: %s\n", info->app_path);
 	printf("\t running pid: %d\n", info->pid);
 	printf("\t==========================\n");
@@ -227,10 +235,10 @@ int get_pkgpid_test()
 	static int num = 0;
 	char buf[MAX_LOCAL_BUFSZ];
 
-	printf("[aul_app_get_pkgname_bypid %d test] \n", num++);
+	printf("[aul_app_get_appid_bypid %d test] \n", num++);
 	pid = atoi(gargv[2]);
 
-	if (aul_app_get_pkgname_bypid(pid, buf, sizeof(buf)) < 0)
+	if (aul_app_get_appid_bypid(pid, buf, sizeof(buf)) < 0)
 		printf("no such pkg by %d\n", pid);
 	else
 		printf("pkgname = %s, pid = %d\n", buf, pid);
@@ -526,8 +534,10 @@ int set_defapp_svc_test()
 static test_func_t test_func[] = {
 	{"launch",launch_test,"aul_launch_app test",
 		"[usage] launch <pkgname> <key1> <val1> <key2> <val2> ..."},
-	{"open",resume_test,"aul_open_app test",
+	{"open",open_test,"aul_open_app test",
 		"[usage] open <pkgname>" },
+	{"resume",resume_test,"aul_resume_app test",
+		"[usage] resume <pkgname>" },
 	{"resume_pid",resume_pid_test,"aul_resume_pid test",
 		"[usage] resume_pid <pid>" },
 	{"term_pid", term_pid_test,"aul_terminate_pid test",
@@ -541,7 +551,7 @@ static test_func_t test_func[] = {
 		"[usage] is_run <pkgname>"},
 	{"getallpkg", get_allpkg_test, "aul_app_get_running_app_info test",
 		"[usage] getallpkg all"},
-	{"getpkgpid", get_pkgpid_test, "aul_app_get_pkgname_bypid test",
+	{"getpkgpid", get_pkgpid_test, "aul_app_get_appid_bypid test",
 		"[usage] getpkgpid <pid>"},
 	
 	{"open_file", open_file_test, "aul_open_file test",

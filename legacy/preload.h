@@ -23,7 +23,7 @@
 #ifdef PRELOAD_ACTIVATE 
 
 #include <dlfcn.h>
-#define PRELOAD_FILE RW_DATA_PREFIX"/preload_list.txt"
+#define PRELOAD_FILE SHARE_PREFIX"/preload_list.txt"
 
 #define EFL_PREINIT_FUNC	"elm_quicklaunch_init"
 #define EFL_SHUTDOWN_FUNC	"elm_quicklaunch_shutdown"

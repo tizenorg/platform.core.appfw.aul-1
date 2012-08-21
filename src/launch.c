@@ -35,6 +35,7 @@
 #include "perf.h"
 #include "simple_util.h"
 #include "launch.h"
+#include "key.h"
 
 static int aul_initialized = 0;
 static int aul_fd;
@@ -53,6 +54,7 @@ static int __app_start_internal(gpointer data);
 static int __app_launch_local(bundle *b);
 static int __send_result_to_launchpad(int fd, int res);
 
+extern  int aul_launch_fini();
 
 int aul_is_initialized()
 {
@@ -91,7 +93,7 @@ static int app_terminate()
  * @param[in]	cmd		message's status (APP_START | APP_RESULT)
  * @param[in]	kb		data
  */
-int app_send_cmd(int pid, int cmd, bundle *kb)
+SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
@@ -204,6 +206,7 @@ int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
 				b = bundle_dup(kb);
 				ret = __app_launch_local(b);
 				break;
+			case APP_OPEN:
 			case APP_RESUME:
 			case APP_RESUME_BY_PID:
 				ret = __app_resume_local();
@@ -269,7 +272,8 @@ int aul_sock_handler(int fd)
 		bundle_free(kbundle);
 		break;
 
-	case APP_RESUME:	/* run in callee */
+	case APP_OPEN:	/* run in callee */
+	case APP_RESUME:
 	case APP_RESUME_BY_PID:
 		app_resume();
 		break;
@@ -288,6 +292,14 @@ int aul_sock_handler(int fd)
 		pid = atoi(pid_str);
 
 		app_result(pkt->cmd, kbundle, pid);
+		bundle_free(kbundle);
+		break;
+
+	case APP_KEY_EVENT:	/* run in caller */
+		kbundle = bundle_decode(pkt->data, pkt->len);
+		if (kbundle == NULL)
+			goto err;
+		app_key_event(kbundle);
 		bundle_free(kbundle);
 		break;
 
@@ -378,6 +390,8 @@ SLPAPI void aul_finalize()
 {
 	int ret;
 
+	aul_launch_fini();
+
 	if (aul_initialized) {
 		ret = close(aul_fd);
 	}
@@ -386,36 +400,36 @@ SLPAPI void aul_finalize()
 }
 
 
-SLPAPI int aul_launch_app(const char *pkgname, bundle *kb)
+SLPAPI int aul_launch_app(const char *appid, bundle *kb)
 {
 	int ret;
 
-	if (pkgname == NULL)
+	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	ret = app_request_to_launchpad(APP_START, pkgname, kb);
+	ret = app_request_to_launchpad(APP_START, appid, kb);
 	return ret;
 }
 
-SLPAPI int aul_open_app(const char *pkgname)
+SLPAPI int aul_open_app(const char *appid)
 {
 	int ret;
 
-	if (pkgname == NULL)
+	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	ret = app_request_to_launchpad(APP_RESUME, pkgname, NULL);
+	ret = app_request_to_launchpad(APP_OPEN, appid, NULL);
 	return ret;
 }
 
-SLPAPI int aul_resume_app(const char *pkgname, bundle *kb)
+SLPAPI int aul_resume_app(const char *appid)
 {
 	int ret;
 
-	if (pkgname == NULL)
+	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	ret = app_request_to_launchpad(APP_RESUME, pkgname, kb);
+	ret = app_request_to_launchpad(APP_RESUME, appid, NULL);
 	return ret;
 }
 

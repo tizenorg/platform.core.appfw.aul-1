@@ -152,6 +152,18 @@ typedef enum _aul_type{
 /** AUL public key - To support SDK */
 #define AUL_K_SDK	"__AUL_SDK__"
 
+/** AUL public key - To support Media key */
+#define AUL_K_MULTI_KEY	"__AUL_MULTI_KEY__"
+/** AUL public key - To support Media key */
+#define AUL_K_MULTI_KEY_EVENT	"__AUL_MULTI_KEY_EVENT__"
+
+/** AUL public bundle value - To support Media key*/
+#define AUL_V_KEY_PRESSED	"__AUL_KEY_PRESSED__"
+/** AUL public bundle value - To support Media key*/
+#define AUL_V_KEY_RELEASED	"__AUL_KEY_RELEASED__"
+
+
+
 /** 
  * @brief	This is callback function for aul_launch_init
  * @param[in]	type    event's type received from system
@@ -362,7 +374,7 @@ int aul_launch_local(bundle *b);
  * @remark
  *	None
  */
-int aul_launch_app(const char *pkgname, bundle *kb);
+int aul_launch_app(const char *appid, bundle *kb);
 
 /**
  * @par Description:
@@ -407,23 +419,22 @@ int aul_launch_app(const char *pkgname, bundle *kb);
  *	you should check app's running state with aul_app_is_running.
  *	This API will launch the application if the application is not running.
 */
-int aul_open_app(const char *pkgname);
+int aul_open_app(const char *appid);
 
 /**
  * @par Description:
  *	This API trigger to resume application 
  * 	If the application is running, this API send a resume event to the App.
- *	If the application is not running or multiple instance, this API launch App. with bundle.
+ *	If the application is not running, this API returns fail.
  *	Although the application is running, if the application cannot receive resume event, 
  *	AUL try to raise the application's default windows.
  * @par Purpose:
  *      This API is for caller.
- *      This API's purpose is to send resume event or to launch application
+ *      This API's purpose is to send resume event.
  * @par Typical use case:
  *	If you only want to show application with previous state or default state, Use this API.
  *		
  * @param[in]	pkgname		package name to be resume as callee
- * @param[in]	kb		bundle to be passed to callee in case of launching app
  * @return	callee's pid if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_EINVAL	- invaild package name 
@@ -445,7 +456,7 @@ int aul_open_app(const char *pkgname);
  * int resume_inhouse_contact_app()
  * { 
  *	if(aul_app_is_running("org.tizen.contact"))
- *		aul_resume_app("org.tizen.contact",NULL);
+ *		aul_resume_app("org.tizen.contact");
  * }
  *
  * @endcode
@@ -456,8 +467,7 @@ int aul_open_app(const char *pkgname);
  *	If you want to only resume without launching in multiple instance application model,
  *	you should use aul_resume_pid.
 */
-int aul_resume_app(const char *pkgname, bundle *kb)
-	    __attribute__ ((__deprecated__));
+int aul_resume_app(const char *appid);
 
 /**
  * @par Description:
@@ -577,8 +587,9 @@ int aul_terminate_pid(int pid);
  */
 typedef struct _aul_app_info {
 	int pid;		/**< app's pid if running*/
-	char* pkg_name;		/**< APN (application package name) */
+	char* pkg_name;		/**< application id */
 	char* app_path;		/**< application excutable path */
+	char* appid;
 } aul_app_info;
 
 /** 
@@ -621,7 +632,7 @@ typedef int (*aul_app_info_iter_fn)(const aul_app_info *ainfo, void *data);
  *	None
 * 
 */
-int aul_app_is_running(const char *pkgname);
+int aul_app_is_running(const char *appid);
 
 /**
  * @par Description:
@@ -651,7 +662,7 @@ int aul_app_is_running(const char *pkgname);
  * int iterfunc(const aul_app_info* info, void* data)
  * {
  *	printf("\t==========================\n");
- *	printf("\t pkg_name: %s\n", info->pkg_name);
+ *	printf("\t pkg_name: %s\n", info->appid);
  *	printf("\t app_path: %s\n", info->app_path);
  *	printf("\t running pid: %d\n", info->pid);
  *	printf("\t==========================\n");
@@ -709,6 +720,46 @@ int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
  *	None
 */
 int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
+
+/**
+ * @par Description:
+ *	This API get application appid by pid
+ * @par Purpose:
+ *	If you want to get appid of running application, use this API
+ * @par Typical use case:
+ *	In general, You can use this API when you want to know caller's information.
+ *
+ * @param[in]	pid		given pid
+ * @param[out]	appid		application id
+ * @param[in]	len		length of pkgname
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- no such a appid
+ * @pre
+ *	None
+ * @post
+ *	None
+ * @see
+ *	None
+ * @code
+ * #include <aul.h>
+ * #include <bundle.h>
+ *
+ * static int app_reset(bundle *b, void *data)
+ * {
+ *	int pid;
+ * 	char appid[255];
+ *
+ * 	pid = atoi(bundle_get_val(b,AUL_K_CALLER_PID));
+ *	aul_app_get_appid_bypid(pid, appid, sizeof(appid));
+ * }
+ *
+ * @endcode
+ * @remark
+ *	None
+*/
+int aul_app_get_appid_bypid(int pid, char *appid, int len);
+
 
 /** @} */
 
@@ -776,7 +827,7 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
  *	None
  * 
  */
-int aul_open_file(const char* filename) __attribute__((deprecated));
+int aul_open_file(const char* filename);
 
 /**
  * @par Description:
@@ -825,7 +876,7 @@ int aul_open_file(const char* filename) __attribute__((deprecated));
  * @remark
  *	None
  */
-int aul_open_file_with_mimetype(const char *filename, const char *mimetype) __attribute__((deprecated));
+int aul_open_file_with_mimetype(const char *filename, const char *mimetype);
 
 /**
  * @par Description:
@@ -871,7 +922,7 @@ int aul_open_file_with_mimetype(const char *filename, const char *mimetype) __at
  *	None
  * 
  */
-int aul_open_content(const char* content) __attribute__((deprecated));
+int aul_open_content(const char* content);
 
 /**
  * @par Description:
@@ -910,7 +961,7 @@ int aul_open_content(const char* content) __attribute__((deprecated));
  *	None
  * 
  */
-int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len) __attribute__((deprecated));
+int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
 
 /**
  * @par Description:
@@ -947,7 +998,7 @@ int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len) __attr
  * @remark
  *	None
 */
-int aul_set_defapp_with_mime(const char *mimetype, const char *defapp) __attribute__((deprecated));
+int aul_set_defapp_with_mime(const char *mimetype, const char *defapp);
 
 /**
  * @par Description:
@@ -1250,7 +1301,7 @@ typedef void (*aul_service_res_fn)(bundle *b, int reserved, void *user_data);
  *	To see kinds of default service provided by platform, see "aul_service.h" header file
  * 
  */
-int aul_open_service(const char *svcname, bundle *b, aul_service_res_fn cbfunc, void *data) __attribute__((deprecated));
+int aul_open_service(const char *svcname, bundle *b, aul_service_res_fn cbfunc, void *data);
 
 /**
  * @par Description:
@@ -1383,7 +1434,7 @@ int aul_send_service_result(bundle *b);
  *	None
  * 
  */
-int aul_set_defapp_for_service(const char *svcname, const char *defapp) __attribute__((deprecated));
+int aul_set_defapp_for_service(const char *svcname, const char *defapp);
 
 /**
  * @par Description:
@@ -1423,8 +1474,87 @@ int aul_set_defapp_for_service(const char *svcname, const char *defapp) __attrib
  *	None
  * 
  */
-int aul_get_defapp_for_service(const char *svcname, char *defapp, int len) __attribute__((deprecated));
+int aul_get_defapp_for_service(const char *svcname, char *defapp, int len);
 
+/**
+ * @par Description:
+ *	This API sets callback fuction that will be called when applications die.
+ * @par Purpose:
+ *	This API's purpose is to listen the application dead event.
+ *	In general, task manager Application need this API.
+ *
+ * @param[in]	func		callback function
+ * @param[in]	data		user data
+ * @return	0 if success, negative value if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @pre
+ *	None
+ * @post
+ *	None
+ * @see
+ *	aul_listen_app_launch_signal
+ * @code
+ * #include <aul.h>
+ *
+ * int app_dead_handler(int pid, void *data)
+ * {
+ * 	printf("===> %s : %d\n", __FUNCTION__, pid);
+ * 	return 0;
+ * }
+ *
+ * void dead_listen()
+ * {
+ *	aul_listen_app_dead_signal(app_dead_handler, NULL);
+ * }
+ *
+ * @endcode
+ * @remark
+ *	None
+ *
+ */
+int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
+
+/**
+ * @par Description:
+ *	This API sets callback fuction that will be called when applications are launched.
+ * @par Purpose:
+ *	This API's purpose is to listen the application launching event.
+ *	In general, task manager Application need this API.
+ *
+ * @param[in]	func		callback function
+ * @param[in]	data		user data
+ * @return	0 if success, negative value if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @pre
+ *	None
+ * @post
+ *	None
+ * @see
+ *	aul_listen_app_dead_signal
+ * @code
+ * #include <aul.h>
+ *
+ * int app_launch_handler(int pid, void *data)
+ * {
+ * 	printf("===> %s : %d\n", __FUNCTION__, pid);
+ * 	return 0;
+ * }
+ *
+ * void dead_listen()
+ * {
+ *	aul_listen_app_launch_signal(app_launch_handler, NULL);
+ * }
+ *
+ * @endcode
+ * @remark
+ *	None
+ *
+ */
+int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
 
 /** @} */
 

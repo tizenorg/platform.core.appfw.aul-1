@@ -183,9 +183,9 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		str = NULL;
 	}
 	
-	ret = ail_package_destroy_appinfo(handle);
+	ret = ail_destroy_appinfo(handle);
 	if (ret != AIL_ERROR_OK) {
-		_E("ail_package_destroy_appinfo failed");
+		_E("ail_destroy_appinfo failed");
 	}
 
 	if (!_get_app_path(menu_info)) {

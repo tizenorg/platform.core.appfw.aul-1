@@ -30,5 +30,6 @@
 #define AUL_DBUS_PATH "/aul/dbus_handler"
 #define AUL_DBUS_SIGNAL_INTERFACE "org.tizen.aul.signal"
 #define AUL_DBUS_APPDEAD_SIGNAL	"app_dead"
+#define AUL_DBUS_APPLAUNCH_SIGNAL	"app_launch"
 
 #endif

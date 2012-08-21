@@ -39,13 +39,7 @@ static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, sockl
 static inline void __set_sock_option(int fd, int cli)
 {
 	int size;
-#ifdef __i386__
-	struct timeval tv = { 5, 200 * 1000 };	/*  5.2 sec */
-	_D("time out : 5.2 sec");
-#else
-	struct timeval tv = { 1, 200 * 1000 };  /*  1.2 sec */
-	_D("time out : 1.2 sec");
-#endif
+	struct timeval tv = { 3, 200 * 1000 };	/*  3.2 sec */
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
@@ -275,7 +269,7 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 	memcpy(pkt->data, kb_data, datalen);
 
 	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d", len, datalen + 8);
+		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
 		if (errno == EPIPE) {
 			_E("pid:%d, fd:%d\n", pid, fd);
 		}
@@ -388,14 +382,18 @@ app_pkt_t *__app_send_cmd_with_result(int pid, int cmd)
 		return NULL;
 	}
 
+retry_recv:
+       /* receive single packet from socket */
 	len = recv(fd, pkt, AUL_SOCK_MAXBUFF, 0);
 	if (len == -1) {
 		if (errno == EAGAIN) {
 			_E("recv timeout \n");
 			free(pkt);
 			return NULL;
+		} else if (errno == EINTR) {
+			goto retry_recv;
 		} else {
-			_E("recv error\n");
+			_E("recv error %s\n", strerror(errno));
 			free(pkt);
 			return NULL;
 		}

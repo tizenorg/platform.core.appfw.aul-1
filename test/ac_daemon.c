@@ -34,11 +34,32 @@
 #include <dlfcn.h>
 #include <poll.h>
 #include <ail.h>
+#include <aul.h>
 
 #include "simple_util.h"
 #include "app_sock.h"
 #include "aul_util.h"
 #include "menu_db_util.h"
+
+#include <Ecore_X.h>
+#include <Ecore_Input.h>
+#include <utilX.h>
+#include <Ecore.h>
+#include <Evas.h>
+
+static struct {
+	Evas_Object *win;
+	Ecore_Event_Handler *key_up;
+	Ecore_Event_Handler *key_down;
+} key_info = {
+	.win = NULL,
+	.key_up = NULL,
+	.key_down = NULL,
+};
+
+GSList *key_pid_list = NULL;
+
+extern int app_send_cmd(int pid, int cmd, bundle *kb);
 
 static gboolean __add_history_handler(gpointer user_data)
 {
@@ -46,6 +67,8 @@ static gboolean __add_history_handler(gpointer user_data)
 	int ret;
 	app_pkt_t *pkt = (app_pkt_t *)user_data;
 	struct history_data *hd = (struct history_data *)pkt->data;
+
+	ret = rua_init();
 
 	memset(&rec, 0, sizeof(rec));
 
@@ -63,6 +86,9 @@ static gboolean __add_history_handler(gpointer user_data)
 		_D("rua add history error");
 
 	free(pkt);
+
+	ret = rua_fini();
+
 	return false;
 }
 
@@ -116,7 +142,7 @@ int __send_running_appinfo(int fd)
 
 	__proc_iter_cmdline(__get_pkginfo, pkt->data);
 
-	pkt->cmd = RUNNING_INFO_RESULT;
+	pkt->cmd = APP_RUNNING_INFO_RESULT;
 	pkt->len = strlen((char *)pkt->data) + 1;
 
 	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
@@ -146,7 +172,7 @@ int __app_is_running(const char *pkgname)
 
 	ail_ret = ail_package_get_appinfo(pkgname, &handle);
 	if (ail_ret != AIL_ERROR_OK) {
-		_E("ail_package_get_appinfo with %s failed", pkgname);
+		_E("ail_get_appinfo with %s failed", pkgname);
 		return ret;
 	}
 
@@ -174,11 +200,59 @@ int __app_is_running(const char *pkgname)
 		ret = 0;
 
  out:
-	if (ail_package_destroy_appinfo(handle) != AIL_ERROR_OK)
+	if (ail_destroy_appinfo(handle) != AIL_ERROR_OK)
 		_E("ail_destroy_rs failed");
 	return ret;
 }
 
+static int __register_key_event(int pid)
+{
+	int *pid_data;
+	GSList *entry;
+
+	pid_data = malloc(sizeof(int));
+	*pid_data = pid;
+
+	key_pid_list = g_slist_prepend(key_pid_list, pid_data);
+
+	_D("===key stack===");
+
+	for (entry = key_pid_list; entry; entry = entry->next) {
+		if (entry->data) {
+			pid_data = (int *) entry->data;
+			_D("pid : %d",*pid_data);
+		}
+	}
+
+	return 0;
+}
+
+static int __unregister_key_event(int pid)
+{
+	GSList *entry;
+	int *pid_data;
+
+	for (entry = key_pid_list; entry; entry = entry->next) {
+		if (entry->data) {
+			pid_data = (int *) entry->data;
+			if(pid == *pid_data) {
+				key_pid_list = g_slist_remove(key_pid_list, entry->data);
+				free(pid_data);
+			}
+		}
+	}
+
+	_D("===key stack===");
+
+	for (entry = key_pid_list; entry; entry = entry->next) {
+		if (entry->data) {
+			pid_data = (int *) entry->data;
+			_D("pid : %d",*pid_data);
+		}
+	}
+
+	return 0;
+}
 
 static gboolean __util_handler(gpointer data)
 {
@@ -197,19 +271,29 @@ static gboolean __util_handler(gpointer data)
 	}
 
 	switch (pkt->cmd) {
-	case ADD_HISTORY:
+	case APP_ADD_HISTORY:
 		hd = (struct history_data *)pkt->data;
 		_D("cmd : %d, pkgname : %s, app_path : %s", pkt->cmd, hd->pkg_name, hd->app_path);
 		__send_result_to_client(clifd, 0);
 		g_timeout_add(1000, __add_history_handler, pkt);
 		break;
-	case RUNNING_INFO:
+	case APP_RUNNING_INFO:
 		__send_running_appinfo(clifd);
 		free(pkt);
 		break;
-	case IS_RUNNING:
+	case APP_IS_RUNNING:
 		strncpy(pkgname, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 		ret = __app_is_running(pkgname);
+		__send_result_to_client(clifd, ret);
+		free(pkt);
+		break;
+	case APP_KEY_RESERVE:
+		ret = __register_key_event(cr.pid);
+		__send_result_to_client(clifd, ret);
+		free(pkt);
+		break;
+	case APP_KEY_RELEASE:
+		ret = __unregister_key_event(cr.pid);
 		__send_result_to_client(clifd, ret);
 		free(pkt);
 		break;
@@ -255,20 +339,116 @@ static GSourceFuncs funcs = {
 	.finalize = NULL
 };
 
+static Eina_Bool _key_release_cb(void *data, int type, void *event)
+{
+	Evas_Event_Key_Up *ev = event;
+	int ret;
+	GSList *entry;
+	int *pid_data;
+	bundle *kb;
 
-int __initialize()
+	_D("Released");
+
+	if (!ev) {
+		_D("Invalid event object");
+		return ECORE_CALLBACK_RENEW;
+	}
+
+	entry = key_pid_list;
+	if (entry && entry->data) {
+		pid_data = (int *) entry->data;
+
+		kb = bundle_create();
+		bundle_add(kb, AUL_K_MULTI_KEY, ev->keyname);
+		bundle_add(kb, AUL_K_MULTI_KEY_EVENT, AUL_V_KEY_RELEASED);
+
+		ret = app_send_cmd(*pid_data, APP_KEY_EVENT, kb);
+
+		bundle_free(kb);
+	}
+
+	return ECORE_CALLBACK_RENEW;
+}
+
+
+static Eina_Bool _key_press_cb(void *data, int type, void *event)
+{
+	Evas_Event_Key_Down *ev = event;
+	int ret;
+	GSList *entry;
+	int *pid_data;
+	bundle *kb;
+
+	_D("Pressed");
+
+	if (!ev) {
+		_D("Invalid event object");
+		return ECORE_CALLBACK_RENEW;
+	}
+
+	entry = key_pid_list;
+	if (entry && entry->data) {
+		pid_data = (int *) entry->data;
+
+		kb = bundle_create();
+		bundle_add(kb, AUL_K_MULTI_KEY, ev->keyname);
+		bundle_add(kb, AUL_K_MULTI_KEY_EVENT, AUL_V_KEY_PRESSED);
+
+		ret = app_send_cmd(*pid_data, APP_KEY_EVENT, kb);
+
+		bundle_free(kb);
+	}
+
+	return ECORE_CALLBACK_RENEW;
+}
+
+static int __app_dead_handler(int pid, void *data)
+{
+	int ret;
+
+	ret = __unregister_key_event(pid);
+
+	return 0;
+}
+
+static void __ac_key_initailize()
+{
+	key_info.win = ecore_x_window_input_new(0, 0, 0, 1, 1);
+	if (!key_info.win) {
+		_D("Failed to create hidden window");
+	}
+
+	ecore_x_icccm_title_set(key_info.win, "acdaemon,key,receiver");
+	ecore_x_netwm_name_set(key_info.win, "acdaemon,key,receiver");
+	ecore_x_netwm_pid_set(key_info.win, getpid());
+
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_PLAYCD, EXCLUSIVE_GRAB);
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_STOPCD, EXCLUSIVE_GRAB);
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_PAUSECD, EXCLUSIVE_GRAB);
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_NEXTSONG, EXCLUSIVE_GRAB);
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_PREVIOUSSONG, EXCLUSIVE_GRAB);
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_REWIND, EXCLUSIVE_GRAB);
+	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_FASTFORWARD, EXCLUSIVE_GRAB);
+
+	key_info.key_up = ecore_event_handler_add(ECORE_EVENT_KEY_UP, _key_release_cb, NULL);
+	if (!key_info.key_up) {
+		_D("Failed to register a key up event handler");
+	}
+
+	key_info.key_down = ecore_event_handler_add(ECORE_EVENT_KEY_DOWN, _key_press_cb, NULL);
+	if (!key_info.key_down) {
+		_D("Failed to register a key down event handler");
+	}
+
+	aul_listen_app_dead_signal(__app_dead_handler, NULL);
+}
+
+static int __initialize()
 {
 	int fd;
 	int r;
 	GPollFD *gpollfd;
 	GSource *src;
-
-	r = rua_init();
-
-	if (r == -1) {
-		_D("[APP %d] rua init error");
-		return AC_R_ERROR;
-	}
 
 	fd = __create_server_sock(AUL_UTIL_PID);
 
@@ -290,22 +470,25 @@ int __initialize()
 		return AC_R_ERROR;
 	}
 
+	__ac_key_initailize();
+
 	return AC_R_OK;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-	
-	GMainLoop *mainloop;
 	int ret;
 
-	mainloop = g_main_loop_new(NULL, FALSE);
+	ecore_init();
+	evas_init();
+	ecore_event_init();
+	ecore_x_init(NULL);
 
 	ret = ac_server_initailize();
 
 	ret = __initialize();
 
-	g_main_loop_run(mainloop);
+	ecore_main_loop_begin();
 
 	return 0;
 }

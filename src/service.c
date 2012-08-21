@@ -175,7 +175,7 @@ SLPAPI int aul_open_service(const char *svcname, bundle *kb,
 		ail_ret = ail_package_get_appinfo(defapp, &handle);
 
 		if (ail_ret == AIL_ERROR_OK) {
-			ail_package_destroy_appinfo(handle);
+			ail_destroy_appinfo(handle);
 			_D("svcname: %s, defapp : %s", svcname, defapp);
 			
 			if (cbfunc) {
@@ -194,10 +194,10 @@ SLPAPI int aul_open_service(const char *svcname, bundle *kb,
 			_D("defapp %s for svcname: %s does NOT exist", defapp,
 			   svcname);
 			svc_delete_with_pkgname(defapp);
-			ail_package_destroy_appinfo(handle);
+			ail_destroy_appinfo(handle);
 			goto retry;
 		} else {
-			_E("ail_package_get_appinfo with %s failed", defapp);
+			_E("ail_get_appinfo with %s failed", defapp);
 			if (must_free) {
 				bundle_free(kb);
 				kb = NULL;

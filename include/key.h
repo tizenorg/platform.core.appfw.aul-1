@@ -18,14 +18,11 @@
  * limitations under the License.
  *
  */
-#define MAX_LOCAL_BUFSZ 	128
 
-#define EXIST_PKGNAME 		"org.tizen.calculator" 
-#define NO_EXIST_PKGNAME 	"empty.fault.application"
 
-#define EXIST_FILENAME		"/opt/share/preload_list.txt"
-#define NOEXIST_FILENAME	"/empty/fault/file"
+#ifndef __APP_KEY_H_
+#define __APP_KEY_H_
 
-#define MIMETYPE		"text/html"
-#define CONTENT			"011-0011-1122"
+int app_key_event(bundle *kb);
 
+#endif

@@ -22,7 +22,7 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 # Set required packages
 INCLUDE(FindPkgConfig)
 
-pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0)
+pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-x ecore-input evas)
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker)
 
 FIND_LIBRARY(LIB_DL dl)
@@ -38,6 +38,7 @@ ENDFOREACH(flag)
 # Compiler flags
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/legacy)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/feature)
 SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -Wl,-zdefs" )
 SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden")
 SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fpic")
@@ -57,7 +58,7 @@ IF("${ARCH}" STREQUAL "arm")
 ENDIF("${ARCH}" STREQUAL "arm")
 
 ADD_DEFINITIONS("-DPREFIX=\"${CMAKE_INSTALL_PREFIX}\"")
-ADD_DEFINITIONS("-DRW_DATA_PREFIX=\"/opt/share\"")
+ADD_DEFINITIONS("-DSHARE_PREFIX=\"/usr/share/aul\"")
 
 # Linker flags
 SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
@@ -82,6 +83,7 @@ add_library(aul SHARED
 		src/mida.c
 		src/miregex.c
 		src/app_signal.c
+		src/key.c
 		)
 target_link_libraries(aul aul_mods ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${VERSION_MAJOR})
@@ -118,10 +120,11 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/aul_service_test.sh DESTINATION b
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/aul_mime.sh DESTINATION bin)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/aul.pc DESTINATION lib/pkgconfig)
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/legacy/preload_list.txt DESTINATION /opt/share )
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/mida_db.sql DESTINATION /opt/share )
-INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/miregex DESTINATION /opt/share )
-INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/service DESTINATION /opt/share )
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/legacy/preload_list.txt DESTINATION /usr/share/aul )
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/feature/preexec_list.txt DESTINATION /usr/share/aul )
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/mida_db.sql DESTINATION /usr/share/aul )
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/miregex DESTINATION /usr/share/aul )
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/service DESTINATION /usr/share/aul )
 
 # test
 add_subdirectory(test)

@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MIREGEX_DIR RW_DATA_PREFIX"/miregex"
+#define MIREGEX_DIR SHARE_PREFIX"/miregex"
 #define ONELINE_BUF 1024
 
 typedef struct miregex_file_info_t {

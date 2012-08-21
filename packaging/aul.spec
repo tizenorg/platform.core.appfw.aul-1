@@ -1,7 +1,7 @@
 Name:       aul
 Summary:    App utility library
-Version:	0.0.169
-Release:    2
+Version:    0.0.186
+Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
@@ -12,15 +12,18 @@ BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(x11)
-BuildRequires:  pkgconfig(app-checker)
-BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(ail)
-BuildRequires:  pkgconfig(xdgmime)
+BuildRequires:  xdgmime-devel, pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(libprivilege-control)
+BuildRequires:  pkgconfig(app-checker)
+BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
+BuildRequires:  pkgconfig(ecore-x)
+BuildRequires:  pkgconfig(ecore-input)
+BuildRequires:  pkgconfig(utilX)
 
 
 %description
@@ -62,8 +65,8 @@ ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc3.d/S35launchpad_run
 ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc4.d/S80launchpad_run
 
 mkdir -p /opt/dbspace
-sqlite3 /opt/dbspace/.mida.db < /opt/share/mida_db.sql
-rm -rf /opt/share/mida_db.sql
+sqlite3 /opt/dbspace/.mida.db < /usr/share/aul/mida_db.sql
+rm -rf /usr/share/aul/mida_db.sql
 
 chown 0:0 /usr/lib/libaul.so.0.1.0
 chown 0:5000 /opt/dbspace/.mida.db
@@ -80,13 +83,14 @@ chmod 664 /opt/dbspace/.mida.db-journal
 /etc/init.d/launchpad_run
 /usr/bin/aul_service.sh
 /usr/bin/aul_service_test.sh
-/opt/share/mida_db.sql
+/usr/share/aul/mida_db.sql
 /usr/bin/aul_mime.sh
 /usr/bin/aul_test
 /usr/bin/launch_app
-/opt/share/miregex/*
-/opt/share/service/*
-/opt/share/preload_list.txt
+/usr/share/aul/miregex/*
+/usr/share/aul/service/*
+/usr/share/aul/preload_list.txt
+/usr/share/aul/preexec_list.txt
 /usr/bin/launchpad_preloading_preinitializing_daemon
 /usr/bin/ac_daemon
 
