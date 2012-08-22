@@ -70,15 +70,16 @@ rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 
 mkdir -p %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants
 install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
-install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/system/ac.service
 ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
-ln -s ../ac.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/ac.service
+
+mkdir -p %{buildroot}%{_libdir}/systemd/user/tizen-middleware.target.wants
+install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/user/ac.service
+ln -s ../ac.service %{buildroot}%{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
 
 
 %preun
 if [ $1 == 0 ]; then
     systemctl stop launchpad-preload@app.service
-    systemctl stop ac.service
 fi
 
 %post
@@ -86,7 +87,6 @@ fi
 systemctl daemon-reload
 if [ $1 == 1 ]; then
     systemctl restart launchpad-preload@app.service
-    systemctl restart ac.service
 fi
 
 %postun -p /sbin/ldconfig
@@ -112,9 +112,9 @@ systemctl daemon-reload
 %{_bindir}/launchpad_preloading_preinitializing_daemon
 %{_bindir}/ac_daemon
 %{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
-%{_libdir}/systemd/system/multi-user.target.wants/ac.service
 %{_libdir}/systemd/system/launchpad-preload@.service
-%{_libdir}/systemd/system/ac.service
+%{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
+%{_libdir}/systemd/user/ac.service
 
 %files devel
 /usr/include/aul/*.h
