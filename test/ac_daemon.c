@@ -470,7 +470,9 @@ static int __initialize()
 		return AC_R_ERROR;
 	}
 
+#ifndef __i386__
 	__ac_key_initailize();
+#endif
 
 	return AC_R_OK;
 }
