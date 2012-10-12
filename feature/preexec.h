@@ -51,6 +51,7 @@ static void __preexec_list_free()
 		}
 	}
 	g_slist_free(preexec_list);
+	preexec_initialized = 0;
 	return;
 }
 
@@ -169,6 +170,10 @@ static inline void __preexec_run(const char *pkg_type, const char *pkg_name,
 }
 
 #else
+
+static void __preexec_list_free()
+{
+}
 
 static inline void __preexec_init(int argc, char **argv)
 {
