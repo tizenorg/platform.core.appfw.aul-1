@@ -34,6 +34,11 @@
 #undef LOG_TAG
 #define LOG_TAG "AUL"
 #endif
+#ifdef AMD_LOG
+#undef LOG_TAG
+#define LOG_TAG "AMD"
+#endif
+
 
 #define MAX_LOCAL_BUFSZ 128
 #define MAX_PID_STR_BUFSZ 20
@@ -62,5 +67,23 @@ int __proc_iter_cmdline(int (*iterfunc)
 int __proc_iter_pgid(int pgid, int (*iterfunc) (int pid, void *priv),
 		     void *priv);
 char *__proc_get_cmdline_bypid(int pid);
+
+static inline const char *FILENAME(const char *filename)
+{
+	const char *p;
+	const char *r;
+
+	if (!filename)
+		return NULL;
+
+	r = p = filename;
+	while (*p) {
+		if (*p == '/')
+			r = p + 1;
+		p++;
+	}
+
+	return r;
+}
 
 #endif

@@ -1,13 +1,19 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.186
+Version:    0.0.201
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
+#Source101:  launchpad-preload@.service
+#Source102:  ac.service
 
 Requires(post): /sbin/ldconfig
+Requires(post): /usr/bin/systemctl
 Requires(postun): /sbin/ldconfig
+Requires(postun): /usr/bin/systemctl
+Requires(preun): /usr/bin/systemctl
+
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(sqlite3)
@@ -24,6 +30,8 @@ BuildRequires:  pkgconfig(rua)
 BuildRequires:  pkgconfig(ecore-x)
 BuildRequires:  pkgconfig(ecore-input)
 BuildRequires:  pkgconfig(utilX)
+BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(pkgmgr-info)
 
 
 %description
@@ -52,51 +60,69 @@ rm -rf %{buildroot}
 
 mkdir -p %{buildroot}/etc/init.d
 install -m 755 launchpad_run %{buildroot}/etc/init.d
-chmod +x %{buildroot}/usr/bin/aul_service.sh
-chmod +x %{buildroot}/usr/bin/aul_service_test.sh
+
+mkdir -p %{buildroot}/etc/rc.d/rc3.d
+mkdir -p %{buildroot}/etc/rc.d/rc4.d
+ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S35launchpad_run
+ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
+
+mkdir -p %{buildroot}/opt/dbspace
+sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
+rm -rf %{buildroot}/usr/share/aul/mida_db.sql
+
+#mkdir -p %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants
+#install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
+#ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
+
+#mkdir -p %{buildroot}%{_libdir}/systemd/user/tizen-middleware.target.wants
+#install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/user/ac.service
+#ln -s ../ac.service %{buildroot}%{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
 
 
-%post
+#%preun
+#if [ $1 == 0 ]; then
+#    systemctl stop launchpad-preload@app.service
+#fi
 
-/sbin/ldconfig
-mkdir -p /etc/rc.d/rc3.d
-mkdir -p /etc/rc.d/rc4.d
-ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc3.d/S35launchpad_run
-ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc4.d/S80launchpad_run
+#%post
+#/sbin/ldconfig
+#systemctl daemon-reload
+#if [ $1 == 1 ]; then
+#    systemctl restart launchpad-preload@app.service
+#fi
 
-mkdir -p /opt/dbspace
-sqlite3 /opt/dbspace/.mida.db < /usr/share/aul/mida_db.sql
-rm -rf /usr/share/aul/mida_db.sql
-
-chown 0:0 /usr/lib/libaul.so.0.1.0
-chown 0:5000 /opt/dbspace/.mida.db
-chown 0:5000 /opt/dbspace/.mida.db-journal
-
-chmod 644 /usr/lib/libaul.so.0.1.0
-chmod 664 /opt/dbspace/.mida.db
-chmod 664 /opt/dbspace/.mida.db-journal
-
-%postun -p /sbin/ldconfig
+#%postun -p /sbin/ldconfig
+#systemctl daemon-reload
 
 %files
-/usr/lib/*.so.*
-/etc/init.d/launchpad_run
-/usr/bin/aul_service.sh
-/usr/bin/aul_service_test.sh
-/usr/share/aul/mida_db.sql
-/usr/bin/aul_mime.sh
-/usr/bin/aul_test
-/usr/bin/launch_app
+%attr(0644,root,root) %{_libdir}/libaul.so.0
+%attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
+%{_sysconfdir}/init.d/launchpad_run
+%attr(0755,root,root) %{_bindir}/aul_service.sh
+%attr(0755,root,root) %{_bindir}/aul_service_test.sh
+%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S35launchpad_run
+%attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
+%config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db
+%config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db-journal
+%attr(0755,root,root) %{_bindir}/aul_mime.sh
+%{_bindir}/aul_test
+%{_bindir}/launch_app
 /usr/share/aul/miregex/*
 /usr/share/aul/service/*
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
-/usr/bin/launchpad_preloading_preinitializing_daemon
-/usr/bin/ac_daemon
+%{_bindir}/launchpad_preloading_preinitializing_daemon
+%{_bindir}/amd
+%{_bindir}/daemon-manager-release-agent
+%{_bindir}/daemon-manager-launch-agent
+#%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
+#%{_libdir}/systemd/system/launchpad-preload@.service
+#%{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
+#%{_libdir}/systemd/user/ac.service
 
 %files devel
 /usr/include/aul/*.h
-/usr/lib/*.so
-/usr/lib/pkgconfig/*.pc
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/*.pc
 
 

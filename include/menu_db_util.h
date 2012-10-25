@@ -46,10 +46,7 @@ typedef struct {
 	char *pkg_name;		/* package */
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
-	char *app_type;		/* x_slp_packagetype */
-	int multiple;		/* x_slp_multiple */
-	int task_manage;	/* x_slp_taskmanage */
-	char *pkg_type;
+	char *pkg_type;		/* x_slp_packagetype */
 } app_info_from_db;
 
 static inline char *_get_pkgname(app_info_from_db *menu_info)
@@ -98,24 +95,6 @@ static inline char *_get_original_app_path(app_info_from_db *menu_info)
 	return menu_info->original_app_path;
 }
 
-static inline char *_get_app_app_type(app_info_from_db *menu_info)
-{
-	return menu_info->app_type;
-}
-
-static inline int _is_app_multi_inst(app_info_from_db *menu_info)
-{
-	if (menu_info->multiple)
-		return 1;
-	else
-		return 0;
-}
-
-static inline int _get_app_task_manage(app_info_from_db *menu_info)
-{
-	return menu_info->task_manage;
-}
-
 static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 {
 	if (menu_info != NULL) {
@@ -125,8 +104,6 @@ static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 			free(menu_info->app_path);
 		if (menu_info->original_app_path != NULL)
 			free(menu_info->original_app_path);
-		if (menu_info->app_type != NULL)
-			free(menu_info->app_type);
 		free(menu_info);
 	}
 }
@@ -144,7 +121,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		return NULL;
 	}
 
-	ret = ail_package_get_appinfo(pkgname, &handle);
+	ret = ail_get_appinfo(pkgname, &handle);
 	if (ret != AIL_ERROR_OK) {
 		_free_app_info_from_db(menu_info);
 		return NULL;
@@ -164,18 +141,6 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 
 	if (menu_info->app_path != NULL)
 		menu_info->original_app_path = strdup(menu_info->app_path);
-
-	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_MULTIPLE_BOOL,
-		(bool *)&menu_info->multiple);
-
-	ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_TASKMANAGE_BOOL,
-		(bool *)&menu_info->task_manage);
-	
-	ret = ail_appinfo_get_str(handle, AIL_PROP_TYPE_STR, &str);
-	if (str) {
-		menu_info->app_type = strdup(str);
-		str = NULL;
-	}
 
 	ret = ail_appinfo_get_str(handle, AIL_PROP_X_SLP_PACKAGETYPE_STR, &str);
 	if (str) {

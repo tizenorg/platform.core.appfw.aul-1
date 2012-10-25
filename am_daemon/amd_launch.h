@@ -19,41 +19,21 @@
  *
  */
 
+#ifndef __AUL_AMD_LAUNCH_H_
+#define __AUL_AMD_LAUNCH_H_
 
-#ifndef __AUL_UTIL_H_
-#define __AUL_UTIL_H_
+#include <bundle.h>
+#include "aul_util.h"
+#include "amd_appinfo.h"
 
-#define AUL_UTIL_PID -2
+int _send_to_sigkill(int pid);
+int _resume_app(int pid);
+int _term_app(int pid);
+int _fake_launch_app(int cmd, int pid, bundle * kb);
+int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd);
+void service_release(const char *group);
+int _start_srv(struct appinfo *ai, bundle *kb);
 
-#define MAX_PACKAGE_STR_SIZE 512
-#define MAX_PACKAGE_APP_PATH_SIZE 512
-#define MAX_RUNNING_APP_INFO 512
+int _launch_init(struct amdmgr* amd);
 
-struct history_data {
-	char pkg_name[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int pid;
-	int len;
-	unsigned char data[1];
-};
-
-typedef struct _app_status_info_t{
-	char appid[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int status;
-	int pid;
-} app_status_info_t;
-
-struct amdmgr {
-	struct appinfomgr *af;  /* appinfo manager */
-	struct cginfo *cg;  /* cgroup infomation */
-};
-
-int _add_app_status_info_list(char *appid, int pid);
-int _update_app_status_info_list(int pid, int status);
-int _remove_app_status_info_list(int pid);
-
-#endif
-
-
-
+#endif /* __AUL_AMD_LAUNCH_H_ */

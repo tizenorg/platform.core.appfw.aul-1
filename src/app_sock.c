@@ -294,8 +294,7 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 			_E("recv error\n");
 			res = -ECOMM;
 		}
-	} else
-		_D("recv result  = %d (%d)", res, len);
+	}
 	close(fd);
 
 	return res;

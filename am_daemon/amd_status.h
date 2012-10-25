@@ -20,40 +20,22 @@
  */
 
 
-#ifndef __AUL_UTIL_H_
-#define __AUL_UTIL_H_
 
-#define AUL_UTIL_PID -2
+int _status_add_app_info_list(char *appid, char *app_path, int pid);
+int _status_update_app_info_list(int pid, int status);
+int _status_remove_app_info_list(int pid);
+int _status_app_is_running(char *appid);
+int _status_send_running_appinfo(int fd);
 
-#define MAX_PACKAGE_STR_SIZE 512
-#define MAX_PACKAGE_APP_PATH_SIZE 512
-#define MAX_RUNNING_APP_INFO 512
 
-struct history_data {
-	char pkg_name[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
+//TODO : remove
+
+typedef struct _item_pkt_t {
 	int pid;
-	int len;
-	unsigned char data[1];
-};
+	char appid[512];
+} item_pkt_t;
 
-typedef struct _app_status_info_t{
-	char appid[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int status;
-	int pid;
-} app_status_info_t;
-
-struct amdmgr {
-	struct appinfomgr *af;  /* appinfo manager */
-	struct cginfo *cg;  /* cgroup infomation */
-};
-
-int _add_app_status_info_list(char *appid, int pid);
-int _update_app_status_info_list(int pid, int status);
-int _remove_app_status_info_list(int pid);
-
-#endif
+gboolean __add_item_running_list(gpointer user_data);
 
 
 

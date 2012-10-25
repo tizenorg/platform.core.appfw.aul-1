@@ -20,40 +20,5 @@
  */
 
 
-#ifndef __AUL_UTIL_H_
-#define __AUL_UTIL_H_
-
-#define AUL_UTIL_PID -2
-
-#define MAX_PACKAGE_STR_SIZE 512
-#define MAX_PACKAGE_APP_PATH_SIZE 512
-#define MAX_RUNNING_APP_INFO 512
-
-struct history_data {
-	char pkg_name[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int pid;
-	int len;
-	unsigned char data[1];
-};
-
-typedef struct _app_status_info_t{
-	char appid[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int status;
-	int pid;
-} app_status_info_t;
-
-struct amdmgr {
-	struct appinfomgr *af;  /* appinfo manager */
-	struct cginfo *cg;  /* cgroup infomation */
-};
-
-int _add_app_status_info_list(char *appid, int pid);
-int _update_app_status_info_list(int pid, int status);
-int _remove_app_status_info_list(int pid);
-
-#endif
-
-
+#define AMD_LOG
 

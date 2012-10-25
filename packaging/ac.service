@@ -1,0 +1,15 @@
+#
+# classical example of a socket activated service?
+#
+
+[Unit]
+Description=Start the Access Control server
+
+[Service]
+ExecStartPre=-/bin/mkdir -m 1777 /tmp/alaunch
+ExecStart=/usr/bin/amd
+
+OOMScoreAdjust=-100
+
+[Install]
+WantedBy=multi-user.target
