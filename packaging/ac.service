@@ -4,6 +4,7 @@
 
 [Unit]
 Description=Start the Access Control server
+After=xorg.target
 
 [Service]
 ExecStartPre=-/bin/mkdir -m 1777 /tmp/alaunch
