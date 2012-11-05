@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.201
+Version:    0.0.202
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -82,6 +82,7 @@ chmod 664 /opt/dbspace/.mida.db-journal
 %postun -p /sbin/ldconfig
 
 %files
+%manifest aul.manifest
 /usr/lib/*.so.*
 /etc/init.d/launchpad_run
 /usr/bin/aul_service.sh
