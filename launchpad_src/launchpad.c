@@ -66,7 +66,7 @@
 #define SQLITE_FLUSH_MAX	(1048576)	/* (1024*1024) */
 #define AUL_POLL_CNT		15
 #define AUL_PR_NAME			16
-#define PATH_APP_ROOT "/opt/apps"
+#define PATH_APP_ROOT "/opt/usr/apps"
 #define PATH_DATA "/data"
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
@@ -192,12 +192,9 @@ _static_ int __prepare_exec(const char *pkg_name,
 	/* SET OOM*/
 	__set_oom();
 
-	/* SET SMACK LABEL */
-	__set_smack((char *)app_path);
-
-	/* SET DAC*/
-	if (__set_dac(pkg_name) < 0) {
-		_D("fail to set DAC - check your package's credential\n");
+	/* SET PRIVILEGES*/
+	if (__set_access(pkg_name, menu_info->pkg_type, app_path) < 0) {
+		 _D("fail to set privileges - check your package's credential\n");
 		return -1;
 	}
 	/* SET DUMPABLE - for coredump*/
@@ -796,9 +793,6 @@ _static_ int __launchpad_pre_init(int argc, char **argv)
 
 	/* signal init*/
 	__signal_init();
-
-	/* dac init*/
-	__dac_init();
 
 	/* get my(launchpad) command line*/
 	launchpad_cmdline = __proc_get_cmdline_bypid(getpid());

@@ -175,8 +175,6 @@ static gboolean __add_history_handler(gpointer user_data)
 		app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
 	}
 
-	ret = rua_init();
-
 	memset((void *)&rec, 0, sizeof(rec));
 
 	rec.pkg_name = appid;
@@ -196,8 +194,6 @@ static gboolean __add_history_handler(gpointer user_data)
 		bundle_free(kb);
 	if (pkt != NULL)
 		free(pkt);
-
-	ret = rua_fini();
 
 	return FALSE;
 }
@@ -443,6 +439,11 @@ int _requset_init(struct amdmgr *amd)
 
 	_raf = amd->af;
 	_rcg = amd->cg;
+
+	r = rua_init();
+	r = rua_clear_history();
+
+	_D("rua_clear_history : %d", r);
 
 	return 0;
 }

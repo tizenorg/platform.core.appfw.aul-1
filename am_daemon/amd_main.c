@@ -19,6 +19,10 @@
  *
  */
 
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <Ecore_X.h>
 #include <Ecore_Input.h>
 #include <utilX.h>
@@ -270,9 +274,13 @@ static int __init()
 int main(int argc, char *argv[])
 {
 	int ret;
+	int handle;
 
 	ret = ac_server_initailize();
 	ret = __init();
+
+	handle = creat("/tmp/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	close(handle);
 
 	ecore_main_loop_begin();
 

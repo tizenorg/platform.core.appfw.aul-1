@@ -237,6 +237,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 	char *type_string;
 	char *appid;
 	char *saveptr;
+	char *pkgname;
 	pkgmgrinfo_appinfo_h handle;
 	pkgmgrinfo_app_component component;
 	struct appinfomgr *cf = (struct appinfomgr *)data;
@@ -257,6 +258,11 @@ static void __vconf_cb(keynode_t *key, void *data)
 		_D("appid : %s /handle : %x", appid, handle);
 		pkgmgrinfo_appinfo_get_component(handle, &component);
 
+		pkgmgrinfo_appinfo_get_pkgname(handle, &pkgname);
+		pkgmgrinfo_pkginfo_get_pkginfo(pkgname, &pkgname);
+
+		_D("pkgname : %s /handle : %x", pkgname, pkgname);
+
 		if(component == PMINFO_UI_APP) {
 			__ui_app_info_insert_handler(handle, data);
 		} else if (component == PMINFO_SVC_APP) {
@@ -264,6 +270,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 		}
 
 		pkgmgrinfo_appinfo_destroy_appinfo(handle);
+		pkgmgrinfo_pkginfo_destroy_pkginfo(p_handle);
 	} else if ( strncmp(type_string, "delete", 6) == 0) {
 		g_hash_table_remove(cf->tbl, appid);
 	}

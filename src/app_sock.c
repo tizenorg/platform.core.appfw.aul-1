@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/xattr.h>
+#include <sys/smack.h>
 #include <errno.h>
 #include <fcntl.h>
 
@@ -82,7 +82,7 @@ int __create_server_sock(int pid)
 
 	/* labeling to socket for SMACK */
 	if(getuid() == 0) {	// this is meaningful iff current user is ROOT
-		if((fsetxattr(fd, "security.SMACK64IPOUT", "@", 2, 0)) < 0) {
+		if(smack_fsetlabel(fd, "@", SMACK_LABEL_IPOUT) != 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
@@ -90,7 +90,7 @@ int __create_server_sock(int pid)
 				return -1;
 			}
 		}
-		if((fsetxattr(fd, "security.SMACK64IPIN", "*", 2, 0)) < 0) {
+		if(smack_fsetlabel(fd, "*", SMACK_LABEL_IPIN) != 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {

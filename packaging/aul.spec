@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.202
+Version:    0.0.206
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -27,6 +27,7 @@ BuildRequires:  pkgconfig(ecore-input)
 BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
+BuildRequires:  pkgconfig(libsmack)
 
 
 %description
@@ -64,7 +65,7 @@ chmod +x %{buildroot}/usr/bin/aul_service_test.sh
 /sbin/ldconfig
 mkdir -p /etc/rc.d/rc3.d
 mkdir -p /etc/rc.d/rc4.d
-ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc3.d/S35launchpad_run
+ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc3.d/S15launchpad_run
 ln -sf /etc/init.d/launchpad_run /etc/rc.d/rc4.d/S80launchpad_run
 
 mkdir -p /opt/dbspace

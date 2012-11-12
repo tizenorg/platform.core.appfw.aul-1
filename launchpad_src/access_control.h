@@ -22,66 +22,21 @@
 
 #ifdef DAC_ACTIVATE
 
-#include <sys/types.h>
-#include <sys/xattr.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <privilege-control.h>
 
 #define INHOUSE_UID     5000
-#define LABEL_LEN		23
-
-static inline void __dac_init()
+static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
 {
-}
-
-static inline int __set_dac(const char *pkg_name)
-{
-	return set_privilege(pkg_name);
-}
-
-static inline int __set_smack(char* path)
-{
-/*
- * This is additional option.
- * Though such a application fails in this function, that error is ignored.
- */
-	char label[LABEL_LEN + 1] = {0, };
-	int fd = 0;
-	int result = -1;
-
-	result = getxattr(path, "security.SMACK64EXEC", label, LABEL_LEN);
-	if(result < 0)	// fail to get extended attribute
-		return 0;	// ignore error
-
-	fd = open("/proc/self/attr/current", O_RDWR);
-	if(fd < 0)		// fail to open file
-		return 0;	// ignore error
-
-	result = write(fd, label, strlen(label));
-	if(result < 0) {	// fail to write label
-		close(fd);
-		return 0;	// ignore error
-	}
-
-	close(fd);
-	return 0;
+	return set_app_privilege(pkg_name, pkg_type, app_path);
 }
 
 #else
-static inline void __dac_init()
-{
-}
 
-static inline int __set_dac(const char *pkg_name)
+static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
 {
 	return 0;
 }
 
-static inline int __set_smack(char* path)
-{
-	return 0;
-}
 #endif
 
 

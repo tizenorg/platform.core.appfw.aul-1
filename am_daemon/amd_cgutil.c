@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <limits.h>
 #include <dirent.h>
+#include <mntent.h>
+
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -240,11 +242,33 @@ void cgutil_destroy(struct cginfo **cg)
 	*cg = NULL;
 }
 
+static int check_cgroup_mount(const char *mount_point)
+{
+	struct mntent* mnt;
+	const char* table = "/etc/mtab";
+	FILE* fp;
+	int	r = -1;
+	fp = setmntent(table, "r");
+
+	if (!fp)
+		return r;
+
+	while (mnt=getmntent(fp)) {
+		if (strcmp(mount_point, mnt->mnt_dir) == 0) {
+			r = 0;
+			break;
+		}
+	}
+	endmntent(fp);
+	return r;
+}
+
 static int _mount_root(struct cginfo *cg, const char *mount_point)
 {
 	int r;
 
-	r = _mount(mount_point, &mntinfos[_MNT_ROOT]);
+	if (check_cgroup_mount(mount_point) < 0)
+		r = _mount(mount_point, &mntinfos[_MNT_ROOT]);
 	if (r == -1) {
 		if (errno != EBUSY) {
 			_E("mount: %s: %s", mount_point, strerror(errno));
