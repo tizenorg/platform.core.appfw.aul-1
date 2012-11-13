@@ -259,9 +259,9 @@ static void __vconf_cb(keynode_t *key, void *data)
 		pkgmgrinfo_appinfo_get_component(handle, &component);
 
 		pkgmgrinfo_appinfo_get_pkgname(handle, &pkgname);
-		pkgmgrinfo_pkginfo_get_pkginfo(pkgname, &pkgname);
+		pkgmgrinfo_pkginfo_get_pkginfo(pkgname, &p_handle);
 
-		_D("pkgname : %s /handle : %x", pkgname, pkgname);
+		_D("pkgname : %s /handle : %x", pkgname, p_handle);
 
 		if(component == PMINFO_UI_APP) {
 			__ui_app_info_insert_handler(handle, data);
