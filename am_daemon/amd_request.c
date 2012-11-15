@@ -286,6 +286,9 @@ static gboolean __request_handler(gpointer data)
 	int *status;
 	int ret = -1;
 	char *appid;
+	char *app_path;
+	char *tmp_pid;
+	int pid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
 
@@ -366,6 +369,16 @@ static gboolean __request_handler(gpointer data)
 		appid = malloc(MAX_PACKAGE_STR_SIZE);
 		strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 		ret = __release_srv(appid);
+		__send_result_to_client(clifd, ret);
+		free(pkt);
+		break;
+	case APP_RUNNING_LIST_UPDATE:
+		kb = bundle_decode(pkt->data, pkt->len);
+		appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+		app_path = (char *)bundle_get_val(kb, AUL_K_EXEC);
+		tmp_pid = (char *)bundle_get_val(kb, AUL_K_PID);
+		pid = atoi(tmp_pid);
+		ret = _status_add_app_info_list(appid, app_path, pid);
 		__send_result_to_client(clifd, ret);
 		free(pkt);
 		break;

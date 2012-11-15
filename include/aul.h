@@ -179,6 +179,13 @@ typedef enum _aul_type{
 /** AUL internal private key */
 #define AUL_K_PACKAGETYPE	"__AUL_PACKAGETYPE__"
 
+/** AUL internal private key */
+#define AUL_K_APPID		"__AUL_APPID__"
+/** AUL internal private key */
+#define AUL_K_PID		"__AUL_PID__"
+
+
+
 /** 
  * @brief	This is callback function for aul_launch_init
  * @param[in]	type    event's type received from system

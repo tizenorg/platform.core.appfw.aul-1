@@ -19,6 +19,9 @@
  *
  */
 
+#include <aul.h>
+#include <bundle.h>
+
 #include "aul_util.h"
 #include "app_sock.h"
 #include "aul_api.h"
@@ -28,6 +31,25 @@ SLPAPI int aul_status_update(int status)
 	int ret;
 
 	ret = __app_send_raw(AUL_UTIL_PID, APP_STATUS_UPDATE, (unsigned char *)&status, sizeof(status));
+
+	return ret;
+}
+
+SLPAPI int aul_running_list_update(char *appid, char *app_path, char *pid)
+{
+	int ret;
+	bundle *kb;
+
+	kb = bundle_create();
+
+	bundle_add(kb, AUL_K_APPID, appid);
+	bundle_add(kb, AUL_K_EXEC, app_path);
+	bundle_add(kb, AUL_K_PID, pid);
+
+	ret = app_send_cmd(AUL_UTIL_PID, APP_RUNNING_LIST_UPDATE, kb);
+
+	if (kb != NULL)
+			bundle_free(kb);
 
 	return ret;
 }

@@ -362,6 +362,14 @@ static int get_pkg_func()
 	return 0;
 }
 
+static int update_running_list()
+{
+	aul_running_list_update(gargv[2], gargv[3], gargv[4]);
+
+	return 0;
+}
+
+
 /*
 static int set_pkg_func()
 {
@@ -588,6 +596,8 @@ static test_func_t test_func[] = {
 	
 	{"getpkg", get_pkg_func, "get package",
 	      	"[usage] getpkg <pkgname>"},
+	{"update_list", update_running_list, "update running list",
+	      	"[usage] update_list <appid> <app_path> <pid>"},
 /*
 	{"setpkg", set_pkg_func, "set package",
 	      	"[usage] setpkg <pkgname> <apppath>"},
