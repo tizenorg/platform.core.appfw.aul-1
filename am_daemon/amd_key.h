@@ -19,24 +19,12 @@
  *
  */
 
+#ifndef __AUL_AMD_KEY_H_
+#define __AUL_AMD_KEY_H_
 
-#ifdef DAC_ACTIVATE
-
-#include <privilege-control.h>
-
-#define INHOUSE_UID     5000
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return set_app_privilege(pkg_name, pkg_type, app_path);
-}
-
-#else
-
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return 0;
-}
+int _key_init(void);
+int _register_key_event(int pid);
+int _unregister_key_event(int pid);
 
 #endif
-
 

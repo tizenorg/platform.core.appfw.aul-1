@@ -172,7 +172,7 @@ SLPAPI int aul_open_service(const char *svcname, bundle *kb,
 		}
 		return ret;
 	} else {
-		ail_ret = ail_package_get_appinfo(defapp, &handle);
+		ail_ret = ail_get_appinfo(defapp, &handle);
 
 		if (ail_ret == AIL_ERROR_OK) {
 			ail_destroy_appinfo(handle);

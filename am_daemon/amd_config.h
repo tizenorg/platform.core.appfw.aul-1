@@ -20,23 +20,5 @@
  */
 
 
-#ifdef DAC_ACTIVATE
-
-#include <privilege-control.h>
-
-#define INHOUSE_UID     5000
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return set_app_privilege(pkg_name, pkg_type, app_path);
-}
-
-#else
-
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return 0;
-}
-
-#endif
-
+#define AMD_LOG
 

@@ -66,7 +66,7 @@
 #define SQLITE_FLUSH_MAX	(1048576)	/* (1024*1024) */
 #define AUL_POLL_CNT		15
 #define AUL_PR_NAME			16
-#define PATH_APP_ROOT "/opt/apps"
+#define PATH_APP_ROOT "/opt/usr/apps"
 #define PATH_DATA "/data"
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
@@ -96,9 +96,6 @@ _static_ int __raise_win_by_x(int pid);
 _static_ int __send_to_sigkill(int pid);
 _static_ int __term_app(int pid);
 _static_ int __resume_app(int pid);
-_static_ int __app_process_by_pid(int cmd, 
-	const char *pkg_name, struct ucred *cr);
-_static_ int __nofork_processing(int cmd, int pid, bundle * kb);
 _static_ void __real_send(int clifd, int ret);
 _static_ void __send_result_to_caller(int clifd, int ret);
 _static_ void __launchpad_main_loop(int main_fd);
@@ -195,12 +192,9 @@ _static_ int __prepare_exec(const char *pkg_name,
 	/* SET OOM*/
 	__set_oom();
 
-	/* SET SMACK LABEL */
-	__set_smack((char *)app_path);
-
-	/* SET DAC*/
-	if (__set_dac(pkg_name) < 0) {
-		_D("fail to set DAC - check your package's credential\n");
+	/* SET PRIVILEGES*/
+	if (__set_access(pkg_name, menu_info->pkg_type, app_path) < 0) {
+		 _D("fail to set privileges - check your package's credential\n");
 		return -1;
 	}
 	/* SET DUMPABLE - for coredump*/
@@ -301,26 +295,28 @@ _static_ void __add_history(int caller, int callee, const char *pkgname,
 
 	if (b) {
 		bundle_encode(b, (bundle_raw **)&kb_data, &len);
-		hd = (struct history_data *)malloc(sizeof(char) * (len+1029));
+		hd = (struct history_data *)malloc(sizeof(char) * (len+1033));
 
 		strncpy(hd->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
 		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
+		hd->pid = callee;
 		hd->len = len;
 		memcpy(hd->data, kb_data, len);
 
 		__app_send_raw(AUL_UTIL_PID, APP_ADD_HISTORY, (unsigned char *)hd,
-			hd->len+1029);
+			hd->len+1033);
 		free(kb_data);
 		free(hd);
 	} else {
-		hd = (struct history_data *)malloc(sizeof(char) * 1029);
+		hd = (struct history_data *)malloc(sizeof(char) * 1033);
 
 		strncpy(hd->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
 		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
+		hd->pid = callee;
 		hd->len = 0;
 
 		__app_send_raw(AUL_UTIL_PID, APP_ADD_HISTORY, (unsigned char *)hd,
-			1029);
+			1033);
 		free(hd);
 	}
 
@@ -426,13 +422,9 @@ static inline int __parser(const char *arg, char *out, int out_size)
 _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			    app_info_from_db * menu_info, int cmd)
 {
-	char tmp_pid[MAX_PID_STR_BUFSZ];
-
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", caller_pid);
-	bundle_add(kb, AUL_K_CALLER_PID, tmp_pid);
 	bundle_del(kb, AUL_K_PKG_NAME);
-	if (cmd == APP_START_RES)
-		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
+	bundle_del(kb, AUL_K_EXEC);
+	bundle_del(kb, AUL_K_PACKAGETYPE);
 
 	/* Parse app_path to retrieve default bundle*/
 	if (cmd == APP_START || cmd == APP_START_RES || cmd == APP_OPEN || cmd == APP_RESUME) {
@@ -594,64 +586,6 @@ _static_ int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	return res;
 }
 
-_static_ int __app_process_by_pid(int cmd, 
-	const char *pkg_name, struct ucred *cr)
-{
-	int pid;
-	int ret = -1;
-
-	if (pkg_name == NULL)
-		return -1;
-
-	if ((cr->uid != 0) && (cr->uid != INHOUSE_UID)) {
-		_E("reject by security rule, your uid is %u\n", cr->uid);
-		return -1;
-	}
-
-	pid = atoi(pkg_name);
-	if (pid <= 1) {
-		_E("invalid pid");
-		return -1;
-	}
-
-	switch (cmd) {
-	case APP_RESUME_BY_PID:
-		ret = __resume_app(pid);
-		break;
-	case APP_TERM_BY_PID:
-		ret = __term_app(pid);
-		break;
-	case APP_KILL_BY_PID:
-		if ((ret = __send_to_sigkill(pid)) < 0)
-			_E("fail to killing - %d\n", pid);
-	}
-
-	return ret;
-}
-
-_static_ int __nofork_processing(int cmd, int pid, bundle * kb)
-{
-	int ret = -1;
-	switch (cmd) {
-	case APP_OPEN:
-	case APP_RESUME:
-		_D("resume app's pid : %d\n", pid);
-		if ((ret = __resume_app(pid)) < 0)
-			_E("__resume_app failed. error code = %d", ret);
-		PERF("resume app done");
-		break;
-
-	case APP_START:
-	case APP_START_RES:
-		_D("fake launch pid : %d\n", pid);
-		if ((ret = __fake_launch_app(cmd, pid, kb)) < 0)
-			_E("fake_launch failed. error code = %d", ret);
-		PERF("fake launch done");
-		break;
-	}
-	return ret;
-}
-
 _static_ void __real_send(int clifd, int ret)
 {
 	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
@@ -711,6 +645,30 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 	return;
 }
 
+static app_info_from_db *_get_app_info_from_bundle_by_pkgname(
+							const char *pkgname, bundle *kb)
+{
+	app_info_from_db *menu_info;
+
+	menu_info = calloc(1, sizeof(app_info_from_db));
+	if (menu_info == NULL) {
+		return NULL;
+	}
+
+	menu_info->pkg_name = strdup(pkgname);
+	menu_info->app_path = strdup(bundle_get_val(kb, AUL_K_EXEC));
+	if (menu_info->app_path != NULL)
+		menu_info->original_app_path = strdup(menu_info->app_path);
+	menu_info->pkg_type = strdup(bundle_get_val(kb, AUL_K_PACKAGETYPE));
+
+	if (!_get_app_path(menu_info)) {
+		_free_app_info_from_db(menu_info);
+		return NULL;
+	}
+
+	return menu_info;
+}
+
 _static_ void __launchpad_main_loop(int main_fd)
 {
 	bundle *kb = NULL;
@@ -741,21 +699,10 @@ _static_ void __launchpad_main_loop(int main_fd)
 	INIT_PERF(kb);
 	PERF("packet processing start");
 
-	if (pkt->cmd == APP_RESULT || pkt->cmd == APP_CANCEL) {
-		pid = __foward_cmd(pkt->cmd, kb, cr.pid);
-		goto end;
-	}
-
 	pkg_name = bundle_get_val(kb, AUL_K_PKG_NAME);
 	_D("pkg name : %s\n", pkg_name);
 
-	if (pkt->cmd == APP_TERM_BY_PID || pkt->cmd == APP_RESUME_BY_PID ||
-	    pkt->cmd == APP_KILL_BY_PID) {
-		pid = __app_process_by_pid(pkt->cmd, pkg_name, &cr);
-		goto end;
-	}
-
-	menu_info = _get_app_info_from_db_by_pkgname(pkg_name);
+	menu_info = _get_app_info_from_bundle_by_pkgname(pkg_name, kb);
 	if (menu_info == NULL) {
 		_D("such pkg no found");
 		goto end;
@@ -776,21 +723,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 
 	PERF("get package information & modify bundle done");
 
-	if (_is_app_multi_inst(menu_info) == 0)
-		pid = __proc_iter_cmdline(NULL, (void *)app_path);
-
-	PERF("find pid by searching proc file system done");
-
-	if (pid > 0) {
-		int ret;
-
-		if (cr.pid == pid) {
-			_D("caller process & callee process is same.[%s:%d]",
-			   pkg_name, pid);
-			pid = -ELOCALLAUNCH_ID;
-		} else if ((ret = __nofork_processing(pkt->cmd, pid, kb)) < 0)
-			pid = ret;
-	} else if (pkt->cmd != APP_RESUME) {
+	{
 		pid = fork();
 		if (pid == 0) {
 			PERF("fork done");
@@ -798,7 +731,6 @@ _static_ void __launchpad_main_loop(int main_fd)
 
 			close(clifd);
 			close(main_fd);
-			ail_db_close();
 			__signal_unset_sigchld();
 			__signal_fini();
 
@@ -830,21 +762,6 @@ _static_ void __launchpad_main_loop(int main_fd)
 	__send_result_to_caller(clifd, pid);
 
 	if (pid > 0) {
-		int ret;
-		ret = ac_check_launch_privilege(pkg_name, menu_info->pkg_type, pid);
-		_D("ac_check_launch_privilege : %d", ret);
-		switch (pkt->cmd) {
-		case APP_OPEN:
-		case APP_RESUME:
-			__add_history(cr.pid, pid, pkg_name, NULL, app_path);
-			break;
-		case APP_START:
-		case APP_START_RES:
-			__add_history(cr.pid, pid, pkg_name, kb, app_path);
-			break;
-		default:
-			_D("no launch case");
-		}
 		if (is_real_launch) {
 			/*TODO: retry*/
 			__signal_block_sigchld();
@@ -876,9 +793,6 @@ _static_ int __launchpad_pre_init(int argc, char **argv)
 
 	/* signal init*/
 	__signal_init();
-
-	/* dac init*/
-	__dac_init();
 
 	/* get my(launchpad) command line*/
 	launchpad_cmdline = __proc_get_cmdline_bypid(getpid());

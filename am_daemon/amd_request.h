@@ -20,23 +20,12 @@
  */
 
 
-#ifdef DAC_ACTIVATE
+#ifndef __AUL_AMD_REQUEST_H_
+#define __AUL_AMD_REQUEST_H_
 
-#include <privilege-control.h>
+int _requset_init(struct amdmgr *amd);
 
-#define INHOUSE_UID     5000
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return set_app_privilege(pkg_name, pkg_type, app_path);
-}
 
-#else
-
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return 0;
-}
 
 #endif
-
 

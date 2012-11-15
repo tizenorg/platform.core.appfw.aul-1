@@ -47,7 +47,10 @@ SLPAPI int aul_app_is_running(const char *appid)
 
 	ret = __app_send_raw(AUL_UTIL_PID, APP_IS_RUNNING, (unsigned char*)appid, strlen(appid));
 
-	return ret;
+	if(ret > 0)
+		return true;
+
+	return 0;
 }
 
 SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,

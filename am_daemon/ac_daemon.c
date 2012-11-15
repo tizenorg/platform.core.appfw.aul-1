@@ -35,6 +35,7 @@
 #include <poll.h>
 #include <ail.h>
 #include <aul.h>
+#include <vconf.h>
 
 #include "simple_util.h"
 #include "app_sock.h"
@@ -57,9 +58,143 @@ static struct {
 	.key_down = NULL,
 };
 
+typedef struct _r_app_info_t{
+	char pkg_name[MAX_PACKAGE_STR_SIZE];
+	int pid;
+} r_app_info_t;
+
 GSList *key_pid_list = NULL;
+GSList *r_app_info_list = NULL;
 
 extern int app_send_cmd(int pid, int cmd, bundle *kb);
+
+static int __send_to_sigkill(int pid)
+{
+	int pgid;
+
+	pgid = getpgid(pid);
+	if (pgid <= 1)
+		return -1;
+
+	if (killpg(pgid, SIGKILL) < 0)
+		return -1;
+
+	return 0;
+}
+
+static int __kill_bg_apps(int limit)
+{
+	int len;
+	int i;
+	int n;
+	r_app_info_t *info_t = NULL;
+	GSList *iter = NULL;
+
+	len = g_slist_length(r_app_info_list);
+
+	n = len - limit;
+
+	if (n<=0) return 0;
+
+	for ( i=0, iter = r_app_info_list; i<n ; i++) {
+		info_t = (r_app_info_t *)iter->data;
+		__send_to_sigkill(info_t->pid);
+		iter = g_slist_next(iter);
+		r_app_info_list = g_slist_remove(r_app_info_list, info_t);
+		free(info_t);
+	}
+
+}
+
+static int __remove_item_running_list(int pid)
+{
+	r_app_info_t *info_t = NULL;
+	GSList *iter = NULL;
+
+	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
+	{
+		info_t = (r_app_info_t *)iter->data;
+		if(pid == info_t->pid) {
+			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
+			free(info_t);
+			break;
+		}
+	}
+	return 0;
+}
+
+static int __add_item_running_list(char *pkgname, int pid)
+{
+	bool taskmanage;
+	ail_appinfo_h handle;
+	ail_error_e ail_ret;
+	r_app_info_t *info_t = NULL;
+	GSList *iter = NULL;
+	int found = 0;
+	int limit;
+	int ret;
+
+	ret = vconf_get_int(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, &limit);
+
+	if (pkgname == NULL) {
+		return -1;
+	} else if (strncmp(pkgname, "org.tizen.cluster-home", 24) == 0) {
+		if(limit>0) __kill_bg_apps(limit-1);
+		return 0;
+	}
+
+	ail_ret = ail_package_get_appinfo(pkgname, &handle);
+	if (ail_ret != AIL_ERROR_OK) {
+		_E("ail_get_appinfo with %s failed", pkgname);
+		return -1;
+	}
+
+	ail_ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_TASKMANAGE_BOOL, &taskmanage);
+	if (ail_ret != AIL_ERROR_OK) {
+		_E("ail_appinfo_get_bool failed");
+		return -1;
+	}
+
+	if (taskmanage == false)
+		return -1;
+
+	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
+	{
+		info_t = (r_app_info_t *)iter->data;
+		_D("inter pkgname : %s, pid : %d, input : %d", info_t->pkg_name, info_t->pid, pid);
+		if(pid == info_t->pid) {
+			found = 1;
+			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
+			r_app_info_list = g_slist_append(r_app_info_list, info_t);
+			break;
+		}
+	}
+	if(found == 0) {
+		info_t = malloc(sizeof(r_app_info_t));
+		strncpy(info_t->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
+		info_t->pid = pid;
+		r_app_info_list = g_slist_append(r_app_info_list, info_t);
+	}
+
+	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
+	{
+		info_t = (r_app_info_t *)iter->data;
+		_D("running list(before kill) : %s", info_t->pkg_name);
+	}
+
+	if(limit>0) __kill_bg_apps(limit);
+
+	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
+	{
+		info_t = (r_app_info_t *)iter->data;
+		_D("running list(after kill) : %s", info_t->pkg_name);
+	}
+
+	if (ail_destroy_appinfo(handle) != AIL_ERROR_OK)
+		_E("ail_destroy_rs failed");
+
+	return 0;
+}
 
 static gboolean __add_history_handler(gpointer user_data)
 {
@@ -84,6 +219,8 @@ static gboolean __add_history_handler(gpointer user_data)
 	ret = rua_add_history(&rec);
 	if (ret == -1)
 		_D("rua add history error");
+
+	__add_item_running_list(hd->pkg_name, hd->pid);
 
 	free(pkt);
 
@@ -262,6 +399,7 @@ static gboolean __util_handler(gpointer data)
 	int clifd;
 	struct ucred cr;
 	struct history_data *hd;
+	int *status;
 	int ret = -1;
 	char pkgname[MAX_PACKAGE_STR_SIZE];
 
@@ -275,6 +413,7 @@ static gboolean __util_handler(gpointer data)
 		hd = (struct history_data *)pkt->data;
 		_D("cmd : %d, pkgname : %s, app_path : %s", pkt->cmd, hd->pkg_name, hd->app_path);
 		__send_result_to_client(clifd, 0);
+		_add_app_status_info_list(hd->pkg_name, hd->pid);
 		g_timeout_add(1000, __add_history_handler, pkt);
 		break;
 	case APP_RUNNING_INFO:
@@ -297,6 +436,11 @@ static gboolean __util_handler(gpointer data)
 		__send_result_to_client(clifd, ret);
 		free(pkt);
 		break;
+	case APP_STATUS_UPDATE:
+		status = (int *)pkt->data;
+		ret = _update_app_status_info_list(cr.pid, *status);
+		__send_result_to_client(clifd, ret);
+		free(pkt);
 	default:
 		_E("no support packet");
 	}
@@ -407,6 +551,8 @@ static int __app_dead_handler(int pid, void *data)
 	int ret;
 
 	ret = __unregister_key_event(pid);
+	ret = __remove_item_running_list(pid);
+	ret = _remove_app_status_info_list(pid);
 
 	return 0;
 }
@@ -443,6 +589,23 @@ static void __ac_key_initailize()
 	aul_listen_app_dead_signal(__app_dead_handler, NULL);
 }
 
+static void __vconf_cb(keynode_t *key, void *data)
+{
+	int limit;
+	const char *name;
+
+	name = vconf_keynode_get_name(key);
+	if( name == NULL ) {
+		return;
+	} else if ( strcmp(name, VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS) != 0)
+	{
+		return;
+	}
+
+	limit = vconf_keynode_get_int(key);
+	if(limit>0) __kill_bg_apps(limit);
+}
+
 static int __initialize()
 {
 	int fd;
@@ -470,9 +633,9 @@ static int __initialize()
 		return AC_R_ERROR;
 	}
 
-#ifndef __i386__
 	__ac_key_initailize();
-#endif
+
+	r = vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL);
 
 	return AC_R_OK;
 }

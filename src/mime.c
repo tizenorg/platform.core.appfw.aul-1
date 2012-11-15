@@ -361,7 +361,7 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 		if (ret > 0)
 			ret = 0;
 	} else {
-		ail_ret = ail_package_get_appinfo(defapp, &handle);
+		ail_ret = ail_get_appinfo(defapp, &handle);
 
 		if (ail_ret == AIL_ERROR_OK) {
 			ail_destroy_appinfo(handle);

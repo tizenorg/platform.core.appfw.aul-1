@@ -29,6 +29,7 @@
 #include "app_sock.h"
 #include "simple_util.h"
 #include "launch.h"
+#include "aul_util.h"
 
 /*#define ACTIVATE_PREEMPT_FEATURE*/
 
@@ -387,7 +388,7 @@ int aul_send_result(bundle *kb, int is_cancel)
 		return AUL_R_OK;
 	}
 
-	ret = app_send_cmd(LAUNCHPAD_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
+	ret = app_send_cmd(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
 	
 	if(latest_caller_pid == pid)
 		latest_caller_pid = -1;

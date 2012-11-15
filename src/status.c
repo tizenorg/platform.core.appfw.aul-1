@@ -19,24 +19,16 @@
  *
  */
 
+#include "aul_util.h"
+#include "app_sock.h"
+#include "aul_api.h"
 
-#ifdef DAC_ACTIVATE
-
-#include <privilege-control.h>
-
-#define INHOUSE_UID     5000
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
+SLPAPI int aul_status_update(int status)
 {
-	return set_app_privilege(pkg_name, pkg_type, app_path);
+	int ret;
+
+	ret = __app_send_raw(AUL_UTIL_PID, APP_STATUS_UPDATE, (unsigned char *)&status, sizeof(status));
+
+	return ret;
 }
-
-#else
-
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return 0;
-}
-
-#endif
-
 

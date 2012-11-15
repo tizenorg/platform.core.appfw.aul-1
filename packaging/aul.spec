@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.186
+Version:    0.0.207
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -30,6 +30,9 @@ BuildRequires:  pkgconfig(rua)
 BuildRequires:  pkgconfig(ecore-x)
 BuildRequires:  pkgconfig(ecore-input)
 BuildRequires:  pkgconfig(utilX)
+BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(pkgmgr-info)
+BuildRequires:  pkgconfig(libsmack)
 
 
 %description
@@ -61,7 +64,7 @@ install -m 755 launchpad_run %{buildroot}/etc/init.d
 
 mkdir -p %{buildroot}/etc/rc.d/rc3.d
 mkdir -p %{buildroot}/etc/rc.d/rc4.d
-ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S35launchpad_run
+ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S15launchpad_run
 ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 
 mkdir -p %{buildroot}/opt/dbspace
@@ -93,12 +96,13 @@ fi
 systemctl daemon-reload
 
 %files
+%manifest aul.manifest
 %attr(0644,root,root) %{_libdir}/libaul.so.0
 %attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
 %{_sysconfdir}/init.d/launchpad_run
 %attr(0755,root,root) %{_bindir}/aul_service.sh
 %attr(0755,root,root) %{_bindir}/aul_service_test.sh
-%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S35launchpad_run
+%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S15launchpad_run
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 %config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db
 %config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db-journal
@@ -115,6 +119,10 @@ systemctl daemon-reload
 %{_libdir}/systemd/system/launchpad-preload@.service
 %{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
 %{_libdir}/systemd/user/ac.service
+/usr/bin/amd
+/usr/bin/daemon-manager-release-agent
+/usr/bin/daemon-manager-launch-agent
+
 
 %files devel
 /usr/include/aul/*.h

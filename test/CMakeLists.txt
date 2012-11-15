@@ -25,13 +25,6 @@ add_executable(test_app
 set_target_properties(test_app PROPERTIES COMPILE_FLAGS "-fpie")
 target_link_libraries(test_app "-pie" aul ${pkgs_LDFLAGS} )
 
-add_executable(ac_daemon
-                ac_daemon.c
-		../src/app_sock.c
-		../src/simple_util.c)
-target_link_libraries(ac_daemon app-checker-server rua glib-2.0 bundle ail aul utilX ${pkgs_LDFLAGS})
-INSTALL(TARGETS ac_daemon DESTINATION bin)
-
 
 
 ### Unit tests ###

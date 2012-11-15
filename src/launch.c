@@ -36,6 +36,7 @@
 #include "simple_util.h"
 #include "launch.h"
 #include "key.h"
+#include "aul_util.h"
 
 static int aul_initialized = 0;
 static int aul_fd;
@@ -186,6 +187,7 @@ int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
 	int must_free = 0;
 	int ret = 0;
 
+	_D("launch request : %s", pkgname);
 	if (kb == NULL) {
 		kb = bundle_create();
 		must_free = 1;
@@ -194,8 +196,9 @@ int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
 
 	bundle_add(kb, AUL_K_PKG_NAME, pkgname);
 	__set_stime(kb);
-	ret = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
+	ret = app_send_cmd(AUL_UTIL_PID, cmd, kb);
 
+	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
 		_E("app_request_to_launchpad : Same Process Send Local");
 		bundle *b;

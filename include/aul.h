@@ -80,6 +80,16 @@ typedef enum _aul_return_val {
 	AUL_R_OK = 0			/**< General success */
 }aul_return_val;
 
+enum app_status {
+	STATUS_LAUNCHING,
+	STATUS_CREATED,
+	STATUS_FOCUS,
+	STATUS_VISIBLE,
+	STATUS_BG,
+	STATUS_DYING,
+	STATUS_HOME
+};
+
 /** @} */ 
 
 /**
@@ -162,7 +172,12 @@ typedef enum _aul_type{
 /** AUL public bundle value - To support Media key*/
 #define AUL_V_KEY_RELEASED	"__AUL_KEY_RELEASED__"
 
-
+/** AUL internal private key */
+#define AUL_K_EXEC		"__AUL_EXEC__"
+/** AUL internal private key */
+#define AUL_K_MULTIPLE		"__AUL_MULTIPLE__"
+/** AUL internal private key */
+#define AUL_K_PACKAGETYPE	"__AUL_PACKAGETYPE__"
 
 /** 
  * @brief	This is callback function for aul_launch_init
@@ -926,7 +941,7 @@ int aul_open_content(const char* content);
 
 /**
  * @par Description:
- *	 This API get the default application(package name) associated with MIME type
+ *	 This API get the default application(appid) associated with MIME type
  * @par Purpose:
  *	This API use to get default application associteted with mimetype 
  *	In general, Setting Application need this API. 
@@ -934,7 +949,7 @@ int aul_open_content(const char* content);
  *	Setting Application show mapping of default application / mimetype
  *
  * @param[in]	mimetype	a mime type
- * @param[out]	defapp		a application package name of the app
+ * @param[out]	defapp		a application appid of the app
  * @param[in]	len		length of defapp
  * @return	0 if success, negative value if fail
  * @retval	AUL_R_OK	- success
@@ -965,7 +980,7 @@ int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
 
 /**
  * @par Description:
- *	 This API set the default application(package name) associated with MIME type
+ *	 This API set the default application(appid) associated with MIME type
  * @par Purpose:
  *	This API use to change default application associteted with mimetype 
  *	In general, Setting Application or Installer need this API. 
@@ -974,7 +989,7 @@ int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
  *	So, application to process specific mimetype can be substituted. 
  *
  * @param[in]	mimetype	a mime type
- * @param[in]	defapp		a application package name of the app to be set
+ * @param[in]	defapp		a application appid of the app to be set
  * @return	0 if success, negative value if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_EINVAL	- invalid argument(mimetype)
@@ -1399,7 +1414,7 @@ int aul_send_service_result(bundle *b);
 
 /**
  * @par Description:
- *	This API set the default application(package name) associated with service name 
+ *	This API set the default application(appid) associated with service name
  * @par Purpose:
  *	This API use to change default application associteted with service name
  *	In general, Setting Application needs this API. 
@@ -1438,7 +1453,7 @@ int aul_set_defapp_for_service(const char *svcname, const char *defapp);
 
 /**
  * @par Description:
- *	This API get the application package name associated with given service name
+ *	This API get the application appid associated with given service name
  * @par Purpose:
  *	This API use to get default application associteted with service name
  *	In general, Setting Application need this API. 

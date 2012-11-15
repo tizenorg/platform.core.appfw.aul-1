@@ -19,24 +19,21 @@
  *
  */
 
+#ifndef __AUL_AMD_LAUNCH_H_
+#define __AUL_AMD_LAUNCH_H_
 
-#ifdef DAC_ACTIVATE
+#include <bundle.h>
+#include "aul_util.h"
+#include "amd_appinfo.h"
 
-#include <privilege-control.h>
+int _send_to_sigkill(int pid);
+int _resume_app(int pid);
+int _term_app(int pid);
+int _fake_launch_app(int cmd, int pid, bundle * kb);
+int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd);
+void service_release(const char *group);
+int _start_srv(struct appinfo *ai, bundle *kb);
 
-#define INHOUSE_UID     5000
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return set_app_privilege(pkg_name, pkg_type, app_path);
-}
+int _launch_init(struct amdmgr* amd);
 
-#else
-
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return 0;
-}
-
-#endif
-
-
+#endif /* __AUL_AMD_LAUNCH_H_ */

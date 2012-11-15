@@ -20,23 +20,22 @@
  */
 
 
-#ifdef DAC_ACTIVATE
 
-#include <privilege-control.h>
+int _status_add_app_info_list(char *appid, char *app_path, int pid);
+int _status_update_app_info_list(int pid, int status);
+int _status_remove_app_info_list(int pid);
+int _status_app_is_running(char *appid);
+int _status_send_running_appinfo(int fd);
 
-#define INHOUSE_UID     5000
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return set_app_privilege(pkg_name, pkg_type, app_path);
-}
 
-#else
+//TODO : remove
 
-static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
-{
-	return 0;
-}
+typedef struct _item_pkt_t {
+	int pid;
+	char appid[512];
+} item_pkt_t;
 
-#endif
+gboolean __add_item_running_list(gpointer user_data);
+
 
 
