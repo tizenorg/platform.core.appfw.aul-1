@@ -8,7 +8,7 @@ After=xorg.target
 
 [Service]
 ExecStartPre=-/bin/mkdir -m 1777 /tmp/alaunch
-ExecStart=/usr/bin/ac_daemon
+ExecStart=/usr/bin/amd
 
 OOMScoreAdjust=-100
 

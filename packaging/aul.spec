@@ -114,7 +114,6 @@ systemctl daemon-reload
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
 %{_bindir}/launchpad_preloading_preinitializing_daemon
-%{_bindir}/ac_daemon
 %{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
 %{_libdir}/systemd/system/launchpad-preload@.service
 %{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
