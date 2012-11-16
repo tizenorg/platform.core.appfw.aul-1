@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.209
+Version:    0.0.210
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -9,10 +9,7 @@ Source0:    %{name}-%{version}.tar.gz
 #Source102:  ac.service
 
 Requires(post): /sbin/ldconfig
-Requires(post): /usr/bin/systemctl
 Requires(postun): /sbin/ldconfig
-Requires(postun): /usr/bin/systemctl
-Requires(preun): /usr/bin/systemctl
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
