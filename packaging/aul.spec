@@ -71,11 +71,11 @@ mkdir -p %{buildroot}/opt/dbspace
 sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
 rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 
-mkdir -p %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants
+mkdir -p %{buildroot}%{_libdir}/systemd/system/graphical.target.wants
 install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
 install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/system/ac.service
-ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
-ln -s ../ac.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/ac.service
+ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/graphical.target.wants/launchpad-preload@app.service
+ln -s ../ac.service %{buildroot}%{_libdir}/systemd/system/graphical.target.wants/ac.service
 
 
 %preun
@@ -114,8 +114,8 @@ systemctl daemon-reload
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
 %{_bindir}/launchpad_preloading_preinitializing_daemon
-%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
-%{_libdir}/systemd/system/multi-user.target.wants/ac.service
+%{_libdir}/systemd/system/graphical.target.wants/launchpad-preload@app.service
+%{_libdir}/systemd/system/graphical.target.wants/ac.service
 %{_libdir}/systemd/system/launchpad-preload@.service
 %{_libdir}/systemd/system/ac.service
 /usr/bin/amd

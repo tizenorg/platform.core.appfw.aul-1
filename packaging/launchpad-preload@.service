@@ -9,4 +9,4 @@ Environment=XDG_RUNTIME_DIR=/run/user/%I
 ExecStart=/usr/bin/launchpad_preloading_preinitializing_daemon
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
