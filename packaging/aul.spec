@@ -30,6 +30,7 @@ BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(libsmack)
+BuildRequires:	pkgconfig(app2sd)
 
 
 %description

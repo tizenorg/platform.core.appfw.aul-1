@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <app2ext_interface.h>
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -472,6 +473,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	int pid = -1;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 
+	int location = -1;
+	app2ext_handle *app2_handle = NULL;
+
 	if(strncmp(appid, "org.tizen.sat-ui", 18) == 0) {
 		pid = __sat_ui_launch(appid, kb, cmd, caller_pid, fd);
 		return pid;
@@ -517,6 +521,23 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 		}
 	} else {
 		_E("unkown application");
+	}
+
+	location = app2ext_get_app_location(appid);
+	if (location == APP2EXT_SD_CARD)
+	{
+		app2_handle = app2ext_init(APP2EXT_SD_CARD);
+		if (app2_handle == NULL) {
+			_E("app2_handle : app2ext init failed\n");
+			return -1;
+		}
+
+		ret = app2_handle->interface.enable(appid);
+		if (ret) {
+			_E("app2_handle : app enable API fail Reason %d", ret);
+		}
+
+		app2ext_deinit(app2_handle);
 	}
 
 	__real_send(fd, pid);
