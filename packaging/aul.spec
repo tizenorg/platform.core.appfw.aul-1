@@ -5,11 +5,14 @@ Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
-#Source101:  launchpad-preload@.service
-#Source102:  ac.service
+Source101:  launchpad-preload@.service
+Source102:  ac.service
 
 Requires(post): /sbin/ldconfig
+Requires(post): /usr/bin/systemctl
 Requires(postun): /sbin/ldconfig
+Requires(postun): /usr/bin/systemctl
+Requires(preun): /usr/bin/systemctl
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
@@ -69,29 +72,29 @@ mkdir -p %{buildroot}/opt/dbspace
 sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
 rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 
-#mkdir -p %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants
-#install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
-#ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
-
-#mkdir -p %{buildroot}%{_libdir}/systemd/user/tizen-middleware.target.wants
-#install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/user/ac.service
-#ln -s ../ac.service %{buildroot}%{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
+mkdir -p %{buildroot}%{_libdir}/systemd/system/graphical.target.wants
+install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
+install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/system/ac.service
+ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/graphical.target.wants/launchpad-preload@app.service
+ln -s ../ac.service %{buildroot}%{_libdir}/systemd/system/graphical.target.wants/ac.service
 
 
-#%preun
-#if [ $1 == 0 ]; then
-#    systemctl stop launchpad-preload@app.service
-#fi
+%preun
+if [ $1 == 0 ]; then
+    systemctl stop launchpad-preload@app.service
+    systemctl stop ac.service
+fi
 
-#%post
-#/sbin/ldconfig
-#systemctl daemon-reload
-#if [ $1 == 1 ]; then
-#    systemctl restart launchpad-preload@app.service
-#fi
+%post
+/sbin/ldconfig
+systemctl daemon-reload
+if [ $1 == 1 ]; then
+    systemctl restart launchpad-preload@app.service
+    systemctl restart ac.service
+fi
 
-#%postun -p /sbin/ldconfig
-#systemctl daemon-reload
+%postun -p /sbin/ldconfig
+systemctl daemon-reload
 
 %files
 %manifest aul.manifest
@@ -112,17 +115,15 @@ rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
 %{_bindir}/launchpad_preloading_preinitializing_daemon
-%{_bindir}/amd
-%{_bindir}/daemon-manager-release-agent
-%{_bindir}/daemon-manager-launch-agent
-#%{_libdir}/systemd/system/multi-user.target.wants/launchpad-preload@app.service
-#%{_libdir}/systemd/system/launchpad-preload@.service
-#%{_libdir}/systemd/user/tizen-middleware.target.wants/ac.service
-#%{_libdir}/systemd/user/ac.service
+%{_libdir}/systemd/system/graphical.target.wants/launchpad-preload@app.service
+%{_libdir}/systemd/system/graphical.target.wants/ac.service
+%{_libdir}/systemd/system/launchpad-preload@.service
+%{_libdir}/systemd/system/ac.service
+/usr/bin/amd
+/usr/bin/daemon-manager-release-agent
+/usr/bin/daemon-manager-launch-agent
 
 %files devel
 /usr/include/aul/*.h
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/*.pc
-
-

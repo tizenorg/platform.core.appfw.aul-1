@@ -6,10 +6,11 @@
 Description=Start the Access Control server
 
 [Service]
+Environment=DISPLAY=:0
 ExecStartPre=-/bin/mkdir -m 1777 /tmp/alaunch
-ExecStart=/usr/bin/amd
+ExecStart=/bin/sh -c 'while test ! -e /tmp/.X0-lock; do sleep 0.1; done; exec /usr/bin/amd'
 
 OOMScoreAdjust=-100
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
