@@ -73,8 +73,6 @@ static void _fini(struct appinfomgr *cf)
 	free(cf);
 }
 
-pkgmgrinfo_pkginfo_h p_handle;
-
 static int __svc_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
 {
 	struct appinfo *c;
@@ -112,7 +110,15 @@ static int __svc_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, voi
 	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
 	c->val[_AI_EXEC] = strdup(exec);
 
-	r = pkgmgrinfo_pkginfo_get_type(p_handle, &type);
+	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
+	if(strncmp(type, "capp", 4) == 0 ) {
+		c->val[_AI_TYPE] = strdup("rpm");
+	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6)) {
+		c->val[_AI_TYPE] = strdup("tpk");
+	} else if (strncmp(type, "webapp", 6) == 0) {
+		c->val[_AI_TYPE] = strdup("wgt");
+	}
+
 	c->val[_AI_TYPE] = strdup(type);
 
 	r = pkgmgrinfo_appinfo_is_onboot(handle, &onboot);
@@ -168,8 +174,14 @@ static int __ui_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void
 	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
 	c->val[_AI_EXEC] = strdup(exec);
 
-	r = pkgmgrinfo_pkginfo_get_type(p_handle, &type);
-	c->val[_AI_TYPE] = strdup(type);
+	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
+	if(strncmp(type, "capp", 4) == 0 ) {
+		c->val[_AI_TYPE] = strdup("rpm");
+	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6)) {
+		c->val[_AI_TYPE] = strdup("tpk");
+	} else if (strncmp(type, "webapp", 6) == 0) {
+		c->val[_AI_TYPE] = strdup("wgt");
+	}
 
 	r = pkgmgrinfo_appinfo_is_multiple(handle, &multiple);
 	if(multiple == true)
@@ -199,7 +211,6 @@ static int __pkg_info_handler(const pkgmgrinfo_pkginfo_h handle, void *data)
 {
 	int r;
 
-	p_handle = handle;
 	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __svc_app_info_insert_handler, data);
 	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __ui_app_info_insert_handler, data);
 
@@ -258,11 +269,6 @@ static void __vconf_cb(keynode_t *key, void *data)
 		_D("appid : %s /handle : %x", appid, handle);
 		pkgmgrinfo_appinfo_get_component(handle, &component);
 
-		pkgmgrinfo_appinfo_get_pkgname(handle, &pkgname);
-		pkgmgrinfo_pkginfo_get_pkginfo(pkgname, &p_handle);
-
-		_D("pkgname : %s /handle : %x", pkgname, p_handle);
-
 		if(component == PMINFO_UI_APP) {
 			__ui_app_info_insert_handler(handle, data);
 		} else if (component == PMINFO_SVC_APP) {
@@ -270,7 +276,6 @@ static void __vconf_cb(keynode_t *key, void *data)
 		}
 
 		pkgmgrinfo_appinfo_destroy_appinfo(handle);
-		pkgmgrinfo_pkginfo_destroy_pkginfo(p_handle);
 	} else if ( strncmp(type_string, "delete", 6) == 0) {
 		g_hash_table_remove(cf->tbl, appid);
 	}
@@ -319,7 +324,6 @@ const struct appinfo *appinfo_insert(struct appinfomgr *cf, const char *pkg_name
 	pkgmgrinfo_pkginfo_h handle;
 
 	r = pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle);
-	p_handle = handle;
 	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __svc_app_info_insert_handler, cf);
 	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __ui_app_info_insert_handler, cf);
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
