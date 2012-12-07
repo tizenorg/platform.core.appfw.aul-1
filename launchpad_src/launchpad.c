@@ -173,6 +173,8 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 			__set_sdk_env(menu_info, (char *)str);
 		}
 	}
+	if (menu_info->hwacc != NULL)
+		setenv("HWACC", menu_info->hwacc, 1);
 }
 
 _static_ int __prepare_exec(const char *pkg_name,
@@ -425,6 +427,7 @@ _static_ void __modify_bundle(bundle * kb, int caller_pid,
 	bundle_del(kb, AUL_K_PKG_NAME);
 	bundle_del(kb, AUL_K_EXEC);
 	bundle_del(kb, AUL_K_PACKAGETYPE);
+	bundle_del(kb, AUL_K_HWACC);
 
 	/* Parse app_path to retrieve default bundle*/
 	if (cmd == APP_START || cmd == APP_START_RES || cmd == APP_OPEN || cmd == APP_RESUME) {
@@ -660,6 +663,7 @@ static app_info_from_db *_get_app_info_from_bundle_by_pkgname(
 	if (menu_info->app_path != NULL)
 		menu_info->original_app_path = strdup(menu_info->app_path);
 	menu_info->pkg_type = strdup(bundle_get_val(kb, AUL_K_PACKAGETYPE));
+	menu_info->hwacc = strdup(bundle_get_val(kb, AUL_K_HWACC));
 
 	if (!_get_app_path(menu_info)) {
 		_free_app_info_from_db(menu_info);

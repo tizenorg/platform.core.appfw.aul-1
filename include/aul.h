@@ -178,6 +178,9 @@ typedef enum _aul_type{
 #define AUL_K_MULTIPLE		"__AUL_MULTIPLE__"
 /** AUL internal private key */
 #define AUL_K_PACKAGETYPE	"__AUL_PACKAGETYPE__"
+/** AUL internal private key */
+#define AUL_K_HWACC		"__AUL_HWACC__"
+
 
 /** AUL internal private key */
 #define AUL_K_APPID		"__AUL_APPID__"

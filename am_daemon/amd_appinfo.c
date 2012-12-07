@@ -28,6 +28,7 @@ enum _appinfo_idx {
 	_AI_ONBOOT,
 	_AI_RESTART,
 	_AI_MULTI,
+	_AI_HWACC,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -45,6 +46,7 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_ONBOOT] = { "StartOnBoot", AIT_ONBOOT, },
 	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, },
 	[_AI_MULTI] = { "Multiple", AIT_MULTI, },
+	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, },
 };
 
 struct appinfo {
@@ -147,6 +149,7 @@ static int __ui_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void
 	char *type;
 	bool multiple;
 	char *appid;
+	pkgmgrinfo_app_hwacceleration hwacc;
 
 	pkgmgrinfo_appinfo_get_appid(handle, &appid);
 
@@ -187,6 +190,15 @@ static int __ui_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void
 	if(multiple == true)
 		c->val[_AI_MULTI] = strdup("true");
 	else c->val[_AI_MULTI] = strdup("false");
+
+	pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
+	if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
+		c->val[_AI_HWACC] = strdup("USE");
+	} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
+		c->val[_AI_HWACC] = strdup("SYS");
+	} else {
+		c->val[_AI_HWACC] = strdup("NOT_USE");
+	}
 
 	_D("%s : %s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE], c->val[_AI_MULTI]);
 

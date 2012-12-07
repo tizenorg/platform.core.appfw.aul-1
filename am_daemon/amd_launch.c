@@ -448,6 +448,7 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 			pid = ret;
 		}
 	} else if (cmd != APP_RESUME) {
+		bundle_add(kb, AUL_K_HWACC, "NOT_USE");
 		bundle_add(kb, AUL_K_EXEC, app_path);
 		bundle_add(kb, AUL_K_PACKAGETYPE, "rpm");
 		pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
@@ -472,6 +473,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	char *app_path = NULL;
 	int pid = -1;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
+	char *hwacc;
 
 	int location = -1;
 	app2ext_handle *app2_handle = NULL;
@@ -505,6 +507,8 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 				pid = ret;
 			}
 		} else if (cmd != APP_RESUME) {
+			hwacc = appinfo_get_value(ai, AIT_HWACC);
+			bundle_add(kb, AUL_K_HWACC, hwacc);
 			bundle_add(kb, AUL_K_EXEC, app_path);
 			bundle_add(kb, AUL_K_PACKAGETYPE, appinfo_get_value(ai, AIT_TYPE));
 			pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);

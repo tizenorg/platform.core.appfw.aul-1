@@ -47,6 +47,7 @@ typedef struct {
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *pkg_type;		/* x_slp_packagetype */
+	char *hwacc;		/* hwacceleration */
 } app_info_from_db;
 
 static inline char *_get_pkgname(app_info_from_db *menu_info)
@@ -104,6 +105,8 @@ static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 			free(menu_info->app_path);
 		if (menu_info->original_app_path != NULL)
 			free(menu_info->original_app_path);
+		if (menu_info->hwacc != NULL)
+			free(menu_info->hwacc);
 		free(menu_info);
 	}
 }
