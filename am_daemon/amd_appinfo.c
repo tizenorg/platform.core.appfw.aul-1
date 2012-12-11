@@ -75,81 +75,19 @@ static void _fini(struct appinfomgr *cf)
 	free(cf);
 }
 
-static int __svc_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
+static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
 {
 	struct appinfo *c;
 	struct appinfomgr *cf = (struct appinfomgr *)data;
 	gboolean r;
 	char *exec;
 	char *type;
+	char *appid;
+	bool multiple;
 	bool onboot;
 	bool restart;
-	char *appid;
-
-	pkgmgrinfo_appinfo_get_appid(handle, &appid);
-
-	g_hash_table_remove(cf->tbl, appid);
-
-	c = calloc(1, sizeof(*c));
-	if (!c) {
-		_E("create appinfo: %s", strerror(errno));
-		return -1;
-	}
-
-	memset(c, 0, sizeof(struct appinfo));
-
-	c->val[_AI_FILE] = strdup(appid);
-	if (!c->val[_AI_FILE]) {
-		_E("create appinfo: %s", strerror(errno));
-		_free_appinfo(c);
-		return -1;
-	}
-
-	c->val[_AI_NAME] = strdup(appid); //TODO :
-
-	c->val[_AI_COMP] = strdup("svc"); //TODO :
-
-	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
-	c->val[_AI_EXEC] = strdup(exec);
-
-	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
-	if(strncmp(type, "capp", 4) == 0 ) {
-		c->val[_AI_TYPE] = strdup("rpm");
-	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6)) {
-		c->val[_AI_TYPE] = strdup("tpk");
-	} else if (strncmp(type, "webapp", 6) == 0) {
-		c->val[_AI_TYPE] = strdup("wgt");
-	}
-
-	c->val[_AI_TYPE] = strdup(type);
-
-	r = pkgmgrinfo_appinfo_is_onboot(handle, &onboot);
-	if(onboot == true)
-		c->val[_AI_ONBOOT] = strdup("true");
-	else c->val[_AI_ONBOOT] = strdup("false");
-
-	r = pkgmgrinfo_appinfo_is_autorestart(handle, &restart);
-	if(restart == true)
-		c->val[_AI_RESTART] = strdup("true");
-	else c->val[_AI_RESTART] = strdup("false");
-
-	_D("%s : %s : %s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE], c->val[_AI_ONBOOT], c->val[_AI_RESTART]);
-
-	g_hash_table_insert(cf->tbl, c->val[_AI_FILE], c);
-
-	return 0;
-}
-
-static int __ui_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
-{
-	struct appinfo *c;
-	struct appinfomgr *cf = (struct appinfomgr *)data;
-	gboolean r;
-	char *exec;
-	char *type;
-	bool multiple;
-	char *appid;
 	pkgmgrinfo_app_hwacceleration hwacc;
+	pkgmgrinfo_app_component component;
 
 	pkgmgrinfo_appinfo_get_appid(handle, &appid);
 
@@ -172,7 +110,36 @@ static int __ui_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void
 
 	c->val[_AI_NAME] = strdup(appid); //TODO :
 
-	c->val[_AI_COMP] = strdup("ui"); //TODO :
+	pkgmgrinfo_appinfo_get_component(handle, &component);
+	if(component == PMINFO_UI_APP) {
+		c->val[_AI_COMP] = strdup("ui"); //TODO :
+
+		r = pkgmgrinfo_appinfo_is_multiple(handle, &multiple);
+		if(multiple == true)
+			c->val[_AI_MULTI] = strdup("true");
+		else c->val[_AI_MULTI] = strdup("false");
+
+		r = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
+		if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
+			c->val[_AI_HWACC] = strdup("USE");
+		} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
+			c->val[_AI_HWACC] = strdup("SYS");
+		} else {
+			c->val[_AI_HWACC] = strdup("NOT_USE");
+		}
+	} else {
+		c->val[_AI_COMP] = strdup("svc");
+
+		r = pkgmgrinfo_appinfo_is_onboot(handle, &onboot);
+		if(onboot == true)
+			c->val[_AI_ONBOOT] = strdup("true");
+		else c->val[_AI_ONBOOT] = strdup("false");
+
+		r = pkgmgrinfo_appinfo_is_autorestart(handle, &restart);
+		if(restart == true)
+			c->val[_AI_RESTART] = strdup("true");
+		else c->val[_AI_RESTART] = strdup("false");
+	}
 
 	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
 	c->val[_AI_EXEC] = strdup(exec);
@@ -186,21 +153,7 @@ static int __ui_app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void
 		c->val[_AI_TYPE] = strdup("wgt");
 	}
 
-	r = pkgmgrinfo_appinfo_is_multiple(handle, &multiple);
-	if(multiple == true)
-		c->val[_AI_MULTI] = strdup("true");
-	else c->val[_AI_MULTI] = strdup("false");
-
-	pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
-	if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
-		c->val[_AI_HWACC] = strdup("USE");
-	} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
-		c->val[_AI_HWACC] = strdup("SYS");
-	} else {
-		c->val[_AI_HWACC] = strdup("NOT_USE");
-	}
-
-	_D("%s : %s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE], c->val[_AI_MULTI]);
+	_D("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
 
 	g_hash_table_insert(cf->tbl, c->val[_AI_FILE], c);
 
@@ -219,21 +172,11 @@ static int __app_info_delete_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	return 0;
 }
 
-static int __pkg_info_handler(const pkgmgrinfo_pkginfo_h handle, void *data)
-{
-	int r;
-
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __svc_app_info_insert_handler, data);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __ui_app_info_insert_handler, data);
-
-	return 0;
-}
-
 static int _read_pkg_info(struct appinfomgr *cf)
 {
 	int r;
 
-	r = pkgmgrinfo_pkginfo_get_list(__pkg_info_handler, cf);
+	r = pkgmgrinfo_appinfo_get_installed_list(__app_info_insert_handler, cf);
 
 	return 0;
 }
@@ -262,7 +205,6 @@ static void __vconf_cb(keynode_t *key, void *data)
 	char *saveptr;
 	char *pkgname;
 	pkgmgrinfo_appinfo_h handle;
-	pkgmgrinfo_app_component component;
 	struct appinfomgr *cf = (struct appinfomgr *)data;
 
 	noti_string = vconf_keynode_get_str(key);
@@ -279,13 +221,8 @@ static void __vconf_cb(keynode_t *key, void *data)
 		pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
 
 		_D("appid : %s /handle : %x", appid, handle);
-		pkgmgrinfo_appinfo_get_component(handle, &component);
 
-		if(component == PMINFO_UI_APP) {
-			__ui_app_info_insert_handler(handle, data);
-		} else if (component == PMINFO_SVC_APP) {
-			__svc_app_info_insert_handler(handle, data);
-		}
+		__app_info_insert_handler(handle, data);
 
 		pkgmgrinfo_appinfo_destroy_appinfo(handle);
 	} else if ( strncmp(type_string, "delete", 6) == 0) {
@@ -336,8 +273,8 @@ const struct appinfo *appinfo_insert(struct appinfomgr *cf, const char *pkg_name
 	pkgmgrinfo_pkginfo_h handle;
 
 	r = pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __svc_app_info_insert_handler, cf);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __ui_app_info_insert_handler, cf);
+	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_insert_handler, cf);
+	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_insert_handler, cf);
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 
 	return cf;
