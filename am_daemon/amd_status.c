@@ -26,11 +26,15 @@
 
 #include "amd_config.h"
 #include "amd_status.h"
+#include "amd_appinfo.h"
 #include "aul_util.h"
 #include "simple_util.h"
 #include "app_sock.h"
+#include "menu_db_util.h"
 
 GSList *app_status_info_list = NULL;
+
+struct appinfomgr *_saf = NULL;
 
 int _status_add_app_info_list(char *appid, char *app_path, int pid)
 {
@@ -167,6 +171,103 @@ int _status_send_running_appinfo(int fd)
 		free(pkt);
 
 	close(fd);
+
+	return 0;
+}
+
+int _status_app_is_running_v2(char *appid)
+{
+	char *apppath = NULL;
+	int ret = 0;
+	int i = 0;
+	struct appinfo *ai;
+
+	if(appid == NULL)
+		return -1;
+
+	ai = appinfo_find(_saf, appid);
+
+	if(ai == NULL)
+		return -1;
+
+	apppath = strdup(appinfo_get_value(ai, AIT_EXEC));
+
+	/*truncate apppath if it includes default bundles */
+	while (apppath[i] != 0) {
+		if (apppath[i] == ' ' || apppath[i] == '\t') {
+			apppath[i]='\0';
+			break;
+		}
+		i++;
+	}
+
+	ret = __proc_iter_cmdline(NULL, apppath);
+
+	free(apppath);
+
+	return ret;
+}
+
+static int __get_pkginfo(const char *dname, const char *cmdline, void *priv)
+{
+	app_info_from_db *menu_info;
+	char *r_info;
+
+	r_info = (char *)priv;
+
+	if ((menu_info = _get_app_info_from_db_by_apppath(cmdline)) == NULL)
+		goto out;
+	else {
+		strncat(r_info, dname, 8);
+		strncat(r_info, ":", 1);
+		strncat(r_info, _get_pkgname(menu_info), MAX_PACKAGE_STR_SIZE);
+		strncat(r_info, ":", 1);
+		strncat(r_info, _get_app_path(menu_info), MAX_PACKAGE_APP_PATH_SIZE);
+		strncat(r_info, ";", 1);
+	}
+
+ out:
+	if (menu_info != NULL)
+		_free_app_info_from_db(menu_info);
+	return 0;
+}
+
+int _status_send_running_appinfo_v2(int fd)
+{
+	app_pkt_t *pkt = NULL;
+	int len;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if(!pkt) {
+		_E("malloc fail");
+		close(fd);
+		return 0;
+	}
+
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	__proc_iter_cmdline(__get_pkginfo, pkt->data);
+
+	pkt->cmd = APP_RUNNING_INFO_RESULT;
+	pkt->len = strlen((char *)pkt->data) + 1;
+
+	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
+		if (errno == EPIPE)
+			_E("send failed due to EPIPE.\n");
+		_E("send fail to client");
+	}
+
+	if(pkt)
+		free(pkt);
+
+	close(fd);
+
+	return 0;
+}
+
+int _status_init(struct amdmgr* amd)
+{
+	_saf = amd->af;
 
 	return 0;
 }

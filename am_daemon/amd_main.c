@@ -258,6 +258,7 @@ static int __init()
 	cgutil_create(MOUNT_PATH, AGENT_PATH, &amd.cg);
 	_requset_init(&amd);
 	_launch_init(&amd);
+	_status_init(&amd);
 
 #ifndef __i386__
 	_key_init();

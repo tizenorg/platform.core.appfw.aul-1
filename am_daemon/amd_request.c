@@ -338,13 +338,13 @@ static gboolean __request_handler(gpointer data)
 		free(pkt);
 		break;
 	case APP_RUNNING_INFO:
-		_status_send_running_appinfo(clifd);
+		_status_send_running_appinfo_v2(clifd);
 		free(pkt);
 		break;
 	case APP_IS_RUNNING:
 		appid = malloc(MAX_PACKAGE_STR_SIZE);
 		strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-		ret = _status_app_is_running(appid);
+		ret = _status_app_is_running_v2(appid);
 		_D("APP_IS_RUNNING : %s : %d",appid, ret);
 		__send_result_to_client(clifd, ret);
 		free(pkt);
@@ -373,12 +373,13 @@ static gboolean __request_handler(gpointer data)
 		free(pkt);
 		break;
 	case APP_RUNNING_LIST_UPDATE:
-		kb = bundle_decode(pkt->data, pkt->len);
+		/*kb = bundle_decode(pkt->data, pkt->len);
 		appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 		app_path = (char *)bundle_get_val(kb, AUL_K_EXEC);
 		tmp_pid = (char *)bundle_get_val(kb, AUL_K_PID);
 		pid = atoi(tmp_pid);
-		ret = _status_add_app_info_list(appid, app_path, pid);
+		ret = _status_add_app_info_list(appid, app_path, pid);*/
+		ret = 0;
 		__send_result_to_client(clifd, ret);
 		free(pkt);
 		break;

@@ -438,7 +438,7 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmp_pid);
 
-	pid = _status_app_is_running(appid);
+	pid = _status_app_is_running_v2(appid);
 
 	if (pid > 0) {
 		if (caller_pid == pid) {
@@ -457,7 +457,7 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	__real_send(fd, pid);
 
 	if(pid > 0) {
-		_status_add_app_info_list(appid, app_path, pid);
+		//_status_add_app_info_list(appid, app_path, pid);
 		ac_server_check_launch_privilege(appid, "rpm", pid);
 	}
 
@@ -496,7 +496,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
 		if (!multiple || strncmp(multiple, "false", 5) == 0) {
-			pid = _status_app_is_running(appid);
+			pid = _status_app_is_running_v2(appid);
 		}
 
 		if (pid > 0) {
@@ -515,7 +515,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 			//_add_cgroup(_lcg, appid, pid);
 		}
 	} else if (componet && strncmp(componet, "svc", 3) == 0) {
-		pid = _status_app_is_running(appid);
+		pid = _status_app_is_running_v2(appid);
 		if (pid > 0) {
 			if ((ret = __nofork_processing(cmd, pid, kb)) < 0) {
 				pid = ret;
@@ -547,7 +547,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	__real_send(fd, pid);
 
 	if(pid > 0) {
-		_status_add_app_info_list(appid, app_path, pid);
+		//_status_add_app_info_list(appid, app_path, pid);
 		ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
 	}
 
