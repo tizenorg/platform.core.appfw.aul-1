@@ -471,6 +471,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	char *componet = NULL;
 	char *multiple = NULL;
 	char *app_path = NULL;
+	char *pkg_type = NULL;
 	int pid = -1;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	char *hwacc;
@@ -493,6 +494,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 
 	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
+	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
 		if (!multiple || strncmp(multiple, "false", 5) == 0) {
@@ -510,8 +512,12 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 			hwacc = appinfo_get_value(ai, AIT_HWACC);
 			bundle_add(kb, AUL_K_HWACC, hwacc);
 			bundle_add(kb, AUL_K_EXEC, app_path);
-			bundle_add(kb, AUL_K_PACKAGETYPE, appinfo_get_value(ai, AIT_TYPE));
-			pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
+			bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
+			if(strncmp(pkg_type, "wgt", 3) == 0) {
+				pid = app_send_cmd(WEB_LAUNCHPAD_PID, cmd, kb);
+			} else {
+				pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
+			}
 			//_add_cgroup(_lcg, appid, pid);
 		}
 	} else if (componet && strncmp(componet, "svc", 3) == 0) {

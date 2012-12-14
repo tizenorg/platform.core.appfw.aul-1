@@ -53,6 +53,7 @@ enum app_cmd {
 #define AUL_SOCK_PREFIX "/tmp/alaunch"
 #define AUL_SOCK_MAXBUFF 65535
 #define LAUNCHPAD_PID -1
+#define WEB_LAUNCHPAD_PID -3
 #define ELOCALLAUNCH_ID 128
 
 typedef struct _app_pkt_t {
