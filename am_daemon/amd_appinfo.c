@@ -147,7 +147,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
 	if(strncmp(type, "capp", 4) == 0 ) {
 		c->val[_AI_TYPE] = strdup("rpm");
-	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6)) {
+	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6) == 0) {
 		c->val[_AI_TYPE] = strdup("tpk");
 	} else if (strncmp(type, "webapp", 6) == 0) {
 		c->val[_AI_TYPE] = strdup("wgt");
