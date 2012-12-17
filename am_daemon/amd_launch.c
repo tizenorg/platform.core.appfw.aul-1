@@ -428,6 +428,16 @@ static void __real_send(int clifd, int ret)
 	close(clifd);
 }
 
+int __sat_ui_is_running()
+{
+	char *apppath = "/usr/apps/org.tizen.sat-ui/bin/sat-ui";
+	int ret = 0;
+
+	ret = __proc_iter_cmdline(NULL, apppath);
+
+	return ret;
+}
+
 int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 {
 	int ret = -1;
@@ -438,7 +448,7 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmp_pid);
 
-	pid = _status_app_is_running_v2(appid);
+	pid = __sat_ui_is_running();
 
 	if (pid > 0) {
 		if (caller_pid == pid) {
