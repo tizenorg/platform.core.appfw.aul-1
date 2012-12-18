@@ -29,22 +29,22 @@
 
 #ifdef LAUNCHPAD_LOG
 #undef LOG_TAG
-#define LOG_TAG "AULD"
+#define LOG_TAG "AUL_PAD"
 #else
 #undef LOG_TAG
 #define LOG_TAG "AUL"
 #endif
 #ifdef AMD_LOG
 #undef LOG_TAG
-#define LOG_TAG "AMD"
+#define LOG_TAG "AUL_AMD"
 #endif
 
 
 #define MAX_LOCAL_BUFSZ 128
 #define MAX_PID_STR_BUFSZ 20
 
-#define _E(fmt, arg...) LOGE("[%s,%d] "fmt, __FUNCTION__, __LINE__, ##arg)
-#define _D(fmt, arg...) LOGD("[%s,%d] "fmt, __FUNCTION__, __LINE__, ##arg)
+#define _E(fmt, arg...) LOGE(fmt, ##arg)
+#define _D(fmt, arg...) LOGD(fmt, ##arg)
 
 #define retvm_if(expr, val, fmt, arg...) do { \
 	if (expr) { \
