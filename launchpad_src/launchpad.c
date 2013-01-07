@@ -86,8 +86,6 @@ _static_ int __fake_launch_app(int cmd, int pid, bundle * kb);
 _static_ char **__create_argc_argv(bundle * kb, int *margc);
 _static_ int __normal_fork_exec(int argc, char **argv);
 _static_ void __real_launch(const char *app_path, bundle * kb);
-_static_ void __add_history(int caller, int callee, const char *pkgname,
-				bundle *b, const char *app_path);
 static inline int __parser(const char *arg, char *out, int out_size);
 _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			    app_info_from_db * menu_info, int cmd);
@@ -282,47 +280,6 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	__preload_exec(app_argc, app_argv);
 
 	__normal_fork_exec(app_argc, app_argv);
-}
-
-_static_ void __add_history(int caller, int callee, const char *pkgname, 
-				bundle *b, const char *app_path)
-{
-	struct history_data *hd;
-	bundle_raw *kb_data;
-	int len;
-
-	_D("***** HISTORY *****\n");
-	_D("%d ==> %d(%s) \n", caller, callee, pkgname);
-	_D("*******************\n");
-
-	if (b) {
-		bundle_encode(b, (bundle_raw **)&kb_data, &len);
-		hd = (struct history_data *)malloc(sizeof(char) * (len+1033));
-
-		strncpy(hd->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
-		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
-		hd->pid = callee;
-		hd->len = len;
-		memcpy(hd->data, kb_data, len);
-
-		__app_send_raw(AUL_UTIL_PID, APP_ADD_HISTORY, (unsigned char *)hd,
-			hd->len+1033);
-		free(kb_data);
-		free(hd);
-	} else {
-		hd = (struct history_data *)malloc(sizeof(char) * 1033);
-
-		strncpy(hd->pkg_name, pkgname, MAX_PACKAGE_STR_SIZE-1);
-		strncpy(hd->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
-		hd->pid = callee;
-		hd->len = 0;
-
-		__app_send_raw(AUL_UTIL_PID, APP_ADD_HISTORY, (unsigned char *)hd,
-			1033);
-		free(hd);
-	}
-
-	return;
 }
 
 

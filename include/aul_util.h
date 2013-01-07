@@ -29,14 +29,6 @@
 #define MAX_PACKAGE_APP_PATH_SIZE 512
 #define MAX_RUNNING_APP_INFO 512
 
-struct history_data {
-	char pkg_name[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int pid;
-	int len;
-	unsigned char data[1];
-};
-
 typedef struct _app_status_info_t{
 	char appid[MAX_PACKAGE_STR_SIZE];
 	char app_path[MAX_PACKAGE_APP_PATH_SIZE];

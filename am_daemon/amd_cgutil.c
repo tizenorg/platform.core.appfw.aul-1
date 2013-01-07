@@ -265,7 +265,7 @@ static int check_cgroup_mount(const char *mount_point)
 
 static int _mount_root(struct cginfo *cg, const char *mount_point)
 {
-	int r;
+	int r = 0;
 
 	if (check_cgroup_mount(mount_point) < 0)
 		r = _mount(mount_point, &mntinfos[_MNT_ROOT]);

@@ -59,7 +59,7 @@ static inline void __preload_init(int argc, char **argv)
 
 	while (fgets(soname, MAX_LOCAL_BUFSZ, preload_list) > 0) {
 		soname[strlen(soname) - 1] = 0;
-		handle = dlopen(soname, RTLD_NOW);
+		handle = dlopen((const char *) soname, RTLD_NOW);
 		if (handle == NULL)
 			continue;
 		_D("preload %s# - handle : %x\n", soname, handle);

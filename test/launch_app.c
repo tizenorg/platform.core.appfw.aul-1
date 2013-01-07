@@ -37,7 +37,7 @@ static bundle *create_internal_bundle(int start)
 {
 	bundle *kb;
 	int i;
-	char arg[1024];
+	char arg[1024] = {0, };
 	char* val_array[128];
 
 	kb = bundle_create();
@@ -46,7 +46,7 @@ static bundle *create_internal_bundle(int start)
 			bundle_add(kb, gargv[i], " ");
 		else {
 			int j = 1;
-			strncpy(arg, gargv[i + 1], 1024);
+			strncpy(arg, gargv[i + 1], 1023);
 			val_array[0] = strtok(arg,",");
 			while(1)
 			{

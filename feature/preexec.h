@@ -109,6 +109,7 @@ static inline void __preexec_init(int argc, char **argv)
 			   type, sopath);
 			free(type_t);
 			dlclose(handle);
+			handle = NULL;
 			continue;
 		}
 
