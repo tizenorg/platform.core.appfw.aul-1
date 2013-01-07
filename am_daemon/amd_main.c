@@ -98,6 +98,7 @@ static int __kill_bg_apps(int limit)
 		free(info_t);
 	}
 
+	return 0;
 }
 
 static int __remove_item_running_list(int pid)
@@ -120,7 +121,7 @@ static int __remove_item_running_list(int pid)
 gboolean __add_item_running_list(gpointer user_data)
 {
 	bool taskmanage;
-	ail_appinfo_h handle;
+	ail_appinfo_h handle = NULL;
 	ail_error_e ail_ret;
 	r_app_info_t *info_t = NULL;
 	GSList *iter = NULL;
@@ -155,11 +156,11 @@ gboolean __add_item_running_list(gpointer user_data)
 	ail_ret = ail_appinfo_get_bool(handle, AIL_PROP_X_SLP_TASKMANAGE_BOOL, &taskmanage);
 	if (ail_ret != AIL_ERROR_OK) {
 		_E("ail_appinfo_get_bool failed");
-		return false;
+		goto END;
 	}
 
 	if (taskmanage == false)
-		return false;
+		goto END;
 
 	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
@@ -190,11 +191,12 @@ gboolean __add_item_running_list(gpointer user_data)
 		info_t = (r_app_info_t *)iter->data;
 	}
 
+END:
 	if (ail_destroy_appinfo(handle) != AIL_ERROR_OK)
 		_E("ail_destroy_rs failed");
 
 	free(item);
-	return false;
+	return ail_ret == AIL_ERROR_OK ? true : false;
 }
 
 static void __vconf_cb(keynode_t *key, void *data)
@@ -281,7 +283,8 @@ int main(int argc, char *argv[])
 	ret = __init();
 
 	handle = creat("/tmp/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	close(handle);
+	if (handle != -1)
+		close(handle);
 
 	ecore_main_loop_begin();
 

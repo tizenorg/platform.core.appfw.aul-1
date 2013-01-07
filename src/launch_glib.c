@@ -126,6 +126,7 @@ SLPAPI int aul_launch_init(
 SLPAPI int aul_launch_fini()
 {
 	g_source_destroy(src);
+	return AUL_R_OK;
 }
 
 SLPAPI int aul_launch_argv_handler(int argc, char **argv)

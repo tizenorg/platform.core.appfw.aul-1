@@ -57,7 +57,7 @@ int __create_server_sock(int pid)
 
 	/* Create basedir for our sockets */
 	orig_mask = umask(0);
-	mkdir(AUL_SOCK_PREFIX, S_IRWXU | S_IRWXG | S_IRWXO | S_ISVTX);
+	(void) mkdir(AUL_SOCK_PREFIX, S_IRWXU | S_IRWXG | S_IRWXO | S_ISVTX);
 	umask(orig_mask);
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -115,6 +115,7 @@ int __create_server_sock(int pid)
 
 	if (listen(fd, 10) == -1) {
 		_E("listen error");
+		close(fd);
 		return -1;
 	}
 
@@ -229,9 +230,9 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
 		return (-1);	/* select error: sockfd not set*/
 
  done:
-	fcntl(fd, F_SETFL, flags);	
+	(void) fcntl(fd, F_SETFL, flags);
 	if (error) {
-		close(fd);	
+		close(fd);
 		errno = error;
 		return (-1);
 	}

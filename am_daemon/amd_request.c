@@ -165,6 +165,9 @@ static gboolean __add_history_handler(gpointer user_data)
 	struct appinfo *ai;
 	app_pkt_t *pkt = (app_pkt_t *)user_data;
 
+	if (!pkt)
+		return FALSE;
+
 	kb = bundle_decode(pkt->data, pkt->len);
 	appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 
@@ -192,8 +195,7 @@ static gboolean __add_history_handler(gpointer user_data)
 
 	if (kb != NULL)
 		bundle_free(kb);
-	if (pkt != NULL)
-		free(pkt);
+	free(pkt);
 
 	return FALSE;
 }
@@ -298,94 +300,98 @@ static gboolean __request_handler(gpointer data)
 	}
 
 	switch (pkt->cmd) {
-	case APP_OPEN:
-	case APP_RESUME:
-	case APP_START:
-	case APP_START_RES:
-		kb = bundle_decode(pkt->data, pkt->len);
-		appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
-		ret = _start_app(appid, kb, pkt->cmd, cr.pid, clifd);
+		case APP_OPEN:
+		case APP_RESUME:
+		case APP_START:
+		case APP_START_RES:
+			kb = bundle_decode(pkt->data, pkt->len);
+			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+			ret = _start_app(appid, kb, pkt->cmd, cr.pid, clifd);
 
-		item = malloc(sizeof(item_pkt_t));
-		item->pid = ret;
-		strncpy(item->appid, appid, 512);
+			item = calloc(1, sizeof(item_pkt_t));
+			item->pid = ret;
+			strncpy(item->appid, appid, 511);
 
-		if (kb != NULL)
-			bundle_free(kb);
+			if (kb != NULL)
+				bundle_free(kb), kb = NULL;
 
-		if(ret > 0) {
-			g_timeout_add(1000, __add_history_handler, pkt);
-			g_timeout_add(1200, __add_item_running_list, item);
-		} else {
+			if(ret > 0) {
+				g_timeout_add(1000, __add_history_handler, pkt);
+				g_timeout_add(1200, __add_item_running_list, item);
+			} else {
+				free(pkt);
+				free(item);
+			}
+			break;
+		case APP_RESULT:
+		case APP_CANCEL:
+			kb = bundle_decode(pkt->data, pkt->len);
+			ret = __foward_cmd(pkt->cmd, kb, cr.pid);
+			__real_send(clifd, ret);
 			free(pkt);
-			free(item);
-		}
-		break;
-	case APP_RESULT:
-	case APP_CANCEL:
-		kb = bundle_decode(pkt->data, pkt->len);
-		ret = __foward_cmd(pkt->cmd, kb, cr.pid);
-		__real_send(clifd, ret);
-		free(pkt);
-		break;
-	case APP_TERM_BY_PID:
-	case APP_RESUME_BY_PID:
-	case APP_KILL_BY_PID:
-		kb = bundle_decode(pkt->data, pkt->len);
-		appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
-		ret = __app_process_by_pid(pkt->cmd, appid, &cr);
-		__real_send(clifd, ret);
-		free(pkt);
-		break;
-	case APP_RUNNING_INFO:
-		_status_send_running_appinfo_v2(clifd);
-		free(pkt);
-		break;
-	case APP_IS_RUNNING:
-		appid = malloc(MAX_PACKAGE_STR_SIZE);
-		strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-		ret = _status_app_is_running_v2(appid);
-		_D("APP_IS_RUNNING : %s : %d",appid, ret);
-		__send_result_to_client(clifd, ret);
-		free(pkt);
-		break;
-	case APP_KEY_RESERVE:
-		ret = _register_key_event(cr.pid);
-		__send_result_to_client(clifd, ret);
-		free(pkt);
-		break;
-	case APP_KEY_RELEASE:
-		ret = _unregister_key_event(cr.pid);
-		__send_result_to_client(clifd, ret);
-		free(pkt);
-		break;
-	case APP_STATUS_UPDATE:
-		status = (int *)pkt->data;
-		ret = _status_update_app_info_list(cr.pid, *status);
-		__send_result_to_client(clifd, ret);
-		free(pkt);
-		break;
-	case APP_RELEASED:
-		appid = malloc(MAX_PACKAGE_STR_SIZE);
-		strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-		ret = __release_srv(appid);
-		__send_result_to_client(clifd, ret);
-		free(pkt);
-		break;
-	case APP_RUNNING_LIST_UPDATE:
-		/*kb = bundle_decode(pkt->data, pkt->len);
-		appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-		app_path = (char *)bundle_get_val(kb, AUL_K_EXEC);
-		tmp_pid = (char *)bundle_get_val(kb, AUL_K_PID);
-		pid = atoi(tmp_pid);
-		ret = _status_add_app_info_list(appid, app_path, pid);*/
-		ret = 0;
-		__send_result_to_client(clifd, ret);
-		free(pkt);
-		break;
-	default:
-		_E("no support packet");
+			break;
+		case APP_TERM_BY_PID:
+		case APP_RESUME_BY_PID:
+		case APP_KILL_BY_PID:
+			kb = bundle_decode(pkt->data, pkt->len);
+			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+			ret = __app_process_by_pid(pkt->cmd, appid, &cr);
+			__real_send(clifd, ret);
+			free(pkt);
+			break;
+		case APP_RUNNING_INFO:
+			_status_send_running_appinfo_v2(clifd);
+			free(pkt);
+			break;
+		case APP_IS_RUNNING:
+			appid = malloc(MAX_PACKAGE_STR_SIZE);
+			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
+			ret = _status_app_is_running_v2(appid);
+			_D("APP_IS_RUNNING : %s : %d",appid, ret);
+			__send_result_to_client(clifd, ret);
+			free(pkt);
+			free(appid);
+			break;
+		case APP_KEY_RESERVE:
+			ret = _register_key_event(cr.pid);
+			__send_result_to_client(clifd, ret);
+			free(pkt);
+			break;
+		case APP_KEY_RELEASE:
+			ret = _unregister_key_event(cr.pid);
+			__send_result_to_client(clifd, ret);
+			free(pkt);
+			break;
+		case APP_STATUS_UPDATE:
+			status = (int *)pkt->data;
+			ret = _status_update_app_info_list(cr.pid, *status);
+			__send_result_to_client(clifd, ret);
+			free(pkt);
+			break;
+		case APP_RELEASED:
+			appid = malloc(MAX_PACKAGE_STR_SIZE);
+			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
+			ret = __release_srv(appid);
+			__send_result_to_client(clifd, ret);
+			free(pkt);
+			free(appid);
+			break;
+		case APP_RUNNING_LIST_UPDATE:
+			/*kb = bundle_decode(pkt->data, pkt->len);
+			  appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+			  app_path = (char *)bundle_get_val(kb, AUL_K_EXEC);
+			  tmp_pid = (char *)bundle_get_val(kb, AUL_K_PID);
+			  pid = atoi(tmp_pid);
+			  ret = _status_add_app_info_list(appid, app_path, pid);*/
+			ret = 0;
+			__send_result_to_client(clifd, ret);
+			free(pkt);
+			break;
+		default:
+			_E("no support packet");
 	}
+	if (kb != NULL)
+		bundle_free(kb), kb = NULL;
 
 	return TRUE;
 }
@@ -407,7 +413,7 @@ static gboolean __au_glib_check(GSource *src)
 }
 
 static gboolean __au_glib_dispatch(GSource *src, GSourceFunc callback,
-				  gpointer data)
+		gpointer data)
 {
 	callback(data);
 	return TRUE;
@@ -441,7 +447,7 @@ int _requset_init(struct amdmgr *amd)
 
 	g_source_add_poll(src, gpollfd);
 	g_source_set_callback(src, (GSourceFunc) __request_handler,
-				      (gpointer) gpollfd, NULL);
+			(gpointer) gpollfd, NULL);
 	g_source_set_priority(src, G_PRIORITY_DEFAULT);
 
 	r = g_source_attach(src, NULL);
