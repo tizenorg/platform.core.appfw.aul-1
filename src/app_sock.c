@@ -75,7 +75,7 @@ int __create_server_sock(int pid)
 		}
 	}
 
-	bzero(&saddr, sizeof(saddr));
+	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
 	snprintf(saddr.sun_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, pid);
 	unlink(saddr.sun_path);

@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.226
+Version:    0.0.228
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -65,7 +65,7 @@ install -m 755 launchpad_run %{buildroot}/etc/init.d
 
 mkdir -p %{buildroot}/etc/rc.d/rc3.d
 mkdir -p %{buildroot}/etc/rc.d/rc4.d
-ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S15launchpad_run
+ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
 ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 
 mkdir -p %{buildroot}/opt/dbspace
@@ -103,7 +103,7 @@ systemctl daemon-reload
 %{_sysconfdir}/init.d/launchpad_run
 %attr(0755,root,root) %{_bindir}/aul_service.sh
 %attr(0755,root,root) %{_bindir}/aul_service_test.sh
-%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S15launchpad_run
+%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 %config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db
 %config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db-journal

@@ -62,7 +62,7 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	char *pkt_data;
 	aul_app_info info;
 
-	bzero(&info, sizeof(info));
+	memset(&info, 0, sizeof(info));
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
