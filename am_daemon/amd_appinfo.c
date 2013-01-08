@@ -256,7 +256,7 @@ int appinfo_init(struct appinfomgr **cf)
 		return -1;
 	}
 
-	r = vconf_notify_key_changed("memory/menuscreen/desktop", __vconf_cb, _cf);
+	r = vconf_notify_key_changed(VCONFKEY_MENUSCREEN_DESKTOP, __vconf_cb, _cf);
 
 	*cf = _cf;
 
