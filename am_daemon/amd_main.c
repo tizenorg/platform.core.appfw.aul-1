@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
 	int ret;
 	int handle;
 
-	ret = ac_server_initailize();
+	ret = ac_server_initialize();
 	ret = __init();
 
 	handle = creat("/tmp/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);

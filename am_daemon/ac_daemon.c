@@ -557,7 +557,7 @@ static int __app_dead_handler(int pid, void *data)
 	return 0;
 }
 
-static void __ac_key_initailize()
+static void __ac_key_initialize()
 {
 	key_info.win = ecore_x_window_input_new(0, 0, 0, 1, 1);
 	if (!key_info.win) {
@@ -633,7 +633,7 @@ static int __initialize()
 		return AC_R_ERROR;
 	}
 
-	__ac_key_initailize();
+	__ac_key_initialize();
 
 	r = vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL);
 
@@ -649,7 +649,7 @@ int main(int argc, char *argv[])
 	ecore_event_init();
 	ecore_x_init(NULL);
 
-	ret = ac_server_initailize();
+	ret = ac_server_initialize();
 
 	ret = __initialize();
 
