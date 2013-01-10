@@ -88,13 +88,18 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	bool restart;
 	pkgmgrinfo_app_hwacceleration hwacc;
 	pkgmgrinfo_app_component component;
+	int ret = -1;
 
 	if (!handle) {
 		_E("null app handle");
 		return -1;
 	}
 
-	pkgmgrinfo_appinfo_get_appid(handle, &appid);
+	ret = pkgmgrinfo_appinfo_get_appid(handle, &appid);
+	if (ret < 0) {
+		_E("fail to get appinfo");
+		return -1;
+	}
 
 	g_hash_table_remove(cf->tbl, appid);
 

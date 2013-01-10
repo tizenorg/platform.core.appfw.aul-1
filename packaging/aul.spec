@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.228
+Version:    0.0.229
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
