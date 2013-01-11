@@ -196,7 +196,7 @@ END:
 		_E("ail_destroy_rs failed");
 
 	free(item);
-	return ail_ret == AIL_ERROR_OK ? true : false;
+	return false;
 }
 
 static void __vconf_cb(keynode_t *key, void *data)
