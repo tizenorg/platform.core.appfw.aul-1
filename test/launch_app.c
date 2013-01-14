@@ -118,13 +118,6 @@ static Eina_Bool run_func(void *data)
 
 int main(int argc, char **argv)
 {
-
-	/* Checking the User ID*/
-	if (getuid() != ROOT_UID) {
-		fprintf(stderr, "permission error\n");
-		exit(EXIT_FAILURE);
-	}
-
 	if (argc < 2) {
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
