@@ -93,6 +93,7 @@ static inline void __preexec_init(int argc, char **argv)
 		if (type_t == NULL) {
 			_E("no available memory\n");
 			__preexec_list_free();
+			flclose(preexec_file);
 			return;
 		}
 
@@ -118,6 +119,7 @@ static inline void __preexec_init(int argc, char **argv)
 			_E("no available memory\n");
 			free(type_t);
 			__preexec_list_free();
+			flclose(preexec_file);
 			return;
 		}
 		type_t->so_path = strdup(sopath);
@@ -126,6 +128,7 @@ static inline void __preexec_init(int argc, char **argv)
 			free(type_t->pkg_type);
 			free(type_t);
 			__preexec_list_free();
+			flclose(preexec_file);
 			return;
 		}
 		type_t->dl_do_pre_exe = func;

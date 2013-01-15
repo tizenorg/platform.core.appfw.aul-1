@@ -87,6 +87,7 @@ int __create_server_sock(int pid)
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
 				_E("labeling to socket(IPOUT) error");
+				close(fd);
 				return -1;
 			}
 		}
@@ -95,6 +96,7 @@ int __create_server_sock(int pid)
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
 				_E("labeling to socket(IPIN) error");
+				close(fd);
 				return -1;
 			}
 		}
@@ -102,12 +104,14 @@ int __create_server_sock(int pid)
 
 	if (bind(fd, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
 		_E("bind error");
+		close(fd);
 		return -1;
 	}
 
 	if (chmod(saddr.sun_path, (S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
 		/* Flawfinder: ignore*/
 		_E("failed to change the socket permission");
+		close(fd);
 		return -1;
 	}
 
