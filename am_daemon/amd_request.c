@@ -287,6 +287,7 @@ static gboolean __request_handler(gpointer data)
 	struct ucred cr;
 	int *status;
 	int ret = -1;
+	int free_pkt = 1;
 	char *appid;
 	char *app_path;
 	char *tmp_pid;
@@ -308,19 +309,17 @@ static gboolean __request_handler(gpointer data)
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 			ret = _start_app(appid, kb, pkt->cmd, cr.pid, clifd);
 
-			item = calloc(1, sizeof(item_pkt_t));
-			item->pid = ret;
-			strncpy(item->appid, appid, 511);
-
 			if (kb != NULL)
 				bundle_free(kb), kb = NULL;
 
 			if(ret > 0) {
+				item = calloc(1, sizeof(item_pkt_t));
+				item->pid = ret;
+				strncpy(item->appid, appid, 511);
+				free_pkt = 0;
+
 				g_timeout_add(1000, __add_history_handler, pkt);
 				g_timeout_add(1200, __add_item_running_list, item);
-			} else {
-				free(pkt);
-				free(item);
 			}
 			break;
 		case APP_RESULT:
@@ -328,7 +327,6 @@ static gboolean __request_handler(gpointer data)
 			kb = bundle_decode(pkt->data, pkt->len);
 			ret = __foward_cmd(pkt->cmd, kb, cr.pid);
 			__real_send(clifd, ret);
-			free(pkt);
 			break;
 		case APP_TERM_BY_PID:
 		case APP_RESUME_BY_PID:
@@ -337,11 +335,9 @@ static gboolean __request_handler(gpointer data)
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr);
 			__real_send(clifd, ret);
-			free(pkt);
 			break;
 		case APP_RUNNING_INFO:
 			_status_send_running_appinfo_v2(clifd);
-			free(pkt);
 			break;
 		case APP_IS_RUNNING:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
@@ -349,31 +345,26 @@ static gboolean __request_handler(gpointer data)
 			ret = _status_app_is_running_v2(appid);
 			_D("APP_IS_RUNNING : %s : %d",appid, ret);
 			__send_result_to_client(clifd, ret);
-			free(pkt);
 			free(appid);
 			break;
 		case APP_KEY_RESERVE:
 			ret = _register_key_event(cr.pid);
 			__send_result_to_client(clifd, ret);
-			free(pkt);
 			break;
 		case APP_KEY_RELEASE:
 			ret = _unregister_key_event(cr.pid);
 			__send_result_to_client(clifd, ret);
-			free(pkt);
 			break;
 		case APP_STATUS_UPDATE:
 			status = (int *)pkt->data;
 			ret = _status_update_app_info_list(cr.pid, *status);
 			__send_result_to_client(clifd, ret);
-			free(pkt);
 			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 			ret = __release_srv(appid);
 			__send_result_to_client(clifd, ret);
-			free(pkt);
 			free(appid);
 			break;
 		case APP_RUNNING_LIST_UPDATE:
@@ -385,11 +376,14 @@ static gboolean __request_handler(gpointer data)
 			  ret = _status_add_app_info_list(appid, app_path, pid);*/
 			ret = 0;
 			__send_result_to_client(clifd, ret);
-			free(pkt);
 			break;
 		default:
 			_E("no support packet");
 	}
+
+	if (free_pkt)
+		free(pkt);
+
 	if (kb != NULL)
 		bundle_free(kb), kb = NULL;
 

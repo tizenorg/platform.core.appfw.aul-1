@@ -564,7 +564,8 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 
 	if(pid > 0) {
 		//_status_add_app_info_list(appid, app_path, pid);
-		ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
+		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
+		return ret != AC_R_ERROR ? pid : -1;
 	}
 
 	return pid;
