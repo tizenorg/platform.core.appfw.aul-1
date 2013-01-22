@@ -274,17 +274,25 @@ static int __init()
 	return 0;
 }
 
-int main(int argc, char *argv[])
+gboolean  __amd_ready(gpointer user_data)
 {
-	int ret;
 	int handle;
-
-	ret = ac_server_initialize();
-	ret = __init();
 
 	handle = creat("/tmp/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	if (handle != -1)
 		close(handle);
+
+	return FALSE;
+}
+
+int main(int argc, char *argv[])
+{
+	int ret;
+
+	ret = ac_server_initialize();
+	ret = __init();
+
+	g_idle_add(__amd_ready, NULL);
 
 	ecore_main_loop_begin();
 
