@@ -6,7 +6,7 @@ EnvironmentFile=/etc/sysconfig/tizen-mobile-ui
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%I/dbus/user_bus_socket
 Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/%I
-ExecStart=/usr/bin/launchpad_preloading_preinitializing_daemon
+ExecStart=/usr/bin/launchpad_preloading_preinitializing_daemon "                                                                                                                                                                                                         "
 
 [Install]
 WantedBy=graphical.target
