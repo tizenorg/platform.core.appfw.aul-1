@@ -216,6 +216,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 	char *pkgname;
 	pkgmgrinfo_appinfo_h handle;
 	struct appinfomgr *cf = (struct appinfomgr *)data;
+	int ret;
 
 	noti_string = vconf_keynode_get_str(key);
 	if( noti_string == NULL ) {
@@ -228,7 +229,10 @@ static void __vconf_cb(keynode_t *key, void *data)
 	appid = strtok_r(NULL, ":", &saveptr);
 
 	if ( strncmp(type_string, "create", 6) == 0) {
-		pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
+		ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
+		if(ret < 0) {
+			_E("pkgmgrinfo_appinfo_get_appinfo fail");
+		}
 
 		_D("appid : %s /handle : %x", appid, handle);
 
