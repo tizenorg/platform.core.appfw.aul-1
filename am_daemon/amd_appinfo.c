@@ -29,6 +29,7 @@ enum _appinfo_idx {
 	_AI_RESTART,
 	_AI_MULTI,
 	_AI_HWACC,
+	_AI_PKGID,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -47,6 +48,7 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, },
 	[_AI_MULTI] = { "Multiple", AIT_MULTI, },
 	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, },
+	[_AI_PKGID] = { "PkgId", AIT_PKGID, },
 };
 
 struct appinfo {
@@ -83,6 +85,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	char *exec;
 	char *type;
 	char *appid;
+	char *pkgid;
 	bool multiple;
 	bool onboot;
 	bool restart;
@@ -153,6 +156,9 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 
 	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
 	c->val[_AI_EXEC] = strdup(exec);
+
+	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
+	c->val[_AI_PKGID] = strdup(pkgid);
 
 	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
 	if(strncmp(type, "capp", 4) == 0 ) {
