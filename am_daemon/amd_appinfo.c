@@ -29,7 +29,6 @@ enum _appinfo_idx {
 	_AI_RESTART,
 	_AI_MULTI,
 	_AI_HWACC,
-	_AI_PKGID,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -48,12 +47,13 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, },
 	[_AI_MULTI] = { "Multiple", AIT_MULTI, },
 	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, },
-	[_AI_PKGID] = { "PkgId", AIT_PKGID, },
 };
 
 struct appinfo {
 	char *val[_AI_MAX];
 };
+
+int gles = 1;
 
 static void _free_appinfo(gpointer data)
 {
@@ -85,7 +85,6 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	char *exec;
 	char *type;
 	char *appid;
-	char *pkgid;
 	bool multiple;
 	bool onboot;
 	bool restart;
@@ -132,13 +131,18 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 			c->val[_AI_MULTI] = strdup("true");
 		else c->val[_AI_MULTI] = strdup("false");
 
-		r = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
-		if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
-			c->val[_AI_HWACC] = strdup("USE");
-		} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
-			c->val[_AI_HWACC] = strdup("SYS");
-		} else {
+		if(gles == 0) {
 			c->val[_AI_HWACC] = strdup("NOT_USE");
+		} else {
+
+			r = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
+			if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
+				c->val[_AI_HWACC] = strdup("USE");
+			} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
+				c->val[_AI_HWACC] = strdup("SYS");
+			} else {
+				c->val[_AI_HWACC] = strdup("NOT_USE");
+			}
 		}
 	} else {
 		c->val[_AI_COMP] = strdup("svc");
@@ -156,9 +160,6 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 
 	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
 	c->val[_AI_EXEC] = strdup(exec);
-
-	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
-	c->val[_AI_PKGID] = strdup(pkgid);
 
 	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
 	if(strncmp(type, "capp", 4) == 0 ) {
@@ -254,12 +255,23 @@ int appinfo_init(struct appinfomgr **cf)
 {
 	struct appinfomgr *_cf;
 	int r;
+	FILE *fp;
+	char buf[4096];
+	char *tmp;
 
 	if (!cf) {
 		errno = EINVAL;
 		_E("appinfo init: %s", strerror(errno));
 		return -1;
 	}
+
+	fp = fopen("/proc/cmdline", "r");
+	r = fgets(buf, sizeof(buf), fp);
+	tmp = strstr(buf, "gles");
+	if(tmp != NULL) {
+		sscanf(tmp,"gles=%d", &gles);
+	}
+	fclose(fp);
 
 	_cf = _init();
 	if (!_cf)
