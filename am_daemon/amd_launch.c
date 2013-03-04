@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <app2ext_interface.h>
 #include <sys/prctl.h>
+#include <pkgmgr-info.h>
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -602,7 +603,7 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	return pid;
 }
 
-int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
+int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
 {
 	struct appinfo *ai;
 	int ret = -1;
@@ -613,6 +614,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	int pid = -1;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	char *hwacc;
+	char *permission;
+	char caller_appid[256];
+	pkgmgrinfo_cert_compare_result_type_e compare_result;
 
 	int location = -1;
 	app2ext_handle *app2_handle = NULL;
@@ -633,6 +637,20 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
+	permission = appinfo_get_value(ai, AIT_PERM);
+
+	if(permission && strncmp(permission, "signature", 9) == 0 ) {
+		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
+			aul_app_get_appid_bypid(caller_pid, caller_appid, sizeof(caller_appid));
+			pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
+			if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
+				pid = -EILLEGALACCESS;
+				__real_send(fd, pid);
+				return pid;
+			}
+		}
+	}
+
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
 		if (!multiple || strncmp(multiple, "false", 5) == 0) {

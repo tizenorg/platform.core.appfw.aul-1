@@ -70,6 +70,7 @@ extern "C" {
  * @brief Return values in AUL. 
  */
 typedef enum _aul_return_val {
+	AUL_R_ILLACC = -8,		/**< Illegal Access */
 	AUL_R_LOCAL = -7,		/**< Launch by himself */
 	AUL_R_ETIMEOUT = -6,		/**< Timeout */
 	AUL_R_ECANCELED = -5,		/**< Operation canceled */

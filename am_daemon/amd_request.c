@@ -307,7 +307,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_START_RES:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
-			ret = _start_app(appid, kb, pkt->cmd, cr.pid, clifd);
+			ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 
 			if (kb != NULL)
 				bundle_free(kb), kb = NULL;

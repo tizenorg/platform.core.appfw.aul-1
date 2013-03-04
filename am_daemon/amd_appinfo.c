@@ -29,6 +29,7 @@ enum _appinfo_idx {
 	_AI_RESTART,
 	_AI_MULTI,
 	_AI_HWACC,
+	_AI_PERM,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -47,6 +48,7 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, },
 	[_AI_MULTI] = { "Multiple", AIT_MULTI, },
 	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, },
+	[_AI_PERM] = { "PermissionType", AIT_PERM, },
 };
 
 struct appinfo {
@@ -90,6 +92,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	bool restart;
 	pkgmgrinfo_app_hwacceleration hwacc;
 	pkgmgrinfo_app_component component;
+	pkgmgrinfo_permission_type permission;
 	int ret = -1;
 
 	if (!handle) {
@@ -168,6 +171,15 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 		c->val[_AI_TYPE] = strdup("tpk");
 	} else if (strncmp(type, "webapp", 6) == 0) {
 		c->val[_AI_TYPE] = strdup("wgt");
+	}
+
+	r = pkgmgrinfo_appinfo_get_permission_type(handle, &permission);
+	if (permission == PMINFO_PERMISSION_SIGNATURE) {
+		c->val[_AI_PERM] = strdup("signature");
+	} else if (permission == PMINFO_PERMISSION_PRIVILEGE) {
+		c->val[_AI_PERM] = strdup("privilege");
+	} else {
+		c->val[_AI_PERM] = strdup("normal");
 	}
 
 	_D("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);

@@ -13,6 +13,7 @@ enum appinfo_type {
 	AIT_RESTART, /* auto restart: boolean */
 	AIT_MULTI,
 	AIT_HWACC,
+	AIT_PERM,
 };
 
 int appinfo_init(struct appinfomgr **cf);
