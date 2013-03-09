@@ -347,6 +347,11 @@ static gboolean __request_handler(gpointer data)
 			__send_result_to_client(clifd, ret);
 			free(appid);
 			break;
+		case APP_GET_APPID_BYPID:
+			memcpy(&pid, pkt->data, pkt->len);
+			ret = _status_get_appid_bypid(clifd, pid);
+			_D("APP_GET_APPID_BYPID : %d : %d", pid, ret);
+			break;
 		case APP_KEY_RESERVE:
 			ret = _register_key_event(cr.pid);
 			__send_result_to_client(clifd, ret);
@@ -379,6 +384,7 @@ static gboolean __request_handler(gpointer data)
 			break;
 		default:
 			_E("no support packet");
+			close(clifd);
 	}
 
 	if (free_pkt)

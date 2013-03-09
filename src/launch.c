@@ -116,7 +116,7 @@ SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 			res = AUL_R_LOCAL;
 			break;
 		case -EILLEGALACCESS:
-			res = AUL_R_ILLACC;
+			res = AUL_R_EILLACC;
 			break;
 		default:
 			res = AUL_R_ERROR;

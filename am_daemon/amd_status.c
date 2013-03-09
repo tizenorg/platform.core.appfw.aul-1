@@ -265,6 +265,78 @@ int _status_send_running_appinfo_v2(int fd)
 	return 0;
 }
 
+static int __get_pkgname_bypid(int pid, char *pkgname, int len)
+{
+	char *cmdline;
+	app_info_from_db *menu_info;
+
+	cmdline = __proc_get_cmdline_bypid(pid);
+	if (cmdline == NULL)
+		return -1;
+
+	if ((menu_info = _get_app_info_from_db_by_apppath(cmdline)) == NULL) {
+		free(cmdline);
+		return -1;
+	} else {
+		snprintf(pkgname, len, "%s", _get_pkgname(menu_info));
+	}
+
+	free(cmdline);
+	_free_app_info_from_db(menu_info);
+
+	return 0;
+}
+
+int _status_get_appid_bypid(int fd, int pid)
+{
+	app_pkt_t *pkt = NULL;
+	int len;
+	int pgid;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if(!pkt) {
+		_E("malloc fail");
+		close(fd);
+		return 0;
+	}
+
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = APP_GET_APPID_BYPID_ERROR;
+
+	if (__get_pkgname_bypid(pid, pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
+		_D("appid for %d is %s", pid, pkt->data);
+		pkt->cmd = APP_GET_APPID_BYPID_OK;
+		goto out;
+	}
+	/* support app launched by shell script*/
+	_D("second chance");
+	pgid = getpgid(pid);
+	if (pgid <= 1)
+		goto out;
+
+	_D("second change pgid = %d, pid = %d", pgid, pid);
+	if (__get_pkgname_bypid(pgid, pkt->data, MAX_PACKAGE_STR_SIZE) == 0)
+		pkt->cmd = APP_GET_APPID_BYPID_OK;
+
+ out:
+	pkt->len = strlen((char *)pkt->data) + 1;
+
+	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
+		if (errno == EPIPE)
+			_E("send failed due to EPIPE.\n");
+		_E("send fail to client");
+	}
+
+	if(pkt)
+		free(pkt);
+
+	close(fd);
+
+	return 0;
+}
+
+
 int _status_init(struct amdmgr* amd)
 {
 	_saf = amd->af;

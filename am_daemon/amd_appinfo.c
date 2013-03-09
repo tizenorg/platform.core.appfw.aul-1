@@ -232,7 +232,6 @@ static void __vconf_cb(keynode_t *key, void *data)
 	char *type_string;
 	char *appid;
 	char *saveptr;
-	char *pkgname;
 	pkgmgrinfo_appinfo_h handle;
 	struct appinfomgr *cf = (struct appinfomgr *)data;
 	int ret;
@@ -260,6 +259,14 @@ static void __vconf_cb(keynode_t *key, void *data)
 		pkgmgrinfo_appinfo_destroy_appinfo(handle);
 	} else if ( strncmp(type_string, "delete", 6) == 0) {
 		g_hash_table_remove(cf->tbl, appid);
+	} else if (strncmp(type_string, "update", 6) == 0){
+		/*REMOVE EXISTING ENTRY & CREATE AGAIN*/
+		if (g_hash_table_remove(cf->tbl, appid) == true){
+			if (pkgmgrinfo_appinfo_get_appinfo(appid, &handle) == PMINFO_R_OK){
+				__app_info_insert_handler(handle, data);
+				pkgmgrinfo_appinfo_destroy_appinfo(handle);
+			}
+		}
 	}
 }
 

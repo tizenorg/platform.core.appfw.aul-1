@@ -181,6 +181,7 @@ _static_ int __prepare_exec(const char *pkg_name,
 {
 	char *file_name;
 	char process_name[AUL_PR_NAME];
+	int ret;
 
 	/* Set new session ID & new process group ID*/
 	/* In linux, child can set new session ID without check permission */
@@ -193,8 +194,9 @@ _static_ int __prepare_exec(const char *pkg_name,
 	__set_oom();
 
 	/* SET PRIVILEGES*/
-	if (__set_access(pkg_name, menu_info->pkg_type, app_path) < 0) {
-		 _D("fail to set privileges - check your package's credential\n");
+	 _D("pkg_name : %s / pkg_type : %s / app_path : %s ", pkg_name, menu_info->pkg_type, app_path);
+	if ((ret = __set_access(pkg_name, menu_info->pkg_type, app_path)) < 0) {
+		 _D("fail to set privileges - check your package's credential : %d\n", ret);
 		return -1;
 	}
 	/* SET DUMPABLE - for coredump*/
