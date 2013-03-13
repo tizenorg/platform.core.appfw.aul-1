@@ -540,7 +540,7 @@ _static_ int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw(pid, cmd, kb_data, datalen)) < 0)
+	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0)
 		res = AUL_R_ERROR;
 
 	free(kb_data);

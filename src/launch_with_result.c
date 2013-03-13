@@ -382,13 +382,17 @@ int aul_send_result(bundle *kb, int is_cancel)
 	if ((pid = __get_caller_pid(kb)) < 0)
 		return AUL_R_EINVAL;
 
+	_D("caller pid : %d", pid);
+
 	if (bundle_get_val(kb, AUL_K_SEND_RESULT) == NULL)
 	{
 		_D("original msg is not msg with result");
 		return AUL_R_OK;
 	}
 
-	ret = app_send_cmd(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
+	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
+
+	_D("app_send_cmd_with_noreply : %d", ret);
 
 	if(latest_caller_pid == pid)
 		latest_caller_pid = -1;

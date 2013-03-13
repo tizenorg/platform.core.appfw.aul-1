@@ -99,6 +99,7 @@ end:
 static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 {
 	int pid;
+	int pgid;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	int datalen;
 	bundle_raw *kb_data;
@@ -107,7 +108,8 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	if ((pid = __get_caller_pid(kb)) < 0)
 			return AUL_R_ERROR;
 
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", cr_pid);
+	pgid = getpgid(cr_pid);
+	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
 
 	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 
@@ -326,7 +328,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_CANCEL:
 			kb = bundle_decode(pkt->data, pkt->len);
 			ret = __foward_cmd(pkt->cmd, kb, cr.pid);
-			__real_send(clifd, ret);
+			//__real_send(clifd, ret);
 			break;
 		case APP_TERM_BY_PID:
 		case APP_RESUME_BY_PID:

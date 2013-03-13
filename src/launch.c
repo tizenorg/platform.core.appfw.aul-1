@@ -127,6 +127,39 @@ SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 	return res;
 }
 
+SLPAPI int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
+{
+	int datalen;
+	bundle_raw *kb_data;
+	int res;
+
+	bundle_encode(kb, &kb_data, &datalen);
+	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0) {
+		switch (res) {
+		case -EINVAL:
+			res = AUL_R_EINVAL;
+			break;
+		case -ECOMM:
+			res = AUL_R_ECOMM;
+			break;
+		case -EAGAIN:
+			res = AUL_R_ETIMEOUT;
+			break;
+		case -ELOCALLAUNCH_ID:
+			res = AUL_R_LOCAL;
+			break;
+		case -EILLEGALACCESS:
+			res = AUL_R_EILLACC;
+			break;
+		default:
+			res = AUL_R_ERROR;
+		}
+	}
+	free(kb_data);
+
+	return res;
+}
+
 static void __clear_internal_key(bundle *kb)
 {
 	bundle_del(kb, AUL_K_CALLER_PID);
@@ -266,7 +299,8 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	__send_result_to_launchpad(clifd, 0);
+	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL)
+		__send_result_to_launchpad(clifd, 0);
 
 	switch (pkt->cmd) {
 	case APP_START:	/* run in callee */
