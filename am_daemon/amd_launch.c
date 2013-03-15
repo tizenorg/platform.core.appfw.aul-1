@@ -632,16 +632,19 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	if (cmd == APP_START_RES)
 		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
 
+	ret = aul_app_get_appid_bypid(caller_pid, caller_appid, sizeof(caller_appid));
+	if(ret == 0) {
+		bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
+	}
+
 	ai = appinfo_find(_laf, appid);
 
 	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	permission = appinfo_get_value(ai, AIT_PERM);
-
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
-			aul_app_get_appid_bypid(caller_pid, caller_appid, sizeof(caller_appid));
 			pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
 			if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
 				pid = -EILLEGALACCESS;
