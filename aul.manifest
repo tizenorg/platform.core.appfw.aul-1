@@ -11,6 +11,10 @@
 		<filesystem path="/etc/init.d/launchpad_run" label="_" exec_label="none"/>
 		<filesystem path="/etc/rc.d/rc3.d/S34launchpad_run" label="_" exec_label="none"/>
 		<filesystem path="/etc/rc.d/rc4.d/S80launchpad_run" label="_" exec_label="none"/>
+		<filesystem path="/usr/lib/systemd/system/ac.service" label="_" exec_label="none" />
+		<filesystem path="/usr/lib/systemd/system/launchpad-preload@.service" label="_" exec_label="none" />
+		<filesystem path="/usr/lib/systemd/system/graphical.target.wants/ac.service" label="_" exec_label="none" />
+		<filesystem path="/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@app.service" label="_" exec_label="none" />
 	</assign>
 	<request>
 		<domain name="aul"/>

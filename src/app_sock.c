@@ -250,6 +250,7 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
+	int ret;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
 
@@ -257,6 +258,8 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 		_E("keybundle error\n");
 		return -EINVAL;
 	}
+
+	_D("pid(%d) : cmd(%d)", pid, cmd);
 
 	fd = __create_client_sock(pid);
 	if (fd < 0)
@@ -275,15 +278,35 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 
 	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
 		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if (errno == EPIPE) {
-			_E("pid:%d, fd:%d\n", pid, fd);
+		if(len > 0) {
+			while (len != datalen + 8) {
+				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
+				if (ret < 0) {
+					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
+					if (errno == EPIPE) {
+						_E("pid:%d, fd:%d\n", pid, fd);
+					}
+					close(fd);
+					if (pkt) {
+						free(pkt);
+						pkt = NULL;
+					}
+					return -ECOMM;
+				}
+				len += ret;
+				_D("sendto() len - %d %d", len, datalen + 8);
+			}
+		} else {
+			if (errno == EPIPE) {
+				_E("pid:%d, fd:%d\n", pid, fd);
+			}
+			close(fd);
+			if (pkt) {
+				free(pkt);
+				pkt = NULL;
+			}
+			return -ECOMM;
 		}
-		close(fd);
-		if (pkt) {
-			free(pkt);
-			pkt = NULL;
-		}
-		return -ECOMM;
 	}
 	if (pkt) {
 		free(pkt);
@@ -305,9 +328,82 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 	return res;
 }
 
+int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int datalen)
+{
+	int fd;
+	int len;
+	int ret;
+	int res = 0;
+	app_pkt_t *pkt = NULL;
+
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+		_E("keybundle error\n");
+		return -EINVAL;
+	}
+
+	_D("pid(%d) : cmd(%d)", pid, cmd);
+
+	fd = __create_client_sock(pid);
+	if (fd < 0)
+		return -ECOMM;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if (NULL == pkt) {
+		_E("Malloc Failed!");
+		return -ENOMEM;
+	}
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+	memcpy(pkt->data, kb_data, datalen);
+
+	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
+		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
+		if(len > 0) {
+			while (len != datalen + 8) {
+				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
+				if (ret < 0) {
+					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
+					if (errno == EPIPE) {
+						_E("pid:%d, fd:%d\n", pid, fd);
+					}
+					close(fd);
+					if (pkt) {
+						free(pkt);
+						pkt = NULL;
+					}
+					return -ECOMM;
+				}
+				len += ret;
+				_D("sendto() len - %d %d", len, datalen + 8);
+			}
+		} else {
+			if (errno == EPIPE) {
+				_E("pid:%d, fd:%d\n", pid, fd);
+			}
+			close(fd);
+			if (pkt) {
+				free(pkt);
+				pkt = NULL;
+			}
+			return -ECOMM;
+		}
+	}
+	if (pkt) {
+		free(pkt);
+		pkt = NULL;
+	}
+
+	close(fd);
+
+	return res;
+}
+
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 {
 	int len;
+	int ret;
 	struct sockaddr_un aul_addr = { 0, };
 	int sun_size;
 	app_pkt_t *pkt = NULL;
@@ -345,17 +441,29 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 		if (errno == EINTR)
 			goto retry_recv;
 
-	if ((len < 8) || (len != (pkt->len + 8))) {
+	if (len < 8) {
 		_E("recv error %d %d", len, pkt->len);
 		free(pkt);
 		close(*clifd);
 		return NULL;
 	}
 
+	while( len != (pkt->len + 8) ) {
+		ret = recv(*clifd, &pkt->data[len-8], AUL_SOCK_MAXBUFF, 0);
+		if (ret < 0) {
+			_E("recv error %d %d", len, pkt->len);
+			free(pkt);
+			close(*clifd);
+			return NULL;
+		}
+		len += ret;
+		_D("recv len %d %d", len, pkt->len);
+	}
+
 	return pkt;
 }
 
-app_pkt_t *__app_send_cmd_with_result(int pid, int cmd)
+app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
@@ -373,9 +481,12 @@ app_pkt_t *__app_send_cmd_with_result(int pid, int cmd)
 	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
-	pkt->len = 0;
+	pkt->len = datalen;
+	if(kb_data) {
+		memcpy(pkt->data, kb_data, datalen);
+	}
 
-	if ((len = send(fd, pkt, 8, 0)) != 8) {
+	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
 		_E("sendto() failed - %d", len);
 		if (errno == EPIPE) {
 			_E("pid:%d, fd:%d\n", pid, fd);

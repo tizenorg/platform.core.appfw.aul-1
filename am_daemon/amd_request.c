@@ -99,6 +99,7 @@ end:
 static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 {
 	int pid;
+	int pgid;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	int datalen;
 	bundle_raw *kb_data;
@@ -107,7 +108,8 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	if ((pid = __get_caller_pid(kb)) < 0)
 			return AUL_R_ERROR;
 
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", cr_pid);
+	pgid = getpgid(cr_pid);
+	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
 
 	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 
@@ -307,7 +309,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_START_RES:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
-			ret = _start_app(appid, kb, pkt->cmd, cr.pid, clifd);
+			ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 
 			if (kb != NULL)
 				bundle_free(kb), kb = NULL;
@@ -326,7 +328,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_CANCEL:
 			kb = bundle_decode(pkt->data, pkt->len);
 			ret = __foward_cmd(pkt->cmd, kb, cr.pid);
-			__real_send(clifd, ret);
+			//__real_send(clifd, ret);
 			break;
 		case APP_TERM_BY_PID:
 		case APP_RESUME_BY_PID:
@@ -346,6 +348,11 @@ static gboolean __request_handler(gpointer data)
 			_D("APP_IS_RUNNING : %s : %d",appid, ret);
 			__send_result_to_client(clifd, ret);
 			free(appid);
+			break;
+		case APP_GET_APPID_BYPID:
+			memcpy(&pid, pkt->data, pkt->len);
+			ret = _status_get_appid_bypid(clifd, pid);
+			_D("APP_GET_APPID_BYPID : %d : %d", pid, ret);
 			break;
 		case APP_KEY_RESERVE:
 			ret = _register_key_event(cr.pid);
@@ -379,6 +386,7 @@ static gboolean __request_handler(gpointer data)
 			break;
 		default:
 			_E("no support packet");
+			close(clifd);
 	}
 
 	if (free_pkt)

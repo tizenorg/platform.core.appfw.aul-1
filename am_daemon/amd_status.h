@@ -28,6 +28,8 @@ int _status_app_is_running(char *appid);
 int _status_send_running_appinfo(int fd);
 int _status_app_is_running_v2(char *appid);
 int _status_send_running_appinfo_v2(int fd);
+int _status_get_appid_bypid(int fd, int pid);
+
 
 
 

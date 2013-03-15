@@ -2,3 +2,4 @@
 /usr/lib/libappcore-common.so.1
 /usr/lib/ecore/immodules/libisf-imf-module.so
 /usr/lib/osp/libosp-appfw.so
+/usr/lib/osp/libosp-uifw.so

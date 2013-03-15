@@ -66,7 +66,7 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_RUNNING_INFO);
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_RUNNING_INFO, NULL, 0);
 
 	if (pkt == NULL)
 		return AUL_R_ERROR;
@@ -117,26 +117,40 @@ SLPAPI int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
 
 SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 {
+	app_pkt_t *pkt = NULL;
 	int pgid;
+
+	if(pid == getpid() || getuid()==0) {
+		if (__get_pkgname_bypid(pid, appid, len) == 0) {
+			_D("appid for %d is %s", pid, appid);
+			return AUL_R_OK;
+		}
+		/* support app launched by shell script*/
+		_D("second chance");
+		pgid = getpgid(pid);
+		if (pgid <= 1)
+			return AUL_R_ERROR;
+
+		_D("second change pgid = %d, pid = %d", pgid, pid);
+		if (__get_pkgname_bypid(pgid, appid, len) == 0)
+			return AUL_R_OK;
+
+		return AUL_R_ERROR;
+	}
 
 	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	if (__get_pkgname_bypid(pid, appid, len) == 0) {
-		_D("appid for %d is %s", pid, appid);
-		return AUL_R_OK;
-	}
-	/* support app launched by shell script*/
-	_D("second chance");
-	pgid = getpgid(pid);
-	if (pgid <= 1)
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GET_APPID_BYPID, &pid, sizeof(pid));
+
+	if(pkt == NULL)
 		return AUL_R_ERROR;
+	if(pkt->cmd == APP_GET_APPID_BYPID_ERROR) {
+		free(pkt);
+		return AUL_R_ERROR;
+	}
 
-	_D("second change pgid = %d, pid = %d", pgid, pid);
-	if (__get_pkgname_bypid(pgid, appid, len) == 0)
-		return AUL_R_OK;
-
-	return AUL_R_ERROR;
+	snprintf(appid, len, "%s", pkt->data);
+	free(pkt);
+	return AUL_R_OK;
 }
-
-

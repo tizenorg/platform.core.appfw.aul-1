@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <app2ext_interface.h>
+#include <sys/prctl.h>
+#include <pkgmgr-info.h>
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -37,9 +39,20 @@
 #include "simple_util.h"
 #include "amd_cgutil.h"
 
+#define DAC_ACTIVATE
+
+#include "access_control.h"
+
 
 #define TERM_WAIT_SEC 3
 #define INIT_PID 1
+
+#define AUL_PR_NAME			16
+#define PATH_APP_ROOT "/opt/usr/apps"
+#define PATH_DATA "/data"
+#define SDK_CODE_COVERAGE "CODE_COVERAGE"
+#define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
+#define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
 
 struct appinfomgr *_laf;
 struct cginfo *_lcg;
@@ -61,13 +74,129 @@ struct ktimer {
 	struct cginfo *cg;
 };
 
-static void _prepare_exec(void)
+static void _set_oom()
 {
+	char buf[MAX_LOCAL_BUFSZ];
+	FILE *fp;
+
+	/* we should reset oomadj value as default because child
+	inherits from parent oom_adj*/
+	snprintf(buf, MAX_LOCAL_BUFSZ, "/proc/%d/oom_adj", getpid());
+	fp = fopen(buf, "w");
+	if (fp == NULL)
+		return;
+	fprintf(fp, "%d", -16);
+	fclose(fp);
+}
+
+static void _set_sdk_env(char* appid, char* str) {
+	char buf[MAX_LOCAL_BUFSZ];
+	int ret;
+
+	_D("key : %s / value : %s", AUL_K_SDK, str);
+	/* http://gcc.gnu.org/onlinedocs/gcc/Cross_002dprofiling.html*/
+	/* GCOV_PREFIX contains the prefix to add to the absolute paths in the object file. */
+	/*		Prefix can be absolute, or relative. The default is no prefix.  */
+	/* GCOV_PREFIX_STRIP indicates the how many initial directory names */
+	/*		to stripoff the hardwired absolute paths. Default value is 0. */
+	if (strncmp(str, SDK_CODE_COVERAGE, strlen(str)) == 0) {
+		snprintf(buf, MAX_LOCAL_BUFSZ, PATH_APP_ROOT"/%s"PATH_DATA, appid);
+		ret = setenv("GCOV_PREFIX", buf, 1);
+		_D("GCOV_PREFIX : %d", ret);
+		ret = setenv("GCOV_PREFIX_STRIP", "4096", 1);
+		_D("GCOV_PREFIX_STRIP : %d", ret);
+	} else if (strncmp(str, SDK_DYNAMIC_ANALYSIS, strlen(str)) == 0) {
+		ret = setenv("LD_PRELOAD", PATH_DA_SO, 1);
+		_D("LD_PRELOAD : %d", ret);
+	}
+}
+
+#define USE_ENGINE(engine) setenv("ELM_ENGINE", engine, 1);
+
+static void _set_env(char *appid, bundle * kb, char *hwacc)
+{
+	const char *str;
+	const char **str_array;
+	int len;
+	int i;
+
+	setenv("PKG_NAME", appid, 1);
+
+	USE_ENGINE("gl")
+
+	str = bundle_get_val(kb, AUL_K_STARTTIME);
+	if (str != NULL)
+		setenv("APP_START_TIME", str, 1);
+
+	if(bundle_get_type(kb, AUL_K_SDK) & BUNDLE_TYPE_ARRAY) {
+		str_array = bundle_get_str_array(kb, AUL_K_SDK, &len);
+		if(str_array != NULL) {
+			for (i = 0; i < len; i++) {
+				_D("index : [%d]", i);
+				_set_sdk_env(appid, (char *)str_array[i]);
+			}
+		}
+	} else {
+		str = bundle_get_val(kb, AUL_K_SDK);
+		if(str != NULL) {
+			_set_sdk_env(appid, (char *)str);
+		}
+	}
+	if (hwacc != NULL)
+		setenv("HWACC", hwacc, 1);
+}
+
+static void _prepare_exec(char *appid, bundle *kb)
+{
+	struct appinfo *ai;
+	char *app_path = NULL;
+	char *pkg_type = NULL;
+	char *file_name;
+	char process_name[AUL_PR_NAME];
+	char *hwacc;
+	int ret;
+
 	setsid();
 
 	signal(SIGINT, SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGCHLD, SIG_DFL);
+
+	ai = appinfo_find(_laf, appid);
+
+	app_path = appinfo_get_value(ai, AIT_EXEC);
+	pkg_type = appinfo_get_value(ai, AIT_TYPE);
+	hwacc = appinfo_get_value(ai, AIT_HWACC);
+
+	/* SET OOM*/
+	_set_oom();
+
+	/* SET PRIVILEGES*/
+	 _D("appid : %s / pkg_type : %s / app_path : %s ", appid, pkg_type, app_path);
+	if ((ret = __set_access(appid, pkg_type, app_path)) < 0) {
+		 _D("fail to set privileges - check your package's credential : %d\n", ret);
+		return -1;
+	}
+
+	/* SET DUMPABLE - for coredump*/
+	prctl(PR_SET_DUMPABLE, 1);
+
+	/* SET PROCESS NAME*/
+	if (app_path == NULL) {
+		_D("app_path should not be NULL - check menu db");
+		return -1;
+	}
+	file_name = strrchr(app_path, '/') + 1;
+	if (file_name == NULL) {
+		_D("can't locate file name to execute");
+		return -1;
+	}
+	memset(process_name, '\0', AUL_PR_NAME);
+	snprintf(process_name, AUL_PR_NAME, "%s", file_name);
+	prctl(PR_SET_NAME, process_name);
+
+	/* SET ENVIROMENT*/
+	_set_env(appid, kb, hwacc);
 
 	/* TODO: do security job */
 	/* TODO: setuid */
@@ -129,12 +258,12 @@ static void _do_exec(struct cginfo *cg, const char *cmd, const char *group, bund
 	if (kb) {
 		b_argv = __create_argc_argv(kb, &b_argc);
 		b_argv[0] = strdup(argv[0]);
-		_prepare_exec();
+		_prepare_exec(group, kb);
 		execv(b_argv[0], b_argv);
 	}
 
 	if (b) {
-		_prepare_exec();
+		_prepare_exec(group, kb);
 		execv(argv[0], argv);
 	}
 
@@ -474,7 +603,7 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	return pid;
 }
 
-int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
+int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
 {
 	struct appinfo *ai;
 	int ret = -1;
@@ -485,6 +614,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	int pid = -1;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	char *hwacc;
+	char *permission;
+	char caller_appid[256];
+	pkgmgrinfo_cert_compare_result_type_e compare_result;
 
 	int location = -1;
 	app2ext_handle *app2_handle = NULL;
@@ -505,6 +637,20 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
+	permission = appinfo_get_value(ai, AIT_PERM);
+
+	if(permission && strncmp(permission, "signature", 9) == 0 ) {
+		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
+			aul_app_get_appid_bypid(caller_pid, caller_appid, sizeof(caller_appid));
+			pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
+			if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
+				pid = -EILLEGALACCESS;
+				__real_send(fd, pid);
+				return pid;
+			}
+		}
+	}
+
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
 		if (!multiple || strncmp(multiple, "false", 5) == 0) {

@@ -143,14 +143,14 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		newinfo.launched_pid = atoi(fwdpid_str);
 		newinfo.cb_func = info->cb_func;
 		newinfo.priv_data = info->priv_data;
-		
+
 		__remove_resultcb(info);
 		__add_resultcb(newinfo.launched_pid, newinfo.cb_func, newinfo.priv_data);
 
 		_D("change callback - %s\n",AUL_K_FWD_CALLEE_PID);
-		
+
 		goto end;
-	}		
+	}
 
 	info->cb_func(kb, is_cancel, info->priv_data);
 	__remove_resultcb(info);
@@ -219,7 +219,7 @@ int _app_start_res_prepare(bundle *kb)
 		_E("caller pid is not valid");
 		return -1;
 	}
-	/* If previous caller is still waiting result, 
+	/* If previous caller is still waiting result,
 	   send cancel packet to the caller. */
 	if (latest_caller_pid != -1)
 		__send_to_cancel(latest_caller_pid);
@@ -268,7 +268,7 @@ SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 
 void __iterate(const char *key, const char *val, void *data)
 {
-	static int i=0;	
+	static int i=0;
 	_D("%d %s %s", i++, key, val);
 }
 
@@ -282,13 +282,13 @@ SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
 
 	if(pkgname == NULL || kb == NULL)
 		return AUL_R_EINVAL;
-	
+
 	caller = (char *)bundle_get_val(kb, AUL_K_CALLER_PID);
 	if(caller == NULL) {
 		_E("original msg doest not have caller pid");
 		return AUL_R_EINVAL;
 	}
-	
+
 	bundle_del(kb, AUL_K_ORG_CALLER_PID);
 	bundle_add(kb, AUL_K_ORG_CALLER_PID, caller);
 
@@ -297,25 +297,25 @@ SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
 		_E("bundle duplicate fail");
 		return AUL_R_EINVAL;
 	}
-	
+
 	if(bundle_get_val(kb, AUL_K_WAIT_RESULT) != NULL) {
 		ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
-		if(ret < 0) 
-			goto end;	
+		if(ret < 0)
+			goto end;
 	} else {
 		ret = app_request_to_launchpad(APP_START, pkgname, kb);
 		goto end;
 	}
-		
+
 //	bundle_iterate(dupb, __iterate, NULL);
 
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ,"%d",ret);
 
 	ret = aul_create_result_bundle(dupb, &outb);
 	if(ret < 0)
-		return ret;
+		goto end;
 
-	bundle_del(outb, AUL_K_FWD_CALLEE_PID);		
+	bundle_del(outb, AUL_K_FWD_CALLEE_PID);
 	bundle_add(outb, AUL_K_FWD_CALLEE_PID, tmp_pid);
 
 //	bundle_iterate(outb, __iterate, NULL);
@@ -335,7 +335,7 @@ SLPAPI int aul_create_result_bundle(bundle *inb, bundle **outb)
 	const char *pid_str;
 
 	*outb = NULL;
-	
+
 	if(inb == NULL){
 		_E("return msg create fail");
 		return AUL_R_EINVAL;
@@ -353,14 +353,14 @@ SLPAPI int aul_create_result_bundle(bundle *inb, bundle **outb)
 	} else {
 		_D("original msg is not msg with result");
 	}
-	
+
 
 	pid_str = bundle_get_val(inb, AUL_K_ORG_CALLER_PID);
 	if(pid_str) {
 		bundle_add(*outb, AUL_K_ORG_CALLER_PID, pid_str);
 		goto end;
 	}
-	
+
 	pid_str = bundle_get_val(inb, AUL_K_CALLER_PID);
 	if (pid_str == NULL) {
 		_E("original msg doest not have caller pid");
@@ -382,14 +382,18 @@ int aul_send_result(bundle *kb, int is_cancel)
 	if ((pid = __get_caller_pid(kb)) < 0)
 		return AUL_R_EINVAL;
 
+	_D("caller pid : %d", pid);
+
 	if (bundle_get_val(kb, AUL_K_SEND_RESULT) == NULL)
 	{
 		_D("original msg is not msg with result");
 		return AUL_R_OK;
 	}
 
-	ret = app_send_cmd(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
-	
+	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
+
+	_D("app_send_cmd_with_noreply : %d", ret);
+
 	if(latest_caller_pid == pid)
 		latest_caller_pid = -1;
 
