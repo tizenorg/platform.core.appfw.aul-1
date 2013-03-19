@@ -299,8 +299,9 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL)
+	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL) {
 		__send_result_to_launchpad(clifd, 0);
+	}
 
 	switch (pkt->cmd) {
 	case APP_START:	/* run in callee */
