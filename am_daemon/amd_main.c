@@ -42,6 +42,7 @@
 #include "amd_key.h"
 #include "amd_status.h"
 #include "amd_launch.h"
+#include "amd_request.h"
 
 #ifndef MOUNT_PATH
 #  define MOUNT_PATH "/sys/fs/cgroup"
@@ -127,7 +128,6 @@ gboolean __add_item_running_list(gpointer user_data)
 	GSList *iter = NULL;
 	int found = 0;
 	int limit;
-	int ret;
 	char *pkgname;
 	int pid;
 
@@ -138,7 +138,9 @@ gboolean __add_item_running_list(gpointer user_data)
 	pkgname = item->appid;
 	pid = item->pid;
 
-	ret = vconf_get_int(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, &limit);
+	if (vconf_get_int(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, &limit) != 0){
+		_E("Unable to get VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
+	}
 
 	if (pkgname == NULL) {
 		return false;
@@ -218,20 +220,17 @@ static void __vconf_cb(keynode_t *key, void *data)
 
 static int __app_dead_handler(int pid, void *data)
 {
-	int ret;
-
-	ret = _unregister_key_event(pid);
-	ret = __remove_item_running_list(pid);
-	ret = _status_remove_app_info_list(pid);
-
+	_unregister_key_event(pid);
+	__remove_item_running_list(pid);
+	_status_remove_app_info_list(pid);
 	return 0;
 }
 
 static void __start_cb(void *user_data,
 		const char *filename, const struct appinfo *ai)
 {
-	struct amdmgr *amd = user_data;
-	char *componet = NULL;
+	/*struct amdmgr *amd = user_data;*/
+	const char *componet = NULL;
 	int r;
 
 	componet = appinfo_get_value(ai, AIT_COMP);
@@ -248,7 +247,6 @@ static void _start_services(struct amdmgr *amd)
 
 static int __init()
 {
-	int r;
 	struct amdmgr amd;
 
 	ecore_init();
@@ -266,7 +264,8 @@ static int __init()
 	_key_init();
 #endif
 
-	r = vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL);
+	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL) != 0)
+		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
 	aul_listen_app_dead_signal(__app_dead_handler, NULL);
 
 	_start_services(&amd);
@@ -287,10 +286,14 @@ gboolean  __amd_ready(gpointer user_data)
 
 int main(int argc, char *argv[])
 {
-	int ret;
-
-	ret = ac_server_initialize();
-	ret = __init();
+	if (ac_server_initialize() != AC_R_OK){
+		_E("ac_server_initialize failed!\n");
+		return -1;
+	}
+	if (__init() != 0){
+		_E("AMD Initialization failed!\n");
+		return -1;
+	}
 
 	g_idle_add(__amd_ready, NULL);
 

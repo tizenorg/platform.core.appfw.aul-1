@@ -141,7 +141,7 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GET_APPID_BYPID, &pid, sizeof(pid));
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GET_APPID_BYPID, (unsigned char *)&pid, sizeof(pid));
 
 	if(pkt == NULL)
 		return AUL_R_ERROR;

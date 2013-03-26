@@ -30,6 +30,7 @@
 #include "amd_config.h"
 #include "simple_util.h"
 #include "app_sock.h"
+#include "launch.h"
 
 static struct {
 	Evas_Object *win;
@@ -70,6 +71,8 @@ static Eina_Bool __key_release_cb(void *data, int type, void *event)
 		bundle_add(kb, AUL_K_MULTI_KEY_EVENT, AUL_V_KEY_RELEASED);
 
 		ret = app_send_cmd(*pid_data, APP_KEY_EVENT, kb);
+		if (ret < 0)
+			_E("app_send_cmd failed with error %d\n", ret);
 
 		bundle_free(kb);
 	}
@@ -102,6 +105,8 @@ static Eina_Bool __key_press_cb(void *data, int type, void *event)
 		bundle_add(kb, AUL_K_MULTI_KEY_EVENT, AUL_V_KEY_PRESSED);
 
 		ret = app_send_cmd(*pid_data, APP_KEY_EVENT, kb);
+		if (ret < 0)
+			_E("app_send_cmd failed with error %d\n", ret);
 
 		bundle_free(kb);
 	}

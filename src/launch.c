@@ -429,12 +429,11 @@ int aul_initialize()
 
 SLPAPI void aul_finalize()
 {
-	int ret;
 
 	aul_launch_fini();
 
 	if (aul_initialized) {
-		ret = close(aul_fd);
+		close(aul_fd);
 	}
 
 	return;

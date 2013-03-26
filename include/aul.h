@@ -144,6 +144,8 @@ typedef enum _aul_type{
 
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_APPID	"__AUL_CALLER_APPID__"
+/** AUL public key - To check caller's secuirty */
+#define AUL_K_CALLEE_APPID	"__AUL_CALLEE_APPID__"
 
 /** AUL public key - To find argv0 */ 
 #define AUL_K_ARGV0		"__AUL_ARGV0__"

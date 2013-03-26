@@ -32,7 +32,7 @@ int _term_app(int pid);
 int _fake_launch_app(int cmd, int pid, bundle * kb);
 int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd);
 void service_release(const char *group);
-int _start_srv(struct appinfo *ai, bundle *kb);
+int _start_srv(const struct appinfo *ai, bundle *kb);
 
 int _launch_init(struct amdmgr* amd);
 

@@ -20,6 +20,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <glib.h>
 #include <aul.h>
 #include <string.h>
@@ -150,12 +151,12 @@ int _status_send_running_appinfo(int fd)
 	{
 		info_t = (app_status_info_t *)iter->data;
 		snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", info_t->pid);
-		strncat(pkt->data, tmp_pid, MAX_PID_STR_BUFSZ);
-		strncat(pkt->data, ":", 1);
-		strncat(pkt->data, info_t->appid, MAX_PACKAGE_STR_SIZE);
-		strncat(pkt->data, ":", 1);
-		strncat(pkt->data, info_t->app_path, MAX_PACKAGE_APP_PATH_SIZE);
-		strncat(pkt->data, ";", 1);
+		strncat((char *)pkt->data, tmp_pid, MAX_PID_STR_BUFSZ);
+		strncat((char *)pkt->data, ":", 1);
+		strncat((char *)pkt->data, info_t->appid, MAX_PACKAGE_STR_SIZE);
+		strncat((char *)pkt->data, ":", 1);
+		strncat((char *)pkt->data, info_t->app_path, MAX_PACKAGE_APP_PATH_SIZE);
+		strncat((char *)pkt->data, ";", 1);
 	}
 
 	pkt->cmd = APP_RUNNING_INFO_RESULT;
@@ -180,7 +181,7 @@ int _status_app_is_running_v2(char *appid)
 	char *apppath = NULL;
 	int ret = 0;
 	int i = 0;
-	struct appinfo *ai;
+	const struct appinfo *ai;
 
 	if(appid == NULL)
 		return -1;
@@ -304,7 +305,7 @@ int _status_get_appid_bypid(int fd, int pid)
 
 	pkt->cmd = APP_GET_APPID_BYPID_ERROR;
 
-	if (__get_pkgname_bypid(pid, pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
+	if (__get_pkgname_bypid(pid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
 		_D("appid for %d is %s", pid, pkt->data);
 		pkt->cmd = APP_GET_APPID_BYPID_OK;
 		goto out;
@@ -316,7 +317,7 @@ int _status_get_appid_bypid(int fd, int pid)
 		goto out;
 
 	_D("second change pgid = %d, pid = %d", pgid, pid);
-	if (__get_pkgname_bypid(pgid, pkt->data, MAX_PACKAGE_STR_SIZE) == 0)
+	if (__get_pkgname_bypid(pgid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0)
 		pkt->cmd = APP_GET_APPID_BYPID_OK;
 
  out:
