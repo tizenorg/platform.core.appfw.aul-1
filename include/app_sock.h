@@ -59,6 +59,8 @@ enum app_cmd {
 #define WEB_LAUNCHPAD_PID -3
 #define ELOCALLAUNCH_ID 128
 #define EILLEGALACCESS 127
+#define ETERMINATING 126
+
 
 
 typedef struct _app_pkt_t {

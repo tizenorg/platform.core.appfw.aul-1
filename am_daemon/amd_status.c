@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <aul.h>
 #include <string.h>
+#include <Ecore.h>
 
 #include "amd_config.h"
 #include "amd_status.h"
@@ -67,6 +68,18 @@ int _status_add_app_info_list(char *appid, char *app_path, int pid)
 	return 0;
 }
 
+static Eina_Bool __app_terminate_timer_cb(void *data)
+{
+	app_status_info_t *info_t = (app_status_info_t *)data;
+	int ret = 0;
+
+	ret = kill(info_t->pid, SIGKILL);
+	if (ret == -1)
+		_E("send SIGKILL: %s", strerror(errno));
+
+	return ECORE_CALLBACK_CANCEL;
+}
+
 int _status_update_app_info_list(int pid, int status)
 {
 	GSList *iter = NULL;
@@ -77,6 +90,9 @@ int _status_update_app_info_list(int pid, int status)
 		info_t = (app_status_info_t *)iter->data;
 		if(pid == info_t->pid) {
 			info_t->status = status;
+			if(status == STATUS_DYING) {
+				ecore_timer_add(2, __app_terminate_timer_cb, info_t);
+			}
 			break;
 		}
 	}
@@ -115,6 +131,21 @@ int _status_remove_app_info_list(int pid)
 
 	return 0;
 }
+
+int _status_get_app_info_status(int pid)
+{
+	GSList *iter = NULL;
+	app_status_info_t *info_t = NULL;
+
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
+	{
+		info_t = (app_status_info_t *)iter->data;
+		if(pid == info_t->pid) {
+			return info_t->status;
+		}
+	}
+}
+
 
 int _status_app_is_running(char *appid)
 {

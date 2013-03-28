@@ -663,7 +663,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		}
 
 		if (pid > 0) {
-			if (caller_pid == pid) {
+			if (_status_get_app_info_status(pid) == STATUS_DYING) {
+				pid = -ETERMINATING;
+			} else if (caller_pid == pid) {
 				_D("caller process & callee process is same.[%s:%d]", appid, pid);
 				pid = -ELOCALLAUNCH_ID;
 			} else if ((ret = __nofork_processing(cmd, pid, kb)) < 0) {
@@ -715,7 +717,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	__real_send(fd, pid);
 
 	if(pid > 0) {
-		//_status_add_app_info_list(appid, app_path, pid);
+		_status_add_app_info_list(appid, app_path, pid);
 		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
 		return ret != AC_R_ERROR ? pid : -1;
 	}
