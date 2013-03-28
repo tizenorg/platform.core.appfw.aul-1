@@ -337,6 +337,7 @@ static gboolean __request_handler(gpointer data)
 			kb = bundle_decode(pkt->data, pkt->len);
 			ret = __foward_cmd(pkt->cmd, kb, cr.pid);
 			//__real_send(clifd, ret);
+			close(clifd);
 			break;
 		case APP_TERM_BY_PID:
 		case APP_RESUME_BY_PID:

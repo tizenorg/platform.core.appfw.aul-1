@@ -700,6 +700,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		app2_handle = app2ext_init(APP2EXT_SD_CARD);
 		if (app2_handle == NULL) {
 			_E("app2_handle : app2ext init failed\n");
+			close(fd);
 			return -1;
 		}
 

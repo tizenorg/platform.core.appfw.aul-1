@@ -301,6 +301,8 @@ int aul_sock_handler(int fd)
 
 	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL) {
 		__send_result_to_launchpad(clifd, 0);
+	} else {
+		close(clifd);
 	}
 
 	switch (pkt->cmd) {
