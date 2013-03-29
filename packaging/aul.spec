@@ -52,7 +52,7 @@ Application utility library (devel)
 %setup -q
 
 %build
-cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
+%cmake .
 
 make %{?jobs:-j%jobs}
 
@@ -72,11 +72,11 @@ mkdir -p %{buildroot}/opt/dbspace
 sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
 rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 
-mkdir -p %{buildroot}%{_libdir}/systemd/system/graphical.target.wants
-install -m 0644 %SOURCE101 %{buildroot}%{_libdir}/systemd/system/launchpad-preload@.service
-install -m 0644 %SOURCE102 %{buildroot}%{_libdir}/systemd/system/ac.service
-ln -s ../launchpad-preload@.service %{buildroot}%{_libdir}/systemd/system/graphical.target.wants/launchpad-preload@app.service
-ln -s ../ac.service %{buildroot}%{_libdir}/systemd/system/graphical.target.wants/ac.service
+mkdir -p %{buildroot}/usr/lib/systemd/system/graphical.target.wants
+install -m 0644 %SOURCE101 %{buildroot}/usr/lib/systemd/system/launchpad-preload@.service
+install -m 0644 %SOURCE102 %{buildroot}/usr/lib/systemd/system/ac.service
+ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@app.service
+ln -s ../ac.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/ac.service
 
 
 %preun
@@ -115,10 +115,10 @@ systemctl daemon-reload
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
 %{_bindir}/launchpad_preloading_preinitializing_daemon
-%{_libdir}/systemd/system/graphical.target.wants/launchpad-preload@app.service
-%{_libdir}/systemd/system/graphical.target.wants/ac.service
-%{_libdir}/systemd/system/launchpad-preload@.service
-%{_libdir}/systemd/system/ac.service
+/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@app.service
+/usr/lib/systemd/system/graphical.target.wants/ac.service
+/usr/lib/systemd/system/launchpad-preload@.service
+/usr/lib/systemd/system/ac.service
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
 /usr/bin/daemon-manager-launch-agent
