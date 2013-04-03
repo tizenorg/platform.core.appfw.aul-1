@@ -117,7 +117,7 @@ int __create_server_sock(int pid)
 
 	__set_sock_option(fd, 0);
 
-	if (listen(fd, 10) == -1) {
+	if (listen(fd, 128) == -1) {
 		_E("listen error");
 		close(fd);
 		return -1;
