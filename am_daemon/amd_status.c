@@ -70,10 +70,12 @@ int _status_add_app_info_list(char *appid, char *app_path, int pid)
 
 static Eina_Bool __app_terminate_timer_cb(void *data)
 {
-	app_status_info_t *info_t = (app_status_info_t *)data;
+	int pid = (int)data;
 	int ret = 0;
 
-	ret = kill(info_t->pid, SIGKILL);
+	_D("pid(%d)", pid);
+
+	ret = kill(pid, SIGKILL);
 	if (ret == -1)
 		_E("send SIGKILL: %s", strerror(errno));
 
@@ -91,7 +93,7 @@ int _status_update_app_info_list(int pid, int status)
 		if(pid == info_t->pid) {
 			info_t->status = status;
 			if(status == STATUS_DYING) {
-				ecore_timer_add(2, __app_terminate_timer_cb, info_t);
+				ecore_timer_add(2, __app_terminate_timer_cb, info_t->pid);
 			}
 			break;
 		}

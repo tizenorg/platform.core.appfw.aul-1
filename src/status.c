@@ -31,7 +31,7 @@ SLPAPI int aul_status_update(int status)
 {
 	int ret;
 
-	ret = __app_send_raw(AUL_UTIL_PID, APP_STATUS_UPDATE, (unsigned char *)&status, sizeof(status));
+	ret = __app_send_raw_with_noreply(AUL_UTIL_PID, APP_STATUS_UPDATE, (unsigned char *)&status, sizeof(status));
 
 	return ret;
 }

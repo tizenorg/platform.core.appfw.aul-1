@@ -374,7 +374,8 @@ static gboolean __request_handler(gpointer data)
 		case APP_STATUS_UPDATE:
 			status = (int *)pkt->data;
 			ret = _status_update_app_info_list(cr.pid, *status);
-			__send_result_to_client(clifd, ret);
+			//__send_result_to_client(clifd, ret);
+			close(clifd);
 			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
