@@ -22,6 +22,7 @@
 
 #include <ail.h>
 #include <string.h>
+#include <stdio.h>
 #include "simple_util.h"
 
 #define MAX_PATH_LEN	1024

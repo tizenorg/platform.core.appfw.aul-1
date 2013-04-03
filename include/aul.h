@@ -70,6 +70,7 @@ extern "C" {
  * @brief Return values in AUL. 
  */
 typedef enum _aul_return_val {
+	AUL_R_ETERMINATING = -9,	/**< application terminating */
 	AUL_R_EILLACC = -8,		/**< Illegal Access */
 	AUL_R_LOCAL = -7,		/**< Launch by himself */
 	AUL_R_ETIMEOUT = -6,		/**< Timeout */
@@ -144,6 +145,8 @@ typedef enum _aul_type{
 
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_APPID	"__AUL_CALLER_APPID__"
+/** AUL public key - To check caller's secuirty */
+#define AUL_K_CALLEE_APPID	"__AUL_CALLEE_APPID__"
 
 /** AUL public key - To find argv0 */ 
 #define AUL_K_ARGV0		"__AUL_ARGV0__"

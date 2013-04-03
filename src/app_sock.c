@@ -504,12 +504,14 @@ retry_recv:
 		if (errno == EAGAIN) {
 			_E("recv timeout \n");
 			free(pkt);
+			close(fd);
 			return NULL;
 		} else if (errno == EINTR) {
 			goto retry_recv;
 		} else {
 			_E("recv error %s\n", strerror(errno));
 			free(pkt);
+			close(fd);
 			return NULL;
 		}
 	} else

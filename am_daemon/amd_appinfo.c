@@ -207,7 +207,7 @@ static int _read_pkg_info(struct appinfomgr *cf)
 
 	r = pkgmgrinfo_appinfo_get_installed_list(__app_info_insert_handler, cf);
 
-	return 0;
+	return r;
 }
 
 static struct appinfomgr *_init()
@@ -274,9 +274,9 @@ int appinfo_init(struct appinfomgr **cf)
 {
 	struct appinfomgr *_cf;
 	int r;
-	FILE *fp;
-	char buf[4096];
-	char *tmp;
+	FILE *fp = NULL;
+	char buf[4096] = {0,};
+	char *tmp = NULL;
 
 	if (!cf) {
 		errno = EINVAL;
@@ -285,6 +285,10 @@ int appinfo_init(struct appinfomgr **cf)
 	}
 
 	fp = fopen("/proc/cmdline", "r");
+	if (fp == NULL){
+		_E("appinfo init failed: %s", strerror(errno));
+		return -1;
+	}
 	r = fgets(buf, sizeof(buf), fp);
 	tmp = strstr(buf, "gles");
 	if(tmp != NULL) {
@@ -297,12 +301,14 @@ int appinfo_init(struct appinfomgr **cf)
 		return -1;
 
 	r = _read_pkg_info(_cf);
-	if (r == -1) {
+	if (r != PMINFO_R_OK) {
 		_fini(_cf);
 		return -1;
 	}
 
 	r = vconf_notify_key_changed(VCONFKEY_MENUSCREEN_DESKTOP, __vconf_cb, _cf);
+	if (r < 0)
+		_E("Unable to register vconf notification callback for VCONFKEY_MENUSCREEN_DESKTOP\n");
 
 	*cf = _cf;
 
@@ -320,25 +326,22 @@ void appinfo_fini(struct appinfomgr **cf)
 
 const struct appinfo *appinfo_insert(struct appinfomgr *cf, const char *pkg_name)
 {
-	int r;
 	pkgmgrinfo_pkginfo_h handle;
-
-	r = pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_insert_handler, cf);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_insert_handler, cf);
-	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
-
+	if (pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle) == PMINFO_R_OK){
+		pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_insert_handler, cf);
+		pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_insert_handler, cf);
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	}
 	return cf;
 }
 
 void appinfo_delete(struct appinfomgr *cf, const char *pkg_name)
 {
-	int r;
 	pkgmgrinfo_pkginfo_h handle;
-
-	r = pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_delete_handler, cf);
-	r = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_delete_handler, cf);
+	if (pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle) != PMINFO_R_OK)
+		return;
+	pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_delete_handler, cf);
+	pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_delete_handler, cf);
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 }
 

@@ -38,6 +38,7 @@
 #include "app_sock.h"
 #include "simple_util.h"
 #include "amd_cgutil.h"
+#include "launch.h"
 
 #define DAC_ACTIVATE
 
@@ -89,7 +90,7 @@ static void _set_oom()
 	fclose(fp);
 }
 
-static void _set_sdk_env(char* appid, char* str) {
+static void _set_sdk_env(const char* appid, char* str) {
 	char buf[MAX_LOCAL_BUFSZ];
 	int ret;
 
@@ -113,7 +114,7 @@ static void _set_sdk_env(char* appid, char* str) {
 
 #define USE_ENGINE(engine) setenv("ELM_ENGINE", engine, 1);
 
-static void _set_env(char *appid, bundle * kb, char *hwacc)
+static void _set_env(const char *appid, bundle * kb, const char *hwacc)
 {
 	const char *str;
 	const char **str_array;
@@ -146,14 +147,14 @@ static void _set_env(char *appid, bundle * kb, char *hwacc)
 		setenv("HWACC", hwacc, 1);
 }
 
-static void _prepare_exec(char *appid, bundle *kb)
+static void _prepare_exec(const char *appid, bundle *kb)
 {
-	struct appinfo *ai;
-	char *app_path = NULL;
-	char *pkg_type = NULL;
+	const struct appinfo *ai;
+	const char *app_path = NULL;
+	const char *pkg_type = NULL;
 	char *file_name;
 	char process_name[AUL_PR_NAME];
-	char *hwacc;
+	const char *hwacc;
 	int ret;
 
 	setsid();
@@ -175,7 +176,7 @@ static void _prepare_exec(char *appid, bundle *kb)
 	 _D("appid : %s / pkg_type : %s / app_path : %s ", appid, pkg_type, app_path);
 	if ((ret = __set_access(appid, pkg_type, app_path)) < 0) {
 		 _D("fail to set privileges - check your package's credential : %d\n", ret);
-		return -1;
+		return;
 	}
 
 	/* SET DUMPABLE - for coredump*/
@@ -184,12 +185,12 @@ static void _prepare_exec(char *appid, bundle *kb)
 	/* SET PROCESS NAME*/
 	if (app_path == NULL) {
 		_D("app_path should not be NULL - check menu db");
-		return -1;
+		return;
 	}
 	file_name = strrchr(app_path, '/') + 1;
 	if (file_name == NULL) {
 		_D("can't locate file name to execute");
-		return -1;
+		return;
 	}
 	memset(process_name, '\0', AUL_PR_NAME);
 	snprintf(process_name, AUL_PR_NAME, "%s", file_name);
@@ -302,7 +303,7 @@ int service_start(struct cginfo *cg, const char *group, const char *cmd, bundle 
 	return r;
 }
 
-int _start_srv(struct appinfo *ai, bundle *kb)
+int _start_srv(const struct appinfo *ai, bundle *kb)
 {
 	int r;
 	const char *group;
@@ -605,16 +606,16 @@ int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
 
 int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
 {
-	struct appinfo *ai;
+	const struct appinfo *ai;
 	int ret = -1;
-	char *componet = NULL;
-	char *multiple = NULL;
-	char *app_path = NULL;
-	char *pkg_type = NULL;
+	const char *componet = NULL;
+	const char *multiple = NULL;
+	const char *app_path = NULL;
+	const char *pkg_type = NULL;
 	int pid = -1;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
-	char *hwacc;
-	char *permission;
+	const char *hwacc;
+	const char *permission;
 	char caller_appid[256];
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
 
@@ -643,6 +644,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	permission = appinfo_get_value(ai, AIT_PERM);
+
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
 			pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
@@ -661,7 +663,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		}
 
 		if (pid > 0) {
-			if (caller_pid == pid) {
+			if (_status_get_app_info_status(pid) == STATUS_DYING) {
+				pid = -ETERMINATING;
+			} else if (caller_pid == pid) {
 				_D("caller process & callee process is same.[%s:%d]", appid, pid);
 				pid = -ELOCALLAUNCH_ID;
 			} else if ((ret = __nofork_processing(cmd, pid, kb)) < 0) {
@@ -698,6 +702,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		app2_handle = app2ext_init(APP2EXT_SD_CARD);
 		if (app2_handle == NULL) {
 			_E("app2_handle : app2ext init failed\n");
+			close(fd);
 			return -1;
 		}
 
@@ -712,7 +717,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	__real_send(fd, pid);
 
 	if(pid > 0) {
-		//_status_add_app_info_list(appid, app_path, pid);
+		_status_add_app_info_list(appid, app_path, pid);
 		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
 		return ret != AC_R_ERROR ? pid : -1;
 	}

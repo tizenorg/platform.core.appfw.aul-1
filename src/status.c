@@ -25,6 +25,7 @@
 #include "aul_util.h"
 #include "app_sock.h"
 #include "aul_api.h"
+#include "launch.h"
 
 SLPAPI int aul_status_update(int status)
 {

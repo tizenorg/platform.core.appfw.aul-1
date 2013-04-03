@@ -118,6 +118,9 @@ SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 		case -EILLEGALACCESS:
 			res = AUL_R_EILLACC;
 			break;
+		case -ETERMINATING:
+			res = AUL_R_ETERMINATING;
+			break;
 		default:
 			res = AUL_R_ERROR;
 		}
@@ -301,6 +304,8 @@ int aul_sock_handler(int fd)
 
 	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL) {
 		__send_result_to_launchpad(clifd, 0);
+	} else {
+		close(clifd);
 	}
 
 	switch (pkt->cmd) {
@@ -429,12 +434,11 @@ int aul_initialize()
 
 SLPAPI void aul_finalize()
 {
-	int ret;
 
 	aul_launch_fini();
 
 	if (aul_initialized) {
-		ret = close(aul_fd);
+		close(aul_fd);
 	}
 
 	return;
