@@ -120,7 +120,7 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	app_pkt_t *pkt = NULL;
 	int pgid;
 
-	if(pid == getpid() || getuid()==0) {
+	if(pid == getpid() || getuid()==0 || geteuid()==0) {
 		if (__get_pkgname_bypid(pid, appid, len) == 0) {
 			_D("appid for %d is %s", pid, appid);
 			return AUL_R_OK;
