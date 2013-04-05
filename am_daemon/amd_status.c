@@ -146,6 +146,8 @@ int _status_get_app_info_status(int pid)
 			return info_t->status;
 		}
 	}
+
+	return -1;
 }
 
 
