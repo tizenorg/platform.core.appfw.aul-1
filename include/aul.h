@@ -174,6 +174,10 @@ typedef enum _aul_type{
 /** AUL public key - To support Media key */
 #define AUL_K_MULTI_KEY_EVENT	"__AUL_MULTI_KEY_EVENT__"
 
+/** AUL public bundle value */
+#define AUL_K_PRIVACY_APPID		"__AUL_PRIVACY_APPID__"
+
+
 /** AUL public bundle value - To support Media key*/
 #define AUL_V_KEY_PRESSED	"__AUL_KEY_PRESSED__"
 /** AUL public bundle value - To support Media key*/
@@ -193,6 +197,8 @@ typedef enum _aul_type{
 #define AUL_K_APPID		"__AUL_APPID__"
 /** AUL internal private key */
 #define AUL_K_PID		"__AUL_PID__"
+
+#define PRIVACY_POPUP "tizenprv00.privacy-popup"
 
 
 

@@ -30,6 +30,7 @@
 #include <app2ext_interface.h>
 #include <sys/prctl.h>
 #include <pkgmgr-info.h>
+#include <privacy_manager_client.h>
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -616,8 +617,10 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
 	const char *permission;
+	const char *pkgid;
 	char caller_appid[256];
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
+	bool consented = true;
 
 	int location = -1;
 	app2ext_handle *app2_handle = NULL;
@@ -640,10 +643,35 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	ai = appinfo_find(_laf, appid);
 
+	if(ai == NULL) {
+		__real_send(fd, -1);
+		return -1;
+	}
+
+	pkgid = appinfo_get_value(ai, AIT_PKGID);
+
+	if(bundle_get_val(kb, AUL_K_PRIVACY_APPID)){
+		bundle_del(kb, AUL_K_PRIVACY_APPID);
+	} else {
+		privacy_manager_client_check_user_consented(pkgid, &consented);
+
+		_D("consented : %d", consented);
+
+		if(consented == false) {
+			_D("appid : %s", appid);
+			bundle_add(kb, AUL_K_PRIVACY_APPID, appid);
+			appid = PRIVACY_POPUP;
+			bundle_del(kb, AUL_K_PKG_NAME);
+			bundle_add(kb, AUL_K_PKG_NAME, appid);
+			ai = appinfo_find(_laf, appid);
+		}
+	}
+
 	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	permission = appinfo_get_value(ai, AIT_PERM);
+	pkgid = appinfo_get_value(ai, AIT_PKGID);
 
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
@@ -696,7 +724,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		_E("unkown application");
 	}
 
-	location = app2ext_get_app_location(appid);
+	location = app2ext_get_app_location(pkgid);
 	if (location == APP2EXT_SD_CARD)
 	{
 		app2_handle = app2ext_init(APP2EXT_SD_CARD);
@@ -706,7 +734,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			return -1;
 		}
 
-		ret = app2_handle->interface.enable(appid);
+		ret = app2_handle->interface.enable(pkgid);
 		if (ret) {
 			_E("app2_handle : app enable API fail Reason %d", ret);
 		}
