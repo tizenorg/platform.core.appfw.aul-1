@@ -81,9 +81,9 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 		info.pkg_name = strdup(info.appid);
 
 		enum_fn(&info, user_param);
+		free(info.pkg_name);
 	}
 
-	free(info.pkg_name);
 	free(pkt);
 
 	return AUL_R_OK;

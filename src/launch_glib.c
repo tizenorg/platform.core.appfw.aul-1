@@ -36,6 +36,22 @@ static gboolean __aul_glib_dispatch(GSource *src, GSourceFunc callback,
 static gboolean __aul_glib_prepare(GSource *src, gint *timeout);
 static gboolean __app_start_internal(gpointer data);
 
+static void __aul_glib_finalize(GSource *src)
+{
+	GSList *fd_list;
+	GPollFD *tmp;
+
+	fd_list = src->poll_fds;
+	do {
+		tmp = (GPollFD *) fd_list->data;
+		g_free(tmp);
+
+		fd_list = fd_list->next;
+	} while (fd_list);
+
+	return;
+}
+
 static gboolean __aul_glib_check(GSource *src)
 {
 	GSList *fd_list;
@@ -68,7 +84,7 @@ GSourceFuncs funcs = {
 	.prepare = __aul_glib_prepare,
 	.check = __aul_glib_check,
 	.dispatch = __aul_glib_dispatch,
-	.finalize = NULL
+	.finalize = __aul_glib_finalize
 };
 
 gboolean __aul_glib_handler(gpointer data)
