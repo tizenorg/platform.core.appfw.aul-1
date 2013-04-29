@@ -70,7 +70,7 @@
 #define PATH_DATA "/data"
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
-#define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
+#define PATH_DA_SO "/usr/lib/da_probe_osp.so"
 
 
 static char *launchpad_cmdline;
@@ -268,6 +268,7 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	int app_argc;
 	char **app_argv;
 	int i;
+	const char *str;
 
 	app_argv = __create_argc_argv(kb, &app_argc);
 	app_argv[0] = strdup(app_path);
@@ -281,7 +282,10 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	/* Temporary log: launch time checking */
 	LOG(LOG_DEBUG, "LAUNCH", "[%s:Platform:launchpad:done]", app_path);
 
-	__preload_exec(app_argc, app_argv);
+	str = bundle_get_val(kb, AUL_K_SDK);
+	if ( !(str && strncmp(str, SDK_DYNAMIC_ANALYSIS, strlen(str))==0) ) {
+		__preload_exec(app_argc, app_argv);
+	}	
 
 	__normal_fork_exec(app_argc, app_argv);
 }
