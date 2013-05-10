@@ -138,6 +138,9 @@ typedef enum _aul_type{
 /** AUL internal private key - To check forwarded callee app's pid */
 #define AUL_K_FWD_CALLEE_PID	"__AUL_FWD_CALLEE_PID__"
 
+/** AUL internal private key */
+#define AUL_K_NO_CANCEL        "__AUL_NO_CANCEL__"
+
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_PID	"__AUL_CALLER_PID__"
 /** AUL public key - To check callee's secuirty */

@@ -211,9 +211,16 @@ static int __send_to_cancel(int pid)
 int _app_start_res_prepare(bundle *kb)
 {
 	int pid;
+	const char* str = NULL;
 
 	if (bundle_get_val(kb, AUL_K_WAIT_RESULT) == NULL)
 		return 0;
+
+	str = bundle_get_val(kb, AUL_K_NO_CANCEL);
+	if( str && strncmp("1", str, 1) == 0) {
+		_D("no cancel");
+		return 0;
+	}
 
 	if ((pid = __get_caller_pid(kb)) < 0) {
 		_E("caller pid is not valid");
