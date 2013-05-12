@@ -1,5 +1,6 @@
 [Unit]
 Description=Start the preload/preinit daemon
+After=ac.service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/tizen-mobile-ui
