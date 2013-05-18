@@ -1,3 +1,5 @@
+%bcond_with privacy-manager-client
+
 Name:       aul
 Summary:    App utility library
 Version:    0.0.266
@@ -34,8 +36,9 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:	pkgconfig(app2sd)
+%if %{with privacy-manager-client}
 BuildRequires:  pkgconfig(privacy-manager-client)
-
+%endif
 
 %description
 Application utility library
@@ -53,7 +56,11 @@ Application utility library (devel)
 %setup -q
 
 %build
-%cmake .
+%if %{with privacy-manger-client}
+%cmake . -DENABLE_PRIVACY_MANAGER=On
+%else
+%cmake . -DENABLE_PRIVACY_MANAGER=Off
+%endif
 
 make %{?jobs:-j%jobs}
 

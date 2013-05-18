@@ -30,7 +30,9 @@
 #include <app2ext_interface.h>
 #include <sys/prctl.h>
 #include <pkgmgr-info.h>
+#ifdef PRIVACY_MANAGER
 #include <privacy_manager_client.h>
+#endif
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -650,6 +652,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	pkgid = appinfo_get_value(ai, AIT_PKGID);
 
+#ifdef PRIVACY_MANAGER
 	if(bundle_get_val(kb, AUL_K_PRIVACY_APPID)){
 		bundle_del(kb, AUL_K_PRIVACY_APPID);
 	} else {
@@ -666,6 +669,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			ai = appinfo_find(_laf, appid);
 		}
 	}
+#endif // PRIVACY_MANAGER
 
 	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
