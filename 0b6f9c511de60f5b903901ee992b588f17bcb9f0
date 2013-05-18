@@ -1,0 +1,8 @@
+Change-Id: I0b6f9c511de60f5b903901ee992b588f17bcb9f0
+Code-Review+2: Anas Nashif
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-by: Anas Nashif
+Submitted-at: Sat, 18 May 2013 15:10:52 -0700
+Reviewed-on: https://review.tizen.org/gerrit/3556
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
