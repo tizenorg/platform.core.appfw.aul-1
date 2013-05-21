@@ -53,6 +53,10 @@ Application utility library (devel)
 %setup -q
 
 %build
+%if 0%{?simulator}
+CFLAGS="%{optflags} -D__emul__"; export CFLAGS
+%endif
+
 %cmake .
 
 make %{?jobs:-j%jobs}

@@ -260,7 +260,7 @@ static int __init()
 	_launch_init(&amd);
 	_status_init(&amd);
 
-#ifndef __i386__
+#ifndef __emul__
 	_key_init();
 #endif
 
