@@ -1,3 +1,6 @@
+* Wed May 29 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130520.103508@583008d
+- Enable building with privacy manager
+
 * Fri May 17 2013 Rusty Lynch <rusty.lynch@intel.com> submit/tizen/20130517.044802@0b6f9c5
 - Add build time config for privacy-manager support
 

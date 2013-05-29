@@ -1,4 +1,4 @@
-%bcond_with privacy-manager-client
+%bcond_without privacy-manager-client
 
 Name:       aul
 Summary:    App utility library
