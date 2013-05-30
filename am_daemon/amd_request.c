@@ -303,7 +303,6 @@ static gboolean __request_handler(gpointer data)
 	char *tmp_pid;*/
 	int pid;
 	bundle *kb = NULL;
-	item_pkt_t *item;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -323,13 +322,8 @@ static gboolean __request_handler(gpointer data)
 				bundle_free(kb), kb = NULL;
 
 			if(ret > 0) {
-				item = calloc(1, sizeof(item_pkt_t));
-				item->pid = ret;
-				strncpy(item->appid, appid, 511);
 				free_pkt = 0;
-
 				g_timeout_add(1000, __add_history_handler, pkt);
-				g_timeout_add(1200, __add_item_running_list, item);
 			}
 			break;
 		case APP_RESULT:

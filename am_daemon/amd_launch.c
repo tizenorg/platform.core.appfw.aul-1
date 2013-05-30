@@ -704,10 +704,15 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			bundle_add(kb, AUL_K_HWACC, hwacc);
 			bundle_add(kb, AUL_K_EXEC, app_path);
 			bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
-			if(strncmp(pkg_type, "wgt", 3) == 0) {
+			if(bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE) {
+				pid = app_send_cmd(DEBUG_LAUNCHPAD_PID, cmd, kb);
+			} else if(strncmp(pkg_type, "wgt", 3) == 0) {
 				pid = app_send_cmd(WEB_LAUNCHPAD_PID, cmd, kb);
 			} else {
 				pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
+			}
+			if(pid == -3) {
+				pid = -ENOLAUNCHPAD;
 			}
 			//_add_cgroup(_lcg, appid, pid);
 		}

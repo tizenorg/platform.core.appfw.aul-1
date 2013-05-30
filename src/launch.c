@@ -121,6 +121,9 @@ SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 		case -ETERMINATING:
 			res = AUL_R_ETERMINATING;
 			break;
+		case -ENOLAUNCHPAD:
+			res = AUL_R_ENOLAUNCHPAD;
+			break;
 		default:
 			res = AUL_R_ERROR;
 		}

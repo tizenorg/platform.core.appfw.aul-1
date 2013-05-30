@@ -57,10 +57,11 @@ enum app_cmd {
 #define AUL_SOCK_MAXBUFF 65535
 #define LAUNCHPAD_PID -1
 #define WEB_LAUNCHPAD_PID -3
+#define DEBUG_LAUNCHPAD_PID -4
 #define ELOCALLAUNCH_ID 128
 #define EILLEGALACCESS 127
 #define ETERMINATING 126
-
+#define ENOLAUNCHPAD 125
 
 
 typedef struct _app_pkt_t {
