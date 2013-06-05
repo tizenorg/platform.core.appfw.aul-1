@@ -1,3 +1,6 @@
+* Wed Jun 05 2013 Xavier Roche <xavrock.os@gmail.com> accepted/tizen/20130529.193617@0a052cb
+- Fix rpmlint issues
+
 * Wed Jun 05 2013 Xavier Roche <xavrock.os@gmail.com> accepted/tizen/20130529.193617@502eb4a
 - Replace manifest with default floor
 
