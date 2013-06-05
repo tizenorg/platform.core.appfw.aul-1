@@ -1,3 +1,6 @@
+* Wed Jun 05 2013 Xavier Roche <xavrock.os@gmail.com> accepted/tizen/20130529.193617@502eb4a
+- Replace manifest with default floor
+
 * Wed May 29 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130520.103508@583008d
 - Enable building with privacy manager
 
