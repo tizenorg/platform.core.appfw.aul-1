@@ -1,0 +1,9 @@
+Change-Id: Ide965d2b6d802bfbeff2994bf08fe76416cb5594
+Code-Review+2: Anas Nashif <anas.nashif@intel.com>
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Verified+1: Xavier Roche <xavier.roche@eurogiciel.fr>
+Submitted-by: Anas Nashif <anas.nashif@intel.com>
+Submitted-at: Wed, 12 Jun 2013 05:17:44 -0700
+Reviewed-on: https://review.tizen.org/gerrit/3834
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
