@@ -31,6 +31,7 @@ enum _appinfo_idx {
 	_AI_HWACC,
 	_AI_PERM,
 	_AI_PKGID,
+	_AI_PRELOAD,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -51,6 +52,7 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, },
 	[_AI_PERM] = { "PermissionType", AIT_PERM, },
 	[_AI_PKGID] = { "PackageId", AIT_PKGID, },
+	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, },
 };
 
 struct appinfo {
@@ -97,6 +99,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	pkgmgrinfo_app_component component;
 	pkgmgrinfo_permission_type permission;
 	int ret = -1;
+	bool preload;
 
 	if (!handle) {
 		_E("null app handle");
@@ -187,6 +190,13 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 
 	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
 	c->val[_AI_PKGID] = strdup(pkgid);
+	
+	r = pkgmgrinfo_appinfo_is_preload(handle, &preload);
+	if (preload == false) {
+		c->val[_AI_PRELOAD] = strdup("false");
+	} else {
+		c->val[_AI_PRELOAD] = strdup("true");
+	}
 
 	_D("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
 

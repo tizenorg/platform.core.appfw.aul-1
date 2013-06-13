@@ -618,6 +618,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	const char *hwacc;
 	const char *permission;
 	const char *pkgid;
+	const char *preload;
 	char caller_appid[256];
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
 	bool consented = true;
@@ -675,11 +676,16 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
-			pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
-			if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
-				pid = -EILLEGALACCESS;
-				__real_send(fd, pid);
-				return pid;
+			const struct appinfo *caller_ai;
+			caller_ai = appinfo_find(_laf, caller_appid);
+			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
+			if( preload && strncmp(preload, "true", 4) != 0 ) {
+				pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
+				if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
+					pid = -EILLEGALACCESS;
+					__real_send(fd, pid);
+					return pid;
+				}
 			}
 		}
 	}
