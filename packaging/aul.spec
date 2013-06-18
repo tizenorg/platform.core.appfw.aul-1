@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.269
+Version:    0.0.270
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -83,6 +83,9 @@ install -m 0644 %SOURCE102 %{buildroot}/usr/lib/systemd/system/ac.service
 ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@app.service
 ln -s ../ac.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/ac.service
 
+mkdir -p %{buildroot}/opt/etc/smack/accesses.d
+install -m 644 aul.rule %{buildroot}/opt/etc/smack/accesses.d
+
 
 %preun
 if [ $1 == 0 ]; then
@@ -127,6 +130,7 @@ systemctl daemon-reload
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
 /usr/bin/daemon-manager-launch-agent
+/opt/etc/smack/accesses.d/aul.rule
 
 %files devel
 /usr/include/aul/*.h
