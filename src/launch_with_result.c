@@ -43,6 +43,11 @@ typedef struct _app_resultcb_info_t {
 static int latest_caller_pid = -1;
 static app_resultcb_info_t *rescb_head = NULL;
 
+static int is_subapp = 0;
+subapp_fn subapp_cb = NULL;
+void *subapp_data = NULL;
+
+
 static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 			 void *data);
 static app_resultcb_info_t *__find_resultcb(int pid);
@@ -407,3 +412,37 @@ int aul_send_result(bundle *kb, int is_cancel)
 	return ret;
 }
 
+int app_subapp_terminate_request()
+{
+	if(is_subapp) {
+		subapp_cb(subapp_data);
+	}
+	return 0;
+}
+
+SLPAPI int aul_set_subapp(subapp_fn cb, void *data)
+{
+	is_subapp = 1;
+	subapp_cb = cb;
+	subapp_data = data;
+
+	return 0;
+}
+
+SLPAPI int aul_subapp_terminate_request_pid(int pid)
+{
+	char pid_str[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pid_str, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad(APP_TERM_REQ_BY_PID, pid_str, NULL);
+	return ret;
+}
+
+SLPAPI int aul_is_subapp()
+{
+	return is_subapp;
+}

@@ -1598,6 +1598,14 @@ int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
  */
 int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
 
+
+typedef int (*subapp_fn)(void *data);
+
+int aul_set_subapp(subapp_fn cb, void *data);
+int aul_subapp_terminate_request_pid(int pid);
+int aul_is_subapp(void);
+
+
 /** @} */
 
 

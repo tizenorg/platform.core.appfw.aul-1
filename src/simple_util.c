@@ -31,6 +31,9 @@
 
 #define BINSH_NAME	"/bin/sh"
 #define BINSH_SIZE	7
+#define VALGRIND_NAME	"/home/developer/sdk_tools/valgrind/usr/bin/valgrind"
+#define VALGRIND_SIZE	51
+
 
 #define PROC_STAT_GID_POS	5
 
@@ -139,6 +142,8 @@ char *__proc_get_cmdline_bypid(int pid)
 	/* support app launched by shell script*/
 	if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0)
 		return strdup(&buf[BINSH_SIZE + 1]);
+	else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0)
+		return strdup(&buf[VALGRIND_SIZE + 1]);
 	else
 		return strdup(buf);
 }

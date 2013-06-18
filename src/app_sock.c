@@ -39,7 +39,7 @@ static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, sockl
 static inline void __set_sock_option(int fd, int cli)
 {
 	int size;
-	struct timeval tv = { 3, 200 * 1000 };	/*  3.2 sec */
+	struct timeval tv = { 5, 200 * 1000 };	/*  5.2 sec */
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
@@ -316,10 +316,10 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 	len = recv(fd, &res, sizeof(int), 0);
 	if (len == -1) {
 		if (errno == EAGAIN) {
-			_E("recv timeout \n");
+			_E("recv timeout : %s", strerror(errno));
 			res = -EAGAIN;
 		} else {
-			_E("recv error\n");
+			_E("recv error : %s", strerror(errno));
 			res = -ECOMM;
 		}
 	}

@@ -221,7 +221,7 @@ static int _read_pkg_info(struct appinfomgr *cf)
 {
 	int r;
 
-	r = pkgmgrinfo_appinfo_get_installed_list(__app_info_insert_handler, cf);
+	r = pkgmgrinfo_appinfo_get_install_list(__app_info_insert_handler, cf);
 
 	return r;
 }

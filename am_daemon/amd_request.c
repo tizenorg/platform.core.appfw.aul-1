@@ -135,6 +135,7 @@ static int __app_process_by_pid(int cmd,
 {
 	int pid;
 	int ret = -1;
+	int dummy;
 
 	if (pkg_name == NULL)
 		return -1;
@@ -160,6 +161,11 @@ static int __app_process_by_pid(int cmd,
 	case APP_KILL_BY_PID:
 		if ((ret = _send_to_sigkill(pid)) < 0)
 			_E("fail to killing - %d\n", pid);
+		break;
+	case APP_TERM_REQ_BY_PID:
+		if ((ret = __app_send_raw(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
+			_D("terminate req packet send error");
+		}
 	}
 
 	return ret;
@@ -336,6 +342,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_TERM_BY_PID:
 		case APP_RESUME_BY_PID:
 		case APP_KILL_BY_PID:
+		case APP_TERM_REQ_BY_PID:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr);

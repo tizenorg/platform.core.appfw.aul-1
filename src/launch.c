@@ -88,6 +88,7 @@ static int app_terminate()
 	return 0;
 }
 
+
 /**
  * @brief	encode kb and send it to 'pid'
  * @param[in]	pid		receiver's pid
@@ -329,6 +330,10 @@ int aul_sock_handler(int fd)
 
 	case APP_TERM_BY_PID:	/* run in callee */
 		app_terminate();
+		break;
+
+	case APP_TERM_REQ_BY_PID:	/* run in callee */
+		app_subapp_terminate_request();
 		break;
 
 	case APP_RESULT:	/* run in caller */

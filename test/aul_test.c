@@ -156,6 +156,13 @@ int term_pid_test()
 	return aul_terminate_pid(apn_pid);
 }
 
+int term_req_pid_test()
+{
+	static int num = 0;
+	printf("[aul_subapp_terminate_request_pid %d test] %d \n", num++, apn_pid);
+	return aul_subapp_terminate_request_pid(apn_pid);
+}
+
 static test_func_t scn_func[] = {
 	{"n", launch_test, "launch_test", ""},
 	{"n", launch_test, "launch_test", ""},
@@ -550,6 +557,8 @@ static test_func_t test_func[] = {
 		"[usage] resume_pid <pid>" },
 	{"term_pid", term_pid_test,"aul_terminate_pid test",
 		"[usage] term_pid <pid>" },
+	{"term_req_pid", term_req_pid_test,"aul_subapp_terminate_request_pid test",
+		"[usage] term_req_pid <pid>" },
 	{"dbuslaunch", dbus_launch_test,"launch by dbus auto activation",
 		"[usage] term_pid <pid>" },
 	{"all",all_test,"test based on predefine scenario",
