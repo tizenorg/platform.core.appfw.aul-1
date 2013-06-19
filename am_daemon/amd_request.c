@@ -104,7 +104,6 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	int datalen;
 	bundle_raw *kb_data;
 	int res;
-	char callee_appid[256];
 
 	if ((pid = __get_caller_pid(kb)) < 0)
 			return AUL_R_ERROR;
@@ -113,13 +112,6 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
 
 	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
-
-	res = aul_app_get_appid_bypid(pgid, callee_appid, sizeof(callee_appid));
-	if(res == 0) {
-		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
-	} else {
-		_W("fail(%d) to get callee appid by pid", res);
-	}
 
 	bundle_encode(kb, &kb_data, &datalen);
 	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0)

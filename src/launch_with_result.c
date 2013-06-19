@@ -390,6 +390,7 @@ int aul_send_result(bundle *kb, int is_cancel)
 {
 	int pid;
 	int ret;
+	char callee_appid[256];
 
 	if ((pid = __get_caller_pid(kb)) < 0)
 		return AUL_R_EINVAL;
@@ -400,6 +401,13 @@ int aul_send_result(bundle *kb, int is_cancel)
 	{
 		_D("original msg is not msg with result");
 		return AUL_R_OK;
+	}
+	
+	ret = aul_app_get_appid_bypid(getpid(), callee_appid, sizeof(callee_appid));
+	if(ret == 0) {
+		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
+	} else {
+		_W("fail(%d) to get callee appid by pid", ret);
 	}
 
 	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
