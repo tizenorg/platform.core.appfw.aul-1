@@ -33,6 +33,12 @@
 #define BINSH_SIZE	7
 #define VALGRIND_NAME	"/home/developer/sdk_tools/valgrind/usr/bin/valgrind"
 #define VALGRIND_SIZE	51
+#define BASH_NAME	"/bin/bash"
+#define BASH_SIZE	9
+#define OPROFILE_NAME	"/usr/bin/oprofile_command"
+#define OPROFILE_SIZE	25
+#define OPTION_VALGRIND_NAME	"valgrind"
+#define OPTION_VALGRIND_SIZE	8
 
 
 #define PROC_STAT_GID_POS	5
@@ -144,6 +150,13 @@ char *__proc_get_cmdline_bypid(int pid)
 		return strdup(&buf[BINSH_SIZE + 1]);
 	else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0)
 		return strdup(&buf[VALGRIND_SIZE + 1]);
+	else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
+		if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
+			if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0) {
+				strdup(&buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3]);
+			}
+		}
+	}
 	else
 		return strdup(buf);
 }
