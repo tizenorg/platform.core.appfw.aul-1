@@ -1,3 +1,6 @@
+* Tue Jun 25 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130529.193617@5afedec
+- Replace manifest with default floor
+
 * Wed Jun 05 2013 Xavier Roche <xavrock.os@gmail.com> accepted/tizen/20130529.193617@de965d2
 - Fix rpmlint issue : use unitdir macro
 
