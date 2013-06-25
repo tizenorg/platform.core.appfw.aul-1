@@ -153,12 +153,12 @@ char *__proc_get_cmdline_bypid(int pid)
 	else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
 		if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
 			if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0) {
-				strdup(&buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3]);
+				return strdup(&buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3]);
 			}
 		}
 	}
-	else
-		return strdup(buf);
+
+	return strdup(buf);
 }
 
 static inline int __get_pgid_from_stat(int pid)
