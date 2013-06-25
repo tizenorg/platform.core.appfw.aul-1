@@ -1,0 +1,11 @@
+Change-Id: Iac20d1b0e2b26bd61223287cc6ad25dcf3d723a7
+Code-Review+2: Anas Nashif <anas.nashif@intel.com>
+Code-Review+1: Baptiste DURAND <baptiste.durand@eurogiciel.fr>
+Verified+1: Baptiste DURAND <baptiste.durand@eurogiciel.fr>
+Code-Review+1: Victor Hakoun <victor.hakoun@eurogiciel.fr>
+Verified+1: Victor Hakoun <victor.hakoun@eurogiciel.fr>
+Submitted-by: Anas Nashif <anas.nashif@intel.com>
+Submitted-at: Tue, 25 Jun 2013 04:43:22 -0700
+Reviewed-on: https://review.tizen.org/gerrit/4244
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
