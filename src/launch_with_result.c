@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "aul.h"
 #include "aul_api.h"
@@ -47,6 +48,7 @@ static int is_subapp = 0;
 subapp_fn subapp_cb = NULL;
 void *subapp_data = NULL;
 
+pthread_mutex_t result_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 			 void *data);
@@ -244,6 +246,7 @@ int _app_start_res_prepare(bundle *kb)
 
 int app_result(int cmd, bundle *kb, int launched_pid)
 {
+	pthread_mutex_lock(&result_lock);
 	switch (cmd) {
 	case APP_RESULT:
 		__call_app_result_callback(kb, 0, launched_pid);
@@ -252,7 +255,7 @@ int app_result(int cmd, bundle *kb, int launched_pid)
 		__call_app_result_callback(kb, 1, launched_pid);
 		break;
 	}
-
+	pthread_mutex_unlock(&result_lock);
 	return 0;
 }
 
@@ -270,10 +273,12 @@ SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 	if (pkgname == NULL || cbfunc == NULL || kb == NULL)
 		return AUL_R_EINVAL;
 
+	pthread_mutex_lock(&result_lock);
 	ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
 
 	if (ret > 0)
 		__add_resultcb(ret, cbfunc, data);
+	pthread_mutex_unlock(&result_lock);
 
 	return ret;
 }
@@ -390,7 +395,10 @@ int aul_send_result(bundle *kb, int is_cancel)
 {
 	int pid;
 	int ret;
+	int callee_pid;
+	int callee_pgid;
 	char callee_appid[256];
+	char tmp_pid[MAX_PID_STR_BUFSZ];
 
 	if ((pid = __get_caller_pid(kb)) < 0)
 		return AUL_R_EINVAL;
@@ -402,8 +410,13 @@ int aul_send_result(bundle *kb, int is_cancel)
 		_D("original msg is not msg with result");
 		return AUL_R_OK;
 	}
-	
-	ret = aul_app_get_appid_bypid(getpid(), callee_appid, sizeof(callee_appid));
+
+	callee_pid = getpid();
+	callee_pgid = getpgid(callee_pid);
+	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", callee_pgid);
+	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
+
+	ret = aul_app_get_appid_bypid(callee_pid, callee_appid, sizeof(callee_appid));
 	if(ret == 0) {
 		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
 	} else {

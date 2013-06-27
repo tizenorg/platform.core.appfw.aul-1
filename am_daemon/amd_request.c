@@ -109,9 +109,11 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 			return AUL_R_ERROR;
 
 	pgid = getpgid(cr_pid);
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
-
-	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
+	if(pgid > 0) {
+		snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
+		bundle_del(kb,AUL_K_CALLEE_PID);
+		bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
+	}
 
 	bundle_encode(kb, &kb_data, &datalen);
 	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0)
