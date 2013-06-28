@@ -80,12 +80,16 @@ static app_resultcb_info_t *__find_resultcb(int pid)
 {
 	app_resultcb_info_t *tmp;
 
+	pthread_mutex_lock(&result_lock);
 	tmp = rescb_head;
 	while (tmp) {
-		if (tmp->launched_pid == pid)
+		if (tmp->launched_pid == pid) {
+			pthread_mutex_unlock(&result_lock);
 			return tmp;
+		}
 		tmp = tmp->next;
 	}
+	pthread_mutex_unlock(&result_lock);
 	return NULL;
 }
 
@@ -246,7 +250,6 @@ int _app_start_res_prepare(bundle *kb)
 
 int app_result(int cmd, bundle *kb, int launched_pid)
 {
-	pthread_mutex_lock(&result_lock);
 	switch (cmd) {
 	case APP_RESULT:
 		__call_app_result_callback(kb, 0, launched_pid);
@@ -255,7 +258,7 @@ int app_result(int cmd, bundle *kb, int launched_pid)
 		__call_app_result_callback(kb, 1, launched_pid);
 		break;
 	}
-	pthread_mutex_unlock(&result_lock);
+
 	return 0;
 }
 
