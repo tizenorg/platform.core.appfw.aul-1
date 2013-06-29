@@ -99,6 +99,7 @@ int __proc_iter_cmdline(
 	int pid;
 	int ret;
 	char buf[MAX_LOCAL_BUFSZ];
+	char *cmdline;
 
 	dp = opendir("/proc");
 	if (dp == NULL) {
@@ -118,12 +119,17 @@ int __proc_iter_cmdline(
 			continue;
 
 		/* support app launched by shell script*/
-		if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0)
-			pid =
-			    iterfunc(dentry->d_name, &buf[BINSH_SIZE + 1],
-				     priv);
-		else
-			pid = iterfunc(dentry->d_name, buf, priv);
+		cmdline = buf;
+		if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0) {
+			cmdline = &buf[BINSH_SIZE + 1];
+		} else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
+			if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
+				if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0) {
+					cmdline = &buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3];
+				}
+			}
+		}
+		pid = iterfunc(dentry->d_name, cmdline, priv);
 
 		if (pid > 0) {
 			closedir(dp);
