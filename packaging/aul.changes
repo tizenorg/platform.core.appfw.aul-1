@@ -1,3 +1,6 @@
+* Wed Jul 03 2013 Rusty Lynch <rusty.lynch@intel.com> submit/tizen/20130625.113817@9f47f96
+- Fix Access Control startup (ac.service)
+
 * Tue Jun 25 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130529.193617@5afedec
 - Replace manifest with default floor
 
