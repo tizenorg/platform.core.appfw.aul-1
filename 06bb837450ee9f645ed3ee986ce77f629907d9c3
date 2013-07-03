@@ -1,0 +1,8 @@
+Change-Id: I06bb837450ee9f645ed3ee986ce77f629907d9c3
+Code-Review+2: Rusty Lynch <rusty.lynch@intel.com>
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-by: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-at: Wed, 03 Jul 2013 09:15:49 -0700
+Reviewed-on: https://review.tizen.org/gerrit/5462
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
