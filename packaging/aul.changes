@@ -1,3 +1,6 @@
+* Fri Jul 05 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130704.204104@c670863
+- Disable key event catch for x86_64 arch
+
 * Wed Jul 03 2013 Rusty Lynch <rusty.lynch@intel.com> submit/tizen/20130625.113817@ef06efe
 - resetting manifest requested domain to floor
 - Fix Access Control startup (ac.service)
