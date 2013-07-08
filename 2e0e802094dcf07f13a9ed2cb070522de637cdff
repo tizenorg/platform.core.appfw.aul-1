@@ -1,0 +1,9 @@
+Change-Id: I2e0e802094dcf07f13a9ed2cb070522de637cdff
+Code-Review+2: Anas Nashif <anas.nashif@intel.com>
+Code-Review+1: Baptiste DURAND <baptiste.durand@eurogiciel.fr>
+Verified+1: Baptiste DURAND <baptiste.durand@eurogiciel.fr>
+Submitted-by: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-at: Mon, 08 Jul 2013 15:31:03 -0700
+Reviewed-on: https://review.tizen.org/gerrit/5540
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
