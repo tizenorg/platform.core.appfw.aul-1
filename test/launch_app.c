@@ -114,17 +114,18 @@ static Eina_Bool run_func(void *data)
 {
 	int pid = -1;
 	char *str = NULL;
+
 	if ((pid = launch()) > 0) {
 		printf("... successfully launched\n");
+		str	 = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
+
+		if( str && strcmp(str, "SYNC") == 0 ) {
+			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
+		} else {
+			ecore_main_loop_quit();
+        }
 	} else {
 		printf("... launch failed\n");
-	}
-
-	str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
-
-	if( str && strcmp(str, "SYNC") == 0 ) {
-		aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
-	} else {
 		ecore_main_loop_quit();
 	}
 
@@ -135,6 +136,7 @@ static Eina_Bool run_func(void *data)
 
 	return 0;
 }
+
 
 int main(int argc, char **argv)
 {

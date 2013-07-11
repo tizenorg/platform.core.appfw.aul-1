@@ -140,6 +140,13 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 			c->val[_AI_MULTI] = strdup("true");
 		else c->val[_AI_MULTI] = strdup("false");
 
+		r = pkgmgrinfo_appinfo_is_preload(handle, &preload);
+		if (preload == false) {
+			c->val[_AI_PRELOAD] = strdup("false");
+		} else {
+			c->val[_AI_PRELOAD] = strdup("true");
+		}
+
 		if(gles == 0) {
 			c->val[_AI_HWACC] = strdup("NOT_USE");
 		} else {
@@ -190,13 +197,6 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 
 	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
 	c->val[_AI_PKGID] = strdup(pkgid);
-	
-	r = pkgmgrinfo_appinfo_is_preload(handle, &preload);
-	if (preload == false) {
-		c->val[_AI_PRELOAD] = strdup("false");
-	} else {
-		c->val[_AI_PRELOAD] = strdup("true");
-	}
 
 	_D("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
 
