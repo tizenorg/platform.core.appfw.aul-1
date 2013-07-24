@@ -1,3 +1,6 @@
+* Wed Jul 24 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130719.023810@ab22e32
+- Add build Option for multi-user support
+
 * Wed Jul 17 2013 Rusty Lynch <rusty.lynch@intel.com> submit/tizen/20130709.065332@5adbedb
 - Fix systemd service file
 

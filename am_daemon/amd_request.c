@@ -42,9 +42,10 @@
 #include "amd_appinfo.h"
 #include "amd_cgutil.h"
 #include "amd_status.h"
+#include "access_control.h"
 
 
-#define INHOUSE_UID     5000
+
 
 struct appinfomgr *_raf;
 struct cginfo *_rcg;
@@ -138,11 +139,13 @@ static int __app_process_by_pid(int cmd,
 
 	if (pkg_name == NULL)
 		return -1;
+#ifdef DAC_ACTIVATE
 
 	if ((cr->uid != 0) && (cr->uid != INHOUSE_UID)) {
 		_E("reject by security rule, your uid is %u\n", cr->uid);
 		return -1;
 	}
+#endif
 
 	pid = atoi(pkg_name);
 	if (pid <= 1) {
@@ -348,6 +351,7 @@ static gboolean __request_handler(gpointer data)
 			__real_send(clifd, ret);
 			break;
 		case APP_RUNNING_INFO:
+			_D("APP_RUNNING_INFO ");
 			_status_send_running_appinfo_v2(clifd);
 			break;
 		case APP_IS_RUNNING:

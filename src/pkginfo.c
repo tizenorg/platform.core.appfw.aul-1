@@ -119,8 +119,14 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 {
 	app_pkt_t *pkt = NULL;
 	int pgid;
-
+	
+#ifndef MULTI_USER_SUPPORT
+	//Test if Application or AMD it self that want to get APP ID
 	if(pid == getpid() || getuid()==0 || geteuid()==0) {
+#else
+	//In this case , Users have access to databases.Remove test to avoid deadlock on socket handler
+	{
+#endif
 		if (__get_pkgname_bypid(pid, appid, len) == 0) {
 			_D("appid for %d is %s", pid, appid);
 			return AUL_R_OK;
