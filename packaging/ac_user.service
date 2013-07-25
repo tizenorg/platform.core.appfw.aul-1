@@ -1,0 +1,12 @@
+#
+# classical example of a socket activated service?
+#
+
+[Unit]
+Description=Start the Access Control server
+
+[Service]
+ExecStart=/usr/bin/amd
+
+[Install]
+WantedBy=tizen-middleware.target
