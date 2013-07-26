@@ -43,8 +43,6 @@
 #include "amd_cgutil.h"
 #include "launch.h"
 
-#define DAC_ACTIVATE
-
 #include "access_control.h"
 
 
