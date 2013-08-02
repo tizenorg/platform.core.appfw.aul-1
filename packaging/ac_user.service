@@ -1,5 +1,5 @@
 #
-#  Systemd script to Launch AMD
+# Systemd script to Launch AMD
 #
 
 [Unit]
@@ -8,7 +8,5 @@ Description=Start the Access Control server
 [Service]
 ExecStart=/usr/bin/amd
 
-OOMScoreAdjust=-100
-
 [Install]
-WantedBy=graphical.target
+WantedBy=tizen-middleware.target
