@@ -658,7 +658,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 		_D("consented : %d", consented);
 
-		if(consented == false) {
+		if(consented == false && bundle_get_val(kb, AUL_K_SDK) == NULL) {
 			_D("appid : %s", appid);
 			bundle_add(kb, AUL_K_PRIVACY_APPID, appid);
 			appid = PRIVACY_POPUP;
