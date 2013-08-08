@@ -181,12 +181,8 @@ static gboolean __add_history_handler(gpointer user_data)
 	kb = bundle_decode(pkt->data, pkt->len);
 	appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 
-	if(strncmp(appid, "org.tizen.sat-ui", 18) == 0) {
-		app_path = "/usr/apps/org.tizen.sat-ui/bin/sat-ui KEY_EXEC_TYPE 0";
-	} else {
-		ai = (struct appinfo *)appinfo_find(_raf, appid);
-		app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
-	}
+	ai = (struct appinfo *)appinfo_find(_raf, appid);
+	app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
 
 	memset((void *)&rec, 0, sizeof(rec));
 
@@ -197,7 +193,7 @@ static gboolean __add_history_handler(gpointer user_data)
 		rec.arg = (char *)pkt->data;
 	}
 
-	_D("add rua history %s %s", rec.pkg_name, rec.app_path);
+	SECURE_LOGD("add rua history %s %s", rec.pkg_name, rec.app_path);
 
 	ret = rua_add_history(&rec);
 	if (ret == -1)
@@ -232,11 +228,11 @@ static int __releasable(const char *filename)
 
 	r = cgutil_exist_group(_rcg, CTRL_MGR, filename);
 	if (r == -1) {
-		_E("release service: exist: %s", strerror(errno));
+		SECURE_LOGE("release service: exist: %s", strerror(errno));
 		return -1;
 	}
 	if (r == 0) {
-		_E("release service: '%s' already not exist", filename);
+		SECURE_LOGE("release service: '%s' already not exist", filename);
 		return -1;
 	}
 
@@ -244,11 +240,11 @@ static int __releasable(const char *filename)
 	r = cgutil_group_foreach_pid(_rcg, CTRL_MGR, filename,
 			__get_pid_cb, &sz);
 	if (r == -1) {
-		_E("release service: '%s' read pid error", filename);
+		SECURE_LOGE("release service: '%s' read pid error", filename);
 		return -1;
 	}
 	if (sz > 0) {
-		_E("release service: '%s' group has process", filename);
+		SECURE_LOGE("release service: '%s' group has process", filename);
 		return -1;
 	}
 
@@ -266,14 +262,14 @@ static int __release_srv(const char *filename)
 
 	ai = (struct appinfo *)appinfo_find(_raf, filename);
 	if (!ai) {
-		_E("release service: '%s' not found", filename);
+		SECURE_LOGE("release service: '%s' not found", filename);
 		return -1;
 	}
 
 	r = appinfo_get_boolean(ai, AIT_RESTART);
 	if (r == 1) {
 		/* Auto restart */
-		_D("Auto restart set: '%s'", filename);
+		SECURE_LOGD("Auto restart set: '%s'", filename);
 		return _start_srv(ai, NULL);
 	}
 
@@ -281,7 +277,7 @@ static int __release_srv(const char *filename)
 
 	r = cgutil_remove_group(_rcg, CTRL_MGR, filename);
 	if (r == -1) {
-		_E("'%s' group remove error: %s", filename, strerror(errno));
+		SECURE_LOGE("'%s' group remove error: %s", filename, strerror(errno));
 		return -1;
 	}
 
@@ -303,6 +299,7 @@ static gboolean __request_handler(gpointer data)
 	char *tmp_pid;*/
 	int pid;
 	bundle *kb = NULL;
+	item_pkt_t *item;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -318,13 +315,18 @@ static gboolean __request_handler(gpointer data)
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 			ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 
+			if(ret > 0) {
+				item = calloc(1, sizeof(item_pkt_t));
+				item->pid = ret;
+				strncpy(item->appid, appid, 511);
+				free_pkt = 0;
+
+				g_timeout_add(1000, __add_history_handler, pkt);
+				g_timeout_add(1200, __add_item_running_list, item);
+			}
+
 			if (kb != NULL)
 				bundle_free(kb), kb = NULL;
-
-			if(ret > 0) {
-				free_pkt = 0;
-				g_timeout_add(1000, __add_history_handler, pkt);
-			}
 			break;
 		case APP_RESULT:
 		case APP_CANCEL:
@@ -349,7 +351,7 @@ static gboolean __request_handler(gpointer data)
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 			ret = _status_app_is_running_v2(appid);
-			_D("APP_IS_RUNNING : %s : %d",appid, ret);
+			SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
 			__send_result_to_client(clifd, ret);
 			free(appid);
 			break;

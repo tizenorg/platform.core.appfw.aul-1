@@ -64,7 +64,6 @@ enum app_cmd {
 #define ETERMINATING 126
 #define ENOLAUNCHPAD 125
 
-
 typedef struct _app_pkt_t {
 	int cmd;
 	int len;
@@ -75,6 +74,7 @@ int __create_server_sock(int pid);
 int __create_client_sock(int pid);
 int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen);
 int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int datalen);
+int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen);
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr);
 app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, int datalen);
 

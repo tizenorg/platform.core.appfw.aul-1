@@ -12,6 +12,11 @@ add_executable(launch_app
 target_link_libraries(launch_app aul ${pkgs_LDFLAGS})
 INSTALL(TARGETS launch_app DESTINATION bin)
 
+add_executable(open_app
+                open_app.c)
+target_link_libraries(open_app aul ${pkgs_LDFLAGS})
+INSTALL(TARGETS open_app DESTINATION bin)
+
 add_executable(dbusapp_test
 		dbusapp_test.c) 
 target_link_libraries(dbusapp_test aul ${pkgs_LDFLAGS})

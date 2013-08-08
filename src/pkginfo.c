@@ -122,11 +122,11 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 
 	if(pid == getpid() || getuid()==0 || geteuid()==0) {
 		if (__get_pkgname_bypid(pid, appid, len) == 0) {
-			_D("appid for %d is %s", pid, appid);
+			SECURE_LOGD("appid for %d is %s", pid, appid);
 			return AUL_R_OK;
 		}
 		/* support app launched by shell script*/
-		_D("second chance");
+
 		pgid = getpgid(pid);
 		if (pgid <= 1)
 			return AUL_R_ERROR;

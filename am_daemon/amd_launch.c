@@ -30,6 +30,7 @@
 #include <app2ext_interface.h>
 #include <sys/prctl.h>
 #include <pkgmgr-info.h>
+#include <poll.h>
 #include <privacy_manager_client.h>
 
 #include "amd_config.h"
@@ -76,20 +77,6 @@ struct ktimer {
 	struct cginfo *cg;
 };
 
-static void _set_oom()
-{
-	char buf[MAX_LOCAL_BUFSZ];
-	FILE *fp;
-
-	/* we should reset oomadj value as default because child
-	inherits from parent oom_adj*/
-	snprintf(buf, MAX_LOCAL_BUFSZ, "/proc/%d/oom_adj", getpid());
-	fp = fopen(buf, "w");
-	if (fp == NULL)
-		return;
-	fprintf(fp, "%d", -16);
-	fclose(fp);
-}
 
 static void _set_sdk_env(const char* appid, char* str) {
 	char buf[MAX_LOCAL_BUFSZ];
@@ -169,9 +156,6 @@ static void _prepare_exec(const char *appid, bundle *kb)
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	hwacc = appinfo_get_value(ai, AIT_HWACC);
-
-	/* SET OOM*/
-	_set_oom();
 
 	/* SET PRIVILEGES*/
 	 _D("appid : %s / pkg_type : %s / app_path : %s ", appid, pkg_type, app_path);
@@ -481,7 +465,7 @@ int _resume_app(int pid)
 	int dummy;
 	int ret;
 	if ((ret =
-	     __app_send_raw(pid, APP_RESUME_BY_PID, (unsigned char *)&dummy,
+	     __app_send_raw_with_delay_reply(pid, APP_RESUME_BY_PID, (unsigned char *)&dummy,
 			    sizeof(int))) < 0) {
 		if (ret == -EAGAIN)
 			_E("resume packet timeout error");
@@ -518,15 +502,132 @@ int _fake_launch_app(int cmd, int pid, bundle * kb)
 	bundle_raw *kb_data;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((ret = __app_send_raw(pid, cmd, kb_data, datalen)) < 0)
+	if ((ret = __app_send_raw_with_delay_reply(pid, cmd, kb_data, datalen)) < 0)
 		_E("error request fake launch - error code = %d", ret);
 	free(kb_data);
 	return ret;
 }
 
-static int __nofork_processing(int cmd, int pid, bundle * kb)
+static void __real_send(int clifd, int ret)
+{
+	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
+		if (errno == EPIPE) {
+			_E("send failed due to EPIPE.\n");
+		}
+		_E("send fail to client");
+	}
+
+	close(clifd);
+}
+
+static gboolean __au_glib_check(GSource *src)
+{
+	GSList *fd_list;
+	GPollFD *tmp;
+
+	fd_list = src->poll_fds;
+	do {
+		tmp = (GPollFD *) fd_list->data;
+		if ((tmp->revents & (POLLIN | POLLPRI)))
+			return TRUE;
+		fd_list = fd_list->next;
+	} while (fd_list);
+
+	return FALSE;
+}
+
+static gboolean __au_glib_dispatch(GSource *src, GSourceFunc callback,
+		gpointer data)
+{
+	callback(data);
+	return TRUE;
+}
+
+static gboolean __au_glib_prepare(GSource *src, gint *timeout)
+{
+	return FALSE;
+}
+
+static GSourceFuncs funcs = {
+	.prepare = __au_glib_prepare,
+	.check = __au_glib_check,
+	.dispatch = __au_glib_dispatch,
+	.finalize = NULL
+};
+
+struct reply_info {
+	GSource *src;
+	GPollFD *gpollfd;
+	guint timer_id;
+	int clifd;
+	int pid;
+};
+
+static gboolean __reply_handler(gpointer data)
+{
+	struct reply_info *r_info = (struct reply_info *) data;;
+	int fd = r_info->gpollfd->fd;
+	int len;
+	int res = 0;
+	int clifd = r_info->clifd;
+	int pid = r_info->pid;
+
+	len = recv(fd, &res, sizeof(int), 0);
+	if (len == -1) {
+		if (errno == EAGAIN) {
+			_E("recv timeout : %s", strerror(errno));
+			res = -EAGAIN;
+		} else {
+			_E("recv error : %s", strerror(errno));
+			res = -ECOMM;
+		}
+	}
+	close(fd);
+
+	if(res < 0) {
+		__real_send(clifd, res);
+	} else {
+		__real_send(clifd, pid);
+	}
+
+	_D("listen fd : %d , send fd : %d, pid : %d", fd, clifd, pid);
+
+	g_source_remove(r_info->timer_id);
+	g_source_remove_poll(r_info->src, r_info->gpollfd);
+	g_source_destroy(r_info->src);
+	g_free(r_info->gpollfd);
+	free(r_info);
+
+	return TRUE;
+}
+
+static gboolean __recv_timeout_handler(gpointer data)
+{
+	struct reply_info *r_info = (struct reply_info *) data;
+	int fd = r_info->gpollfd->fd;
+	int clifd = r_info->clifd;
+
+	__real_send(clifd, -EAGAIN);
+
+	close(fd);
+
+	g_source_remove_poll(r_info->src, r_info->gpollfd);
+	g_source_destroy(r_info->src);
+	g_free(r_info->gpollfd);
+	free(r_info);
+
+	return FALSE;
+}
+
+static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 {
 	int ret = -1;
+	int r;
+	GPollFD *gpollfd;
+	GSource *src;
+	struct reply_info *r_info;
+	GMainContext *reply_context;
+
 	switch (cmd) {
 	case APP_OPEN:
 	case APP_RESUME:
@@ -544,66 +645,33 @@ static int __nofork_processing(int cmd, int pid, bundle * kb)
 		_D("fake launch done");
 		break;
 	}
+
+	if(ret > 0) {
+		src = g_source_new(&funcs, sizeof(GSource));
+
+		gpollfd = (GPollFD *) g_malloc(sizeof(GPollFD));
+		gpollfd->events = POLLIN;
+		gpollfd->fd = ret;
+
+		r_info = malloc(sizeof(*r_info));
+		r_info->clifd = clifd;
+		r_info->pid = pid;
+		r_info->src = src;
+		r_info->gpollfd = gpollfd;
+
+		_D("listen fd : %d, send fd : %d", ret, clifd);
+
+		r_info->timer_id = g_timeout_add(5200, __recv_timeout_handler, (gpointer) r_info);
+		g_source_add_poll(src, gpollfd);
+		g_source_set_callback(src, (GSourceFunc) __reply_handler,
+				(gpointer) r_info, NULL);
+		g_source_set_priority(src, G_PRIORITY_DEFAULT);
+		r = g_source_attach(src, NULL);
+	}
+
 	return ret;
 }
 
-static void __real_send(int clifd, int ret)
-{
-	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
-		if (errno == EPIPE) {
-			_E("send failed due to EPIPE.\n");
-		}
-		_E("send fail to client");
-	}
-
-	close(clifd);
-}
-
-int __sat_ui_is_running()
-{
-	char *apppath = "/usr/apps/org.tizen.sat-ui/bin/sat-ui";
-	int ret = 0;
-
-	ret = __proc_iter_cmdline(NULL, apppath);
-
-	return ret;
-}
-
-int __sat_ui_launch(char* appid, bundle* kb, int cmd, int caller_pid, int fd)
-{
-	int ret = -1;
-	char *app_path = "/usr/apps/org.tizen.sat-ui/bin/sat-ui KEY_EXEC_TYPE 0";
-	int pid = -1;
-	char tmp_pid[MAX_PID_STR_BUFSZ];
-
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", caller_pid);
-	bundle_add(kb, AUL_K_CALLER_PID, tmp_pid);
-
-	pid = __sat_ui_is_running();
-
-	if (pid > 0) {
-		if (caller_pid == pid) {
-			_D("caller process & callee process is same.[%s:%d]", appid, pid);
-			pid = -ELOCALLAUNCH_ID;
-		} else if ((ret = __nofork_processing(cmd, pid, kb)) < 0) {
-			pid = ret;
-		}
-	} else if (cmd != APP_RESUME) {
-		bundle_add(kb, AUL_K_HWACC, "NOT_USE");
-		bundle_add(kb, AUL_K_EXEC, app_path);
-		bundle_add(kb, AUL_K_PACKAGETYPE, "rpm");
-		pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
-	}
-
-	__real_send(fd, pid);
-
-	if(pid > 0) {
-		//_status_add_app_info_list(appid, app_path, pid);
-		ac_server_check_launch_privilege(appid, "rpm", pid);
-	}
-
-	return pid;
-}
 
 int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
 {
@@ -621,15 +689,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	const char *preload;
 	char caller_appid[256];
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
+	int delay_reply = 0;
+	int pad_pid = LAUNCHPAD_PID;
 	bool consented = true;
-
-	int location = -1;
-	app2ext_handle *app2_handle = NULL;
-
-	if(strncmp(appid, "org.tizen.sat-ui", 18) == 0) {
-		pid = __sat_ui_launch(appid, kb, cmd, caller_pid, fd);
-		return pid;
-	}
 
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmp_pid);
@@ -690,6 +752,10 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		}
 	}
 
+	if(app2ext_get_app_location(pkgid) == APP2EXT_SD_CARD) {
+		app2ext_enable_external_pkg(pkgid);
+	}
+
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
 		if (!multiple || strncmp(multiple, "false", 5) == 0) {
@@ -700,10 +766,14 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			if (_status_get_app_info_status(pid) == STATUS_DYING) {
 				pid = -ETERMINATING;
 			} else if (caller_pid == pid) {
-				_D("caller process & callee process is same.[%s:%d]", appid, pid);
+				SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);
 				pid = -ELOCALLAUNCH_ID;
-			} else if ((ret = __nofork_processing(cmd, pid, kb)) < 0) {
-				pid = ret;
+			} else {
+				if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
+					pid = ret;
+				} else {
+					delay_reply = 1;
+				}
 			}
 		} else if (cmd != APP_RESUME) {
 			hwacc = appinfo_get_value(ai, AIT_HWACC);
@@ -711,12 +781,11 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			bundle_add(kb, AUL_K_EXEC, app_path);
 			bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
 			if(bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE) {
-				pid = app_send_cmd(DEBUG_LAUNCHPAD_PID, cmd, kb);
+				pad_pid = DEBUG_LAUNCHPAD_PID;		
 			} else if(strncmp(pkg_type, "wgt", 3) == 0) {
-				pid = app_send_cmd(WEB_LAUNCHPAD_PID, cmd, kb);
-			} else {
-				pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
+				pad_pid = WEB_LAUNCHPAD_PID;
 			}
+			pid = app_send_cmd(pad_pid, cmd, kb);
 			if(pid == -3) {
 				pid = -ENOLAUNCHPAD;
 			}
@@ -725,7 +794,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	} else if (componet && strncmp(componet, "svc", 3) == 0) {
 		pid = _status_app_is_running_v2(appid);
 		if (pid > 0) {
-			if ((ret = __nofork_processing(cmd, pid, kb)) < 0) {
+			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
 				pid = ret;
 			}
 		} else if (cmd != APP_RESUME) {
@@ -735,28 +804,11 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		_E("unkown application");
 	}
 
-	location = app2ext_get_app_location(pkgid);
-	if (location == APP2EXT_SD_CARD)
-	{
-		app2_handle = app2ext_init(APP2EXT_SD_CARD);
-		if (app2_handle == NULL) {
-			_E("app2_handle : app2ext init failed\n");
-			close(fd);
-			return -1;
-		}
-
-		ret = app2_handle->interface.enable(pkgid);
-		if (ret) {
-			_E("app2_handle : app enable API fail Reason %d", ret);
-		}
-
-		app2ext_deinit(app2_handle);
-	}
-
-	__real_send(fd, pid);
+	if(!delay_reply)
+		__real_send(fd, pid);
 
 	if(pid > 0) {
-		_status_add_app_info_list(appid, app_path, pid);
+		_status_add_app_info_list(appid, app_path, pid, pad_pid);
 		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
 		return ret != AC_R_ERROR ? pid : -1;
 	}

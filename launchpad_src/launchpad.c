@@ -94,7 +94,7 @@ _static_ int __raise_win_by_x(int pid);
 _static_ int __send_to_sigkill(int pid);
 _static_ int __term_app(int pid);
 _static_ int __resume_app(int pid);
-_static_ void __real_send(int clifd, int ret);
+_static_ int __real_send(int clifd, int ret);
 _static_ void __send_result_to_caller(int clifd, int ret);
 _static_ void __launchpad_main_loop(int main_fd);
 _static_ int __launchpad_pre_init(int argc, char **argv);
@@ -273,11 +273,13 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	app_argv = __create_argc_argv(kb, &app_argc);
 	app_argv[0] = strdup(app_path);
 
-	for (i = 0; i < app_argc; i++)
-		_D("input argument %d : %s##", i, app_argv[i]);
+	for (i = 0; i < app_argc; i++) {
+		if( (i%2) == 1)
+			continue;
+		SECURE_LOGD("input argument %d : %s##", i, app_argv[i]);
+	}
 
 	PERF("setup argument done");
-	_E("lock up test log(no error) : setup argument done");
 
 	/* Temporary log: launch time checking */
 	LOG(LOG_DEBUG, "LAUNCH", "[%s:Platform:launchpad:done]", app_path);
@@ -408,7 +410,7 @@ _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			char value[256];
 
 			ptr += flag;
-			_D("parsing app_path: EXEC - %s\n", exe);
+			SECURE_LOGD("parsing app_path: EXEC - %s\n", exe);
 
 			do {
 				flag = __parser(ptr, key, sizeof(key));
@@ -554,16 +556,19 @@ _static_ int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	return res;
 }
 
-_static_ void __real_send(int clifd, int ret)
+_static_ int __real_send(int clifd, int ret)
 {
 	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
 		if (errno == EPIPE) {
 			_E("send failed due to EPIPE.\n");
+			close(clifd);
+			return -1;
 		}
 		_E("send fail to client");
 	}
 
 	close(clifd);
+	return 0;
 }
 
 _static_ void __send_result_to_caller(int clifd, int ret)
@@ -572,6 +577,7 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 	int wait_count;
 	int cmdline_changed = 0;
 	int cmdline_exist = 0;
+	int r;
 
 	if (clifd == -1)
 		return;
@@ -609,7 +615,12 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 	if (!cmdline_changed)
 		_E("process launched, but cmdline not changed");
 
-	__real_send(clifd, ret);
+	if(__real_send(clifd, ret) < 0) {
+		r = kill(ret, SIGKILL);
+		if (r == -1)
+			_E("send SIGKILL: %s", strerror(errno));
+	}
+	
 	return;
 }
 
@@ -669,7 +680,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 	PERF("packet processing start");
 
 	pkg_name = bundle_get_val(kb, AUL_K_PKG_NAME);
-	_D("pkg name : %s\n", pkg_name);
+	SECURE_LOGD("pkg name : %s\n", pkg_name);
 
 	menu_info = _get_app_info_from_bundle_by_pkgname(pkg_name, kb);
 	if (menu_info == NULL) {
@@ -696,7 +707,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 		pid = fork();
 		if (pid == 0) {
 			PERF("fork done");
-			_E("lock up test log(no error) : fork done");
+			_D("lock up test log(no error) : fork done");
 
 			close(clifd);
 			close(main_fd);
@@ -707,23 +718,23 @@ _static_ void __launchpad_main_loop(int main_fd)
 			unlink(sock_path);
 
 			PERF("prepare exec - first done");
-			_E("lock up test log(no error) : prepare exec - first done");
+			_D("lock up test log(no error) : prepare exec - first done");
 
 			if (__prepare_exec(pkg_name, app_path,
 					   menu_info, kb) < 0) {
-				_E("preparing work fail to launch - "
+				SECURE_LOGE("preparing work fail to launch - "
 				   "can not launch %s\n", pkg_name);
 				exit(-1);
 			}
 
 			PERF("prepare exec - second done");
-			_E("lock up test log(no error) : prepare exec - second done");
+			_D("lock up test log(no error) : prepare exec - second done");
 
 			__real_launch(app_path, kb);
 
 			exit(-1);
 		}
-		_D("==> real launch pid : %d %s\n", pid, app_path);
+		SECURE_LOGD("==> real launch pid : %d %s\n", pid, app_path);
 		is_real_launch = 1;
 	}
 

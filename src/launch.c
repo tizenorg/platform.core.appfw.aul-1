@@ -230,7 +230,7 @@ int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
 	int must_free = 0;
 	int ret = 0;
 
-	_D("launch request : %s", pkgname);
+	SECURE_LOGD("launch request : %s", pkgname);
 	if (kb == NULL) {
 		kb = bundle_create();
 		must_free = 1;
@@ -273,8 +273,11 @@ int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
 static int __send_result_to_launchpad(int fd, int res)
 {
 	if (send(fd, &res, sizeof(int), MSG_NOSIGNAL) < 0) {
-		if (errno == EPIPE)
+		if (errno == EPIPE) {
 			_E("send failed due to EPIPE.\n");
+			close(fd);
+			return -1;
+		}
 		_E("send fail to client");
 	}
 	close(fd);
@@ -293,6 +296,7 @@ int aul_sock_handler(int fd)
 
 	const char *pid_str;
 	int pid;
+	int ret;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -307,7 +311,11 @@ int aul_sock_handler(int fd)
 	}
 
 	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL) {
-		__send_result_to_launchpad(clifd, 0);
+		ret = __send_result_to_launchpad(clifd, 0);
+		if (ret < 0) {
+			free(pkt);
+			return -1;
+		}
 	} else {
 		close(clifd);
 	}
@@ -426,7 +434,7 @@ int aul_register_init_callback(
 int aul_initialize()
 {
 	if (aul_initialized) {
-		_E("aul already initialized");
+		//_E("aul already initialized");
 		return AUL_R_ECANCELED;
 	}
 

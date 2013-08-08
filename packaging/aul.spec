@@ -118,6 +118,7 @@ systemctl daemon-reload
 %attr(0755,root,root) %{_bindir}/aul_mime.sh
 %{_bindir}/aul_test
 %{_bindir}/launch_app
+%{_bindir}/open_app
 /usr/share/aul/miregex/*
 /usr/share/aul/service/*
 /usr/share/aul/preload_list.txt

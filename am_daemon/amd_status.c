@@ -38,7 +38,7 @@ GSList *app_status_info_list = NULL;
 
 struct appinfomgr *_saf = NULL;
 
-int _status_add_app_info_list(char *appid, char *app_path, int pid)
+int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
@@ -56,13 +56,14 @@ int _status_add_app_info_list(char *appid, char *app_path, int pid)
 	strncpy(info_t->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
 	info_t->status = STATUS_LAUNCHING;
 	info_t->pid = pid;
+	info_t->pad_pid = pad_pid;
 	app_status_info_list = g_slist_append(app_status_info_list, info_t);
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
 
-		_D("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
+		//SECURE_LOGD("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
 	}
 
 	return 0;
@@ -77,7 +78,7 @@ static Eina_Bool __app_terminate_timer_cb(void *data)
 
 	ret = kill(pid, SIGKILL);
 	if (ret == -1)
-		_E("send SIGKILL: %s", strerror(errno));
+		_D("send SIGKILL: %s", strerror(errno));
 
 	return ECORE_CALLBACK_CANCEL;
 }
@@ -93,7 +94,8 @@ int _status_update_app_info_list(int pid, int status)
 		if(pid == info_t->pid) {
 			info_t->status = status;
 			if(status == STATUS_DYING) {
-				ecore_timer_add(2, __app_terminate_timer_cb, info_t->pid);
+				if(info_t->pad_pid != DEBUG_LAUNCHPAD_PID)
+					ecore_timer_add(2, __app_terminate_timer_cb, info_t->pid);
 			}
 			break;
 		}
@@ -103,7 +105,7 @@ int _status_update_app_info_list(int pid, int status)
 	{
 		info_t = (app_status_info_t *)iter->data;
 
-		_D("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
+		//SECURE_LOGD("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
 	}
 
 	return 0;
@@ -128,7 +130,7 @@ int _status_remove_app_info_list(int pid)
 	{
 		info_t = (app_status_info_t *)iter->data;
 
-		_D("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
+		//SECURE_LOGD("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
 	}
 
 	return 0;
@@ -341,7 +343,7 @@ int _status_get_appid_bypid(int fd, int pid)
 	pkt->cmd = APP_GET_APPID_BYPID_ERROR;
 
 	if (__get_pkgname_bypid(pid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
-		_D("appid for %d is %s", pid, pkt->data);
+		SECURE_LOGD("appid for %d is %s", pid, pkt->data);
 		pkt->cmd = APP_GET_APPID_BYPID_OK;
 		goto out;
 	}

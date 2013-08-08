@@ -70,7 +70,7 @@ SLPAPI int aul_get_mime_from_content(const char *content, char *mimetype,
 		if (__match_content_with_regex(content,
 			&(miregex_tbl->regex_preg))) {
 			founded = miregex_tbl->mimetype;
-			_D("content %s => mimetype %s\n", content, founded);
+			SECURE_LOGD("content %s => mimetype %s\n", content, founded);
 			break;
 		}
 		miregex_tbl = miregex_tbl->next;
@@ -350,7 +350,7 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 	if (_aul_get_defapp_from_mime
 	    (mime_type, unaliased_mime_type, defapp,
 	     sizeof(unaliased_mime_type), sizeof(defapp)) < 0) {
-		_D("mimetype : %s, unaliased mimetype : %s, mime_content : %s,"
+		SECURE_LOGD("mimetype : %s, unaliased mimetype : %s, mime_content : %s,"
 			" no default app", mime_type, 
 				unaliased_mime_type, mime_content);
 		bundle_add(kb, AUL_K_UNALIASED_MIME_TYPE, unaliased_mime_type);
@@ -365,7 +365,7 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 
 		if (ail_ret == AIL_ERROR_OK) {
 			ail_destroy_appinfo(handle);
-			_D("mimetype : %s, unaliased mimetype : %s, "
+			SECURE_LOGD("mimetype : %s, unaliased mimetype : %s, "
 				"mime_content : %s, defapp : %s", mime_type, 
 					unaliased_mime_type, 
 						mime_content, defapp);
@@ -373,14 +373,14 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 				   unaliased_mime_type);
 			ret = aul_launch_app(defapp, kb);
 		} else if (ail_ret == AIL_ERROR_NO_DATA) {
-			_D("defapp %s for mimetype : %s, mime_content : %s "
+			SECURE_LOGD("defapp %s for mimetype : %s, mime_content : %s "
 				"does NOT exist", defapp, 
 					mime_type, mime_content);
 			mida_delete_with_pkgname(defapp);
 			ail_destroy_appinfo(handle);
 			goto retry;
 		} else {
-			_E("ail_get_appinfo with %s failed", defapp);
+			SECURE_LOGE("ail_get_appinfo with %s failed", defapp);
 			if (kb) {
 				bundle_free(kb);
 				kb = NULL;
