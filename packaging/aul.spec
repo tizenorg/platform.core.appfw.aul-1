@@ -122,7 +122,8 @@ if [ $1 == 1 ]; then
 fi
 %endif
 
-%postun -p /sbin/ldconfig
+%postun
+/sbin/ldconfig
 %if !%{with multi_user}
 systemctl daemon-reload
 %endif
