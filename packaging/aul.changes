@@ -1,3 +1,6 @@
+* Mon Aug 12 2013 Patrick McCarty <patrick.mccarty@linux.intel.com> 91a6684
+- packaging: fix errors in %preun and %postun scriptlets
+
 * Fri Aug 02 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130731.144156@ab708cb
 - Add build Option for multi-user support
 

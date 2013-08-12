@@ -105,12 +105,12 @@ ln -s ../ac.service %{buildroot}/%{_unitdir}/graphical.target.wants/ac.service
 %endif
 
 %preun
-if [ $1 == 0 ]; then
 %if !%{with multi_user}
+if [ $1 == 0 ]; then
     systemctl stop launchpad-preload@app.service
     systemctl stop ac.service
-%endif
 fi
+%endif
 
 %post
 /sbin/ldconfig
@@ -122,7 +122,8 @@ if [ $1 == 1 ]; then
 fi
 %endif
 
-%postun -p /sbin/ldconfig
+%postun
+/sbin/ldconfig
 %if !%{with multi_user}
 systemctl daemon-reload
 %endif
