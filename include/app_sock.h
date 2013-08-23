@@ -53,7 +53,6 @@ enum app_cmd {
 	APP_RUNNING_LIST_UPDATE
 };
 
-#define AUL_SOCK_PREFIX "/tmp/alaunch"
 #define AUL_SOCK_MAXBUFF 65535
 #define LAUNCHPAD_PID -1
 #define WEB_LAUNCHPAD_PID -3
@@ -69,6 +68,9 @@ typedef struct _app_pkt_t {
 	unsigned char data[1];
 } app_pkt_t;
 
+char *__compute_socket_directory(int makedir);
+int __compute_socket_name_s(char *pid, char *name, size_t size, int makedir);
+int __compute_socket_name_i(int pid, char *name, size_t size, int makedir);
 int __create_server_sock(int pid);
 int __create_client_sock(int pid);
 int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen);

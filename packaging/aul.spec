@@ -1,5 +1,5 @@
 %bcond_without privacy-manager-client
-%bcond_with multi_user
+%bcond_without multi_user
 
 Name:       aul
 Summary:    App utility library
@@ -12,8 +12,9 @@ Source101:  launchpad-preload@.service
 Source102:  ac.service
 Source103:  launchpad-preload_user.service
 Source104:  ac_user.service
+Source105:  ac.socket
+Source106:  launchpad-preload.socket
 Source1001: %{name}.manifest
-
 Requires(post): /sbin/ldconfig
 Requires(post): /usr/bin/systemctl
 Requires(postun): /sbin/ldconfig
@@ -43,6 +44,7 @@ BuildRequires:	pkgconfig(app2sd)
 %if %{with privacy-manager-client}
 BuildRequires:  pkgconfig(privacy-manager-client)
 %endif
+BuildRequires:  pkgconfig(libsystemd-daemon)
 
 %description
 Application utility library
@@ -90,42 +92,52 @@ ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80laun
 mkdir -p %{buildroot}/opt/dbspace
 sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
 rm -rf %{buildroot}/usr/share/aul/mida_db.sql
+
 %if %{with multi_user}
-mkdir -p %{buildroot}/%{_unitdir_user}/tizen-middleware.target.wants
+mkdir -p %{buildroot}/%{_unitdir_user}/
+mkdir -p %{buildroot}/%{_unitdir_user}/sockets.target.wants
 install -m 0644 %SOURCE103 %{buildroot}/%{_unitdir_user}/launchpad-preload.service
+install -m 0644 %SOURCE106 %{buildroot}/%{_unitdir_user}/launchpad-preload.socket
+ln -s ../launchpad-preload.socket %{buildroot}/%{_unitdir_user}/sockets.target.wants/launchpad-preload.socket
 install -m 0644 %SOURCE104 %{buildroot}/%{_unitdir_user}/ac.service
-ln -s ../launchpad-preload.service %{buildroot}/%{_unitdir_user}/tizen-middleware.target.wants/launchpad-preload.service
-ln -s ../ac.service %{buildroot}/%{_unitdir_user}/tizen-middleware.target.wants/ac.service
+install -m 0644 %SOURCE105 %{buildroot}/%{_unitdir_user}/ac.socket
+ln -s ../ac.socket %{buildroot}/%{_unitdir_user}/sockets.target.wants/ac.socket
 %else
 mkdir -p %{buildroot}/%{_unitdir}/graphical.target.wants
 install -m 0644 %SOURCE101 %{buildroot}/%{_unitdir}/launchpad-preload@.service
-install -m 0644 %SOURCE102 %{buildroot}/%{_unitdir}/ac.service
 ln -s ../launchpad-preload@.service %{buildroot}/%{_unitdir}/graphical.target.wants/launchpad-preload@app.service
+install -m 0644 %SOURCE102 %{buildroot}/%{_unitdir}/ac.service
 ln -s ../ac.service %{buildroot}/%{_unitdir}/graphical.target.wants/ac.service
+install -m 0644 %SOURCE105 %{buildroot}/%{_unitdir}/ac.socket
 %endif
 
 %preun
-%if !%{with multi_user}
-if [ $1 == 0 ]; then
-    systemctl stop launchpad-preload@app.service
-    systemctl stop ac.service
-fi
+%if %{with multi_user}
+	systemctl --user stop launchpad-preload.service
+	systemctl --user stop ac.service
+%else
+	%systemd_preun launchpad-preload@app.service ac.socket
 %endif
 
 %post
 /sbin/ldconfig
 systemctl daemon-reload
-%if !%{with multi_user}
-if [ $1 == 1 ]; then
-    systemctl restart launchpad-preload@app.service
-    systemctl restart ac.service
-fi
+%if %{with multi_user}
+#	systemctl --user enable ac.socket
+#	systemctl --user start ac.socket
+#	systemctl --user enable launchpad-preload.socket
+#	systemctl --user start launchpad-preload.socket
+%else
+	systemctl restart launchpad-preload@app.service
+	systemctl restart ac.service
 %endif
 
 %postun
 /sbin/ldconfig
-%if !%{with multi_user}
-systemctl daemon-reload
+%if %{with multi_user}
+#	systemctl --user daemon-reload
+%else
+	%systemd_postun launchpad-preload@app.service ac.socket
 %endif
 
 %files
@@ -149,17 +161,19 @@ systemctl daemon-reload
 %{_bindir}/launchpad_preloading_preinitializing_daemon
 
 %if %{with multi_user}
-%{_unitdir_user}/tizen-middleware.target.wants/launchpad-preload.service
-%{_unitdir_user}/tizen-middleware.target.wants/ac.service
-%{_unitdir_user}/launchpad-preload.service
-%{_unitdir_user}/ac.service
+	%{_unitdir_user}/launchpad-preload.service
+	%{_unitdir_user}/launchpad-preload.socket
+	%{_unitdir_user}/ac.service
+	%{_unitdir_user}/ac.socket
+	%{_unitdir_user}/sockets.target.wants/launchpad-preload.socket
+	%{_unitdir_user}/sockets.target.wants/ac.socket
 %else
-%{_unitdir}/graphical.target.wants/launchpad-preload@app.service
-%{_unitdir}/graphical.target.wants/ac.service
-%{_unitdir}/launchpad-preload@.service
-%{_unitdir}/ac.service
+	%{_unitdir}/graphical.target.wants/launchpad-preload@app.service
+	%{_unitdir}/graphical.target.wants/ac.service
+	%{_unitdir}/launchpad-preload@.service
+	%{_unitdir}/ac.service
+	%{_unitdir}/ac.socket
 %endif
-
 
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
