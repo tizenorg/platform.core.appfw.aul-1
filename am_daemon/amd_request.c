@@ -45,6 +45,7 @@
 #include "access_control.h"
 
 
+#include <systemd/sd-daemon.h>
 
 
 struct appinfomgr *_raf;
@@ -449,12 +450,26 @@ static GSourceFuncs funcs = {
 
 int _requset_init(struct amdmgr *amd)
 {
-	int fd;
+	int fd, n;
 	int r;
 	GPollFD *gpollfd;
 	GSource *src;
 
-	fd = __create_server_sock(AUL_UTIL_PID);
+	/* Systemd socket activation */
+	n = sd_listen_fds(1);
+	if (n > 1) {
+		_E("Too many file descriptors received");
+		 return -1;
+	} else if (n == 1) {
+		fd = SD_LISTEN_FDS_START + 0;
+	} else { /* create launchpad sock */
+		fd = __create_server_sock(AUL_UTIL_PID);
+		if (fd < 0) {
+			_E("server sock error");
+			return -1;
+		}
+	}
+
 	src = g_source_new(&funcs, sizeof(GSource));
 
 	gpollfd = (GPollFD *) g_malloc(sizeof(GPollFD));

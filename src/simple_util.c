@@ -76,6 +76,16 @@ static inline int __find_pid_by_cmdline(const char *dname,
 		pid = atoi(dname);
 		if (pid != getpgid(pid))
 			pid = 0;
+#if defined(MULTI_USER_SUPPORT)
+		else {
+			char path[PATH_MAX];
+			struct stat sbuf;
+			if (!__compute_socket_name_i(pid, path, sizeof path, 0))
+			    pid = 0;
+			else if (stat(path, &sbuf) < 0)
+			    pid = 0;
+		}
+#endif
 	}
 
 	return pid;
