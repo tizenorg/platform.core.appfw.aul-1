@@ -66,11 +66,6 @@
 #define SQLITE_FLUSH_MAX	(1048576)	/* (1024*1024) */
 #define AUL_POLL_CNT		15
 #define AUL_PR_NAME			16
-#define PATH_APP_ROOT "/opt/usr/apps"
-#define PATH_DATA "/data"
-#define SDK_CODE_COVERAGE "CODE_COVERAGE"
-#define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
-#define PATH_DA_SO "/usr/lib/da_probe_osp.so"
 
 
 static char *launchpad_cmdline;
@@ -119,29 +114,6 @@ _static_ void __set_oom()
 	fclose(fp);
 }
 
-_static_ void __set_sdk_env(app_info_from_db* menu_info, char* str) {
-	char buf[MAX_LOCAL_BUFSZ];
-	int ret;
-
-	_D("key : %s / value : %s", AUL_K_SDK, str);
-	/* http://gcc.gnu.org/onlinedocs/gcc/Cross_002dprofiling.html*/
-	/* GCOV_PREFIX contains the prefix to add to the absolute paths in the object file. */
-	/*		Prefix can be absolute, or relative. The default is no prefix.  */
-	/* GCOV_PREFIX_STRIP indicates the how many initial directory names */
-	/*		to stripoff the hardwired absolute paths. Default value is 0. */
-	if (strncmp(str, SDK_CODE_COVERAGE, strlen(str)) == 0) {
-		snprintf(buf, MAX_LOCAL_BUFSZ, PATH_APP_ROOT"/%s"PATH_DATA, _get_pkgname(menu_info));
-		ret = setenv("GCOV_PREFIX", buf, 1);
-		_D("GCOV_PREFIX : %d", ret);
-		ret = setenv("GCOV_PREFIX_STRIP", "4096", 1);
-		_D("GCOV_PREFIX_STRIP : %d", ret);
-	} else if (strncmp(str, SDK_DYNAMIC_ANALYSIS, strlen(str)) == 0) {
-		ret = setenv("LD_PRELOAD", PATH_DA_SO, 1);
-		_D("LD_PRELOAD : %d", ret);
-	}
-}
-
-
 _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 {
 	const char *str;
@@ -157,20 +129,6 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 	if (str != NULL)
 		setenv("APP_START_TIME", str, 1);
 
-	if(bundle_get_type(kb, AUL_K_SDK) & BUNDLE_TYPE_ARRAY) {
-		str_array = bundle_get_str_array(kb, AUL_K_SDK, &len);
-		if(str_array != NULL) {
-			for (i = 0; i < len; i++) {
-				_D("index : [%d]", i);
-				__set_sdk_env(menu_info, (char *)str_array[i]);
-			}
-		}
-	} else {
-		str = bundle_get_val(kb, AUL_K_SDK);
-		if(str != NULL) {
-			__set_sdk_env(menu_info, (char *)str);
-		}
-	}
 	if (menu_info->hwacc != NULL)
 		setenv("HWACC", menu_info->hwacc, 1);
 }
@@ -268,7 +226,6 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	int app_argc;
 	char **app_argv;
 	int i;
-	const char *str;
 
 	app_argv = __create_argc_argv(kb, &app_argc);
 	app_argv[0] = strdup(app_path);
@@ -284,10 +241,7 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	/* Temporary log: launch time checking */
 	LOG(LOG_DEBUG, "LAUNCH", "[%s:Platform:launchpad:done]", app_path);
 
-	str = bundle_get_val(kb, AUL_K_SDK);
-	if ( !(str && strncmp(str, SDK_DYNAMIC_ANALYSIS, strlen(str))==0) ) {
-		__preload_exec(app_argc, app_argv);
-	}	
+	__preload_exec(app_argc, app_argv);
 
 	__normal_fork_exec(app_argc, app_argv);
 }
