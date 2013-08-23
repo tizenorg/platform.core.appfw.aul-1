@@ -48,17 +48,143 @@ static inline void __set_sock_option(int fd, int cli)
 		setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 }
 
+/*
+ * Settings for naming sockets.
+ *
+ * The historical implmentation was single user oriented and created
+ * the UNIX sockets into the directory /tmp/alaunch. While refactoring
+ * for a multi users target, the need was to distinguish the sockets 
+ * associated to users.
+ *
+ * For multi users, implementation expect to be launched by a systemd
+ * service with if available the socket already opened. Systemd set the
+ * environment variable XDG_RUNTIME_DIR, what is a freedesktop standard.
+ * (see http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html)
+ *
+ * If the environment variable XDG_RUNTIME_DIR isn't set, the directory
+ * /run/user/uid is used were uid is the effective user id of the process.
+ *
+ * Then for multi users, the socket directory used is either
+ * $XDG_RUNTIME_DIR/alaunch or /run/user/uid/alaunch, depending on existing
+ * or not environment variable XDG_RUNTIME_DIR.
+ */
+
+#if defined(MULTI_USER_SUPPORT)
+#   define AUL_SOCK_BASE_ENV_NAME	"XDG_RUNTIME_DIR"
+#   define AUL_SOCK_BASE_NOENV_PATTERN	"/run/user/%d"
+#   define AUL_SOCK_DIR_LENGTH		200
+#   define AUL_SOCK_DIR_PATTERN		"%s/alaunch"
+#else
+#   define AUL_SOCK_DIR_NAME		"/tmp/alaunch"
+#endif
+#define AUL_SOCK_NAME_PATTERN		"%s/%s"
+#define AUL_SOCK_FLAG_DIR_NAMED		1
+#define AUL_SOCK_FLAG_DIR_CREATED	2
+
+/*
+ * Returns the socket directory name or NULL in case of error.
+ *
+ * If 'makedir' isn't zero, the directory of the socket will be created
+ * (but it don't fail if error occurs when creating the directory).
+ */
+char *__compute_socket_directory(int makedir)
+{
+    static int  flags = 0;
+
+#if !defined(MULTI_USER_SUPPORT)
+    static char directory[] = AUL_SOCK_DIR_NAME;
+#else
+    static char directory[AUL_SOCK_DIR_LENGTH];
+
+    if ( !(flags & AUL_SOCK_FLAG_DIR_NAMED) ) {
+
+	char  failbase[AUL_SOCK_DIR_LENGTH];
+	char *base;
+	int   length;
+
+	/* compute the base directory */
+	base = getenv(AUL_SOCK_BASE_ENV_NAME);
+	if (base == NULL) {
+	    length = snprintf(failbase, sizeof failbase, 
+				AUL_SOCK_BASE_NOENV_PATTERN, (int)geteuid());
+	    if (length > 0 && length < sizeof failbase) {
+		base = failbase;
+	    }
+	    else {
+		return NULL;
+	    }
+	}
+
+	/* compute the socket directory */
+        length = snprintf(directory, sizeof directory, 
+				AUL_SOCK_DIR_PATTERN, base);
+	if (length > 0 && length < sizeof directory) {
+	    flags = flags | AUL_SOCK_FLAG_DIR_NAMED;
+	}
+	else {
+	    return NULL;
+	}
+    }
+#endif
+
+    /* create the directory if needed */
+    if ( makedir && !(flags & AUL_SOCK_FLAG_DIR_CREATED) ) {
+
+	mode_t orig_mask = umask(0);
+	(void) mkdir(directory, S_IRWXU | S_IRWXG | S_IRWXO | S_ISVTX);
+	umask(orig_mask);
+	flags = flags | AUL_SOCK_FLAG_DIR_CREATED;
+    }
+
+    return directory;
+}
+
+/*
+ * Compute in 'name' the socket name for the given 'pid'.
+ *
+ * If 'makedir' isn't zero, the directory of the socket will be created
+ * (but it don't fail if error occurs when creating the directory).
+ *
+ * Returns 1 if ok or else 0 if error.
+ */
+int __compute_socket_name_s(char *pid, char *name, size_t size, int makedir)
+{
+    int ret;
+    char *directory = __compute_socket_directory(makedir);
+    if (directory == NULL) {
+	return 0;
+    }
+    ret = snprintf( name, size, AUL_SOCK_NAME_PATTERN, directory, pid);
+    return ret > 0 && ret < size;
+}
+
+/*
+ * Compute in 'name' the socket name for the given 'pid'.
+ *
+ * If 'makedir' isn't zero, the directory of the socket will be created
+ * (but it don't fail if error occurs when creating the directory).
+ *
+ * Returns 1 if ok or else 0 if error.
+ */
+int __compute_socket_name_i(int pid, char *name, size_t size, int makedir)
+{
+    char buffer[40]; /* enough for 128 bit integers */
+    int  ret;
+
+    ret = snprintf( buffer, sizeof buffer, "%d", pid );
+    if ( ret <= 0 || ret >= sizeof buffer) {
+	return 0;
+    }
+    return __compute_socket_name_s( buffer, name, size, makedir);
+}
+
+
+
 int __create_server_sock(int pid)
 {
 	struct sockaddr_un saddr;
 	struct sockaddr_un p_saddr;
 	int fd;
-	mode_t orig_mask;
-
-	/* Create basedir for our sockets */
-	orig_mask = umask(0);
-	(void) mkdir(AUL_SOCK_PREFIX, S_IRWXU | S_IRWXG | S_IRWXO | S_ISVTX);
-	umask(orig_mask);
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
@@ -77,7 +203,10 @@ int __create_server_sock(int pid)
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, pid);
+	if (!__compute_socket_name_i(pid, saddr.sun_path, sizeof saddr.sun_path, 1)) {
+	    _E("socket name error");
+	    return -1;
+	}
 	unlink(saddr.sun_path);
 
 	/* labeling to socket for SMACK */
@@ -128,8 +257,11 @@ int __create_server_sock(int pid)
 		int pgid;
 		pgid = getpgid(pid);
 		if (pgid > 1) {
-			snprintf(p_saddr.sun_path, UNIX_PATH_MAX, "%s/%d",
-				 AUL_SOCK_PREFIX, pgid);
+			if (!__compute_socket_name_i(pgid, p_saddr.sun_path, 
+					    sizeof p_saddr.sun_path, 0)) {
+			    _E("socket name error");
+			    return -1;
+			}
 			if (link(saddr.sun_path, p_saddr.sun_path) < 0) {
 				if (errno == EEXIST)
 					_D("pg path - already exists");
@@ -165,7 +297,11 @@ int __create_client_sock(int pid)
 	}
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, pid);
+	if (!__compute_socket_name_i(pid, saddr.sun_path, sizeof saddr.sun_path, 0)) {
+	    _E("socket name error");
+	    return -1;
+	}
+
  retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);

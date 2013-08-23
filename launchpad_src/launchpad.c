@@ -58,6 +58,8 @@
 
 #include "gl.h"
 
+#include <systemd/sd-daemon.h>
+
 #include <app-checker.h>
 #include <sqlite3.h>
 
@@ -703,8 +705,8 @@ _static_ void __launchpad_main_loop(int main_fd)
 			__signal_unset_sigchld();
 			__signal_fini();
 
-			snprintf(sock_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, getpid());
-			unlink(sock_path);
+			if (__compute_socket_name_i(getpid(), sock_path, UNIX_PATH_MAX, 0))
+			    unlink(sock_path);
 
 			PERF("prepare exec - first done");
 			_E("lock up test log(no error) : prepare exec - first done");
@@ -758,7 +760,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 
 _static_ int __launchpad_pre_init(int argc, char **argv)
 {
-	int fd;
+	int fd, n;
 
 	/* signal init*/
 	__signal_init();
@@ -771,11 +773,19 @@ _static_ int __launchpad_pre_init(int argc, char **argv)
 	}
 	_D("launchpad cmdline = %s", launchpad_cmdline);
 
-	/* create launchpad sock        */
-	fd = __create_server_sock(LAUNCHPAD_PID);
-	if (fd < 0) {
-		_E("server sock error");
-		return -1;
+	/* Systemd socket activation */
+	n = sd_listen_fds(1);
+	if (n > 1) {
+		_E("Too many file descriptors received");
+	     return -1;
+	} else if (n == 1) {
+		fd = SD_LISTEN_FDS_START + 0;
+	} else { /* create launchpad sock */
+		fd = __create_server_sock(LAUNCHPAD_PID);
+		if (fd < 0) {
+			_E("server sock error");
+			return -1;
+		}
 	}
 
 	__preload_init(argc, argv);
