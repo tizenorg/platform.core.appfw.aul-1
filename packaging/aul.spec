@@ -5,8 +5,8 @@ Name:       aul
 Summary:    App utility library
 Version:    0.0.266
 Release:    1
-Group:      System/Libraries
-License:    Apache License, Version 2.0
+Group:      Application Framework/Libraries
+License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 Source101:  launchpad-preload@.service
 Source102:  ac.service
@@ -49,7 +49,6 @@ Application utility library
 
 %package devel
 Summary:    App utility library (devel)
-Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
 %description devel
@@ -78,14 +77,6 @@ make %{?jobs:-j%jobs}
 %install
 rm -rf %{buildroot}
 %make_install
-
-mkdir -p %{buildroot}/etc/init.d
-install -m 755 launchpad_run %{buildroot}/etc/init.d
-
-mkdir -p %{buildroot}/etc/rc.d/rc3.d
-mkdir -p %{buildroot}/etc/rc.d/rc4.d
-ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
-ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 
 mkdir -p %{buildroot}/opt/dbspace
 sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
@@ -132,11 +123,8 @@ systemctl daemon-reload
 %manifest %{name}.manifest
 %attr(0644,root,root) %{_libdir}/libaul.so.0
 %attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
-%{_sysconfdir}/init.d/launchpad_run
 %attr(0755,root,root) %{_bindir}/aul_service.sh
 %attr(0755,root,root) %{_bindir}/aul_service_test.sh
-%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
-%attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 %config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db
 %config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db-journal
 %attr(0755,root,root) %{_bindir}/aul_mime.sh
