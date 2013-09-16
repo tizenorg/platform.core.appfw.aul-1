@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "aul.h"
 #include "aul_api.h"
@@ -42,6 +43,12 @@ typedef struct _app_resultcb_info_t {
 
 static int latest_caller_pid = -1;
 static app_resultcb_info_t *rescb_head = NULL;
+
+static int is_subapp = 0;
+subapp_fn subapp_cb = NULL;
+void *subapp_data = NULL;
+
+pthread_mutex_t result_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 			 void *data);
@@ -73,12 +80,16 @@ static app_resultcb_info_t *__find_resultcb(int pid)
 {
 	app_resultcb_info_t *tmp;
 
+	pthread_mutex_lock(&result_lock);
 	tmp = rescb_head;
 	while (tmp) {
-		if (tmp->launched_pid == pid)
+		if (tmp->launched_pid == pid) {
+			pthread_mutex_unlock(&result_lock);
 			return tmp;
+		}
 		tmp = tmp->next;
 	}
+	pthread_mutex_unlock(&result_lock);
 	return NULL;
 }
 
@@ -265,10 +276,12 @@ SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 	if (pkgname == NULL || cbfunc == NULL || kb == NULL)
 		return AUL_R_EINVAL;
 
+	pthread_mutex_lock(&result_lock);
 	ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
 
 	if (ret > 0)
 		__add_resultcb(ret, cbfunc, data);
+	pthread_mutex_unlock(&result_lock);
 
 	return ret;
 }
@@ -385,6 +398,10 @@ int aul_send_result(bundle *kb, int is_cancel)
 {
 	int pid;
 	int ret;
+	int callee_pid;
+	int callee_pgid;
+	char callee_appid[256];
+	char tmp_pid[MAX_PID_STR_BUFSZ];
 
 	if ((pid = __get_caller_pid(kb)) < 0)
 		return AUL_R_EINVAL;
@@ -397,6 +414,18 @@ int aul_send_result(bundle *kb, int is_cancel)
 		return AUL_R_OK;
 	}
 
+	callee_pid = getpid();
+	callee_pgid = getpgid(callee_pid);
+	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", callee_pgid);
+	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
+
+	ret = aul_app_get_appid_bypid(callee_pid, callee_appid, sizeof(callee_appid));
+	if(ret == 0) {
+		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
+	} else {
+		_W("fail(%d) to get callee appid by pid", ret);
+	}
+
 	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, (is_cancel==1)? APP_CANCEL : APP_RESULT, kb);
 
 	_D("app_send_cmd_with_noreply : %d", ret);
@@ -407,3 +436,37 @@ int aul_send_result(bundle *kb, int is_cancel)
 	return ret;
 }
 
+int app_subapp_terminate_request()
+{
+	if(is_subapp) {
+		subapp_cb(subapp_data);
+	}
+	return 0;
+}
+
+SLPAPI int aul_set_subapp(subapp_fn cb, void *data)
+{
+	is_subapp = 1;
+	subapp_cb = cb;
+	subapp_data = data;
+
+	return 0;
+}
+
+SLPAPI int aul_subapp_terminate_request_pid(int pid)
+{
+	char pid_str[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pid_str, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad(APP_TERM_REQ_BY_PID, pid_str, NULL);
+	return ret;
+}
+
+SLPAPI int aul_is_subapp()
+{
+	return is_subapp;
+}

@@ -618,6 +618,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	const char *hwacc;
 	const char *permission;
 	const char *pkgid;
+	const char *preload;
 	char caller_appid[256];
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
 	bool consented = true;
@@ -658,7 +659,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 		_D("consented : %d", consented);
 
-		if(consented == false) {
+		if(consented == false && bundle_get_val(kb, AUL_K_SDK) == NULL) {
 			_D("appid : %s", appid);
 			bundle_add(kb, AUL_K_PRIVACY_APPID, appid);
 			appid = PRIVACY_POPUP;
@@ -677,11 +678,16 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
-			pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
-			if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
-				pid = -EILLEGALACCESS;
-				__real_send(fd, pid);
-				return pid;
+			const struct appinfo *caller_ai;
+			caller_ai = appinfo_find(_laf, caller_appid);
+			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
+			if( preload && strncmp(preload, "true", 4) != 0 ) {
+				pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
+				if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
+					pid = -EILLEGALACCESS;
+					__real_send(fd, pid);
+					return pid;
+				}
 			}
 		}
 	}
@@ -706,10 +712,15 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			bundle_add(kb, AUL_K_HWACC, hwacc);
 			bundle_add(kb, AUL_K_EXEC, app_path);
 			bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
-			if(strncmp(pkg_type, "wgt", 3) == 0) {
+			if(bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE) {
+				pid = app_send_cmd(DEBUG_LAUNCHPAD_PID, cmd, kb);
+			} else if(strncmp(pkg_type, "wgt", 3) == 0) {
 				pid = app_send_cmd(WEB_LAUNCHPAD_PID, cmd, kb);
 			} else {
 				pid = app_send_cmd(LAUNCHPAD_PID, cmd, kb);
+			}
+			if(pid == -3) {
+				pid = -ENOLAUNCHPAD;
 			}
 			//_add_cgroup(_lcg, appid, pid);
 		}

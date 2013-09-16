@@ -141,11 +141,12 @@ int _unregister_key_event(int pid)
 	GSList *entry;
 	int *pid_data;
 
-	for (entry = key_pid_list; entry; entry = entry->next) {
+	for (entry = key_pid_list; entry;) {
 		if (entry->data) {
 			pid_data = (int *) entry->data;
+			entry = entry->next;
 			if(pid == *pid_data) {
-				key_pid_list = g_slist_remove(key_pid_list, entry->data);
+				key_pid_list = g_slist_remove(key_pid_list, pid_data);
 				free(pid_data);
 			}
 		}

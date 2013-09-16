@@ -15,6 +15,7 @@ enum appinfo_type {
 	AIT_HWACC,
 	AIT_PERM,
 	AIT_PKGID,
+	AIT_PRELOAD,
 };
 
 int appinfo_init(struct appinfomgr **cf);

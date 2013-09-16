@@ -3,7 +3,7 @@
 
 Name:       aul
 Summary:    App utility library
-Version:    0.0.266
+Version:    0.0.280
 Release:    1
 Group:      Application Framework/Libraries
 License:    Apache-2.0
@@ -60,6 +60,9 @@ Application utility library (devel)
 cp %{SOURCE1001} .
 
 %build
+%if 0%{?simulator}
+CFLAGS="%{optflags} -D__emul__"; export CFLAGS
+%endif
 %cmake . \
 %if %{with privacy-manger-client}
 	-DENABLE_PRIVACY_MANAGER=On \
@@ -94,6 +97,10 @@ install -m 0644 %SOURCE102 %{buildroot}/%{_unitdir}/ac.service
 ln -s ../launchpad-preload@.service %{buildroot}/%{_unitdir}/graphical.target.wants/launchpad-preload@app.service
 ln -s ../ac.service %{buildroot}/%{_unitdir}/graphical.target.wants/ac.service
 %endif
+
+mkdir -p %{buildroot}/opt/etc/smack/accesses.d
+install -m 644 aul.rule %{buildroot}/opt/etc/smack/accesses.d
+
 
 %preun
 %if !%{with multi_user}
@@ -152,6 +159,7 @@ systemctl daemon-reload
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
 /usr/bin/daemon-manager-launch-agent
+/opt/etc/smack/accesses.d/aul.rule
 
 %files devel
 %manifest %{name}.manifest

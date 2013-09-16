@@ -70,6 +70,7 @@ extern "C" {
  * @brief Return values in AUL. 
  */
 typedef enum _aul_return_val {
+	AUL_R_ENOLAUNCHPAD = -10,	/**< no launchpad */
 	AUL_R_ETERMINATING = -9,	/**< application terminating */
 	AUL_R_EILLACC = -8,		/**< Illegal Access */
 	AUL_R_LOCAL = -7,		/**< Launch by himself */
@@ -1596,6 +1597,14 @@ int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
  *
  */
 int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
+
+
+typedef int (*subapp_fn)(void *data);
+
+int aul_set_subapp(subapp_fn cb, void *data);
+int aul_subapp_terminate_request_pid(int pid);
+int aul_is_subapp(void);
+
 
 /** @} */
 

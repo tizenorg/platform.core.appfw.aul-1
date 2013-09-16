@@ -105,21 +105,15 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 	int datalen;
 	bundle_raw *kb_data;
 	int res;
-	char callee_appid[256];
 
 	if ((pid = __get_caller_pid(kb)) < 0)
 			return AUL_R_ERROR;
 
 	pgid = getpgid(cr_pid);
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
-
-	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
-
-	res = aul_app_get_appid_bypid(pgid, callee_appid, sizeof(callee_appid));
-	if(res == 0) {
-		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
-	} else {
-		_W("fail(%d) to get callee appid by pid", res);
+	if(pgid > 0) {
+		snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
+		bundle_del(kb,AUL_K_CALLEE_PID);
+		bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 	}
 
 	bundle_encode(kb, &kb_data, &datalen);
@@ -136,6 +130,7 @@ static int __app_process_by_pid(int cmd,
 {
 	int pid;
 	int ret = -1;
+	int dummy;
 
 	if (pkg_name == NULL)
 		return -1;
@@ -163,6 +158,11 @@ static int __app_process_by_pid(int cmd,
 	case APP_KILL_BY_PID:
 		if ((ret = _send_to_sigkill(pid)) < 0)
 			_E("fail to killing - %d\n", pid);
+		break;
+	case APP_TERM_REQ_BY_PID:
+		if ((ret = __app_send_raw(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
+			_D("terminate req packet send error");
+		}
 	}
 
 	return ret;
@@ -306,7 +306,6 @@ static gboolean __request_handler(gpointer data)
 	char *tmp_pid;*/
 	int pid;
 	bundle *kb = NULL;
-	item_pkt_t *item;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -326,13 +325,8 @@ static gboolean __request_handler(gpointer data)
 				bundle_free(kb), kb = NULL;
 
 			if(ret > 0) {
-				item = calloc(1, sizeof(item_pkt_t));
-				item->pid = ret;
-				strncpy(item->appid, appid, 511);
 				free_pkt = 0;
-
 				g_timeout_add(1000, __add_history_handler, pkt);
-				g_timeout_add(1200, __add_item_running_list, item);
 			}
 			break;
 		case APP_RESULT:
@@ -345,6 +339,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_TERM_BY_PID:
 		case APP_RESUME_BY_PID:
 		case APP_KILL_BY_PID:
+		case APP_TERM_REQ_BY_PID:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr);

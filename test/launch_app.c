@@ -32,6 +32,8 @@
 
 static char **gargv;
 static int gargc;
+bundle *kb = NULL;
+
 
 static bundle *create_internal_bundle(int start)
 {
@@ -68,7 +70,6 @@ static bundle *create_internal_bundle(int start)
 
 int launch()
 {
-	bundle *kb = NULL;
 	FILE *fp;
 	int ret = -1;
 	int pid = -1;
@@ -81,10 +82,6 @@ int launch()
 
 	pid = aul_launch_app(gargv[1], kb);
 
-	if (kb) {
-		bundle_free(kb);
-		kb = NULL;
-	}
 	/* Write the package name to TMP_FILE*/
 	fp = fopen(TMP_FILE, "w");
 	if (fp == NULL)
@@ -103,18 +100,43 @@ void print_usage(char *progname)
 	       progname);
 }
 
-static Eina_Bool run_func(void *data)
+static int __launch_app_dead_handler(int pid, void *data)
 {
-	if (launch() > 0) {
-		printf("... successfully launched\n");
-	} else {
-		printf("... launch failed\n");
-	}
+	int listen_pid = (int) data;
 
-	ecore_main_loop_quit();
+	if(listen_pid == pid)
+		ecore_main_loop_quit();
 
 	return 0;
 }
+
+static Eina_Bool run_func(void *data)
+{
+	int pid = -1;
+	char *str = NULL;
+
+	if ((pid = launch()) > 0) {
+		printf("... successfully launched\n");
+		str	 = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
+
+		if( str && strcmp(str, "SYNC") == 0 ) {
+			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
+		} else {
+			ecore_main_loop_quit();
+        }
+	} else {
+		printf("... launch failed\n");
+		ecore_main_loop_quit();
+	}
+
+	if (kb) {
+		bundle_free(kb);
+		kb = NULL;
+	}
+
+	return 0;
+}
+
 
 int main(int argc, char **argv)
 {
