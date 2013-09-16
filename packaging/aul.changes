@@ -1,3 +1,19 @@
+* Mon Sep 16 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130912.200358@e7f2709
+- Fix DCM-2250 issue
+- support valgrind
+- fixed mutex lock bug
+- fixed proc_get_cmdline_bypid bug
+- added smack rule
+- support oprofile : valgrind
+- apply launch_app sync mode:
+- fixed send result bug(callee appid)
+- added aul.rule file
+- added debug launch call
+- added preload application check
+- remove debug launchpad call
+- added debug launchpad
+- Fix TZSP-5456 Media player is unable to handle music playback control
+
 * Mon Aug 12 2013 Patrick McCarty <patrick.mccarty@linux.intel.com> 91a6684
 - packaging: fix errors in %preun and %postun scriptlets
 
