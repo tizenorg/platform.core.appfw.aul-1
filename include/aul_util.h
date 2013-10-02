@@ -34,6 +34,7 @@ typedef struct _app_status_info_t{
 	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
 	int status;
 	int pid;
+	int pad_pid;
 } app_status_info_t;
 
 struct amdmgr {

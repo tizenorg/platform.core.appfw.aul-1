@@ -21,6 +21,7 @@
 
 
 #define LAUNCHPAD_LOG
+#define DAC_ACTIVATE
 #define PRELOAD_ACTIVATE
 #define PREEXEC_ACTIVATE
 /*#define GL_ACTIVATE*/

@@ -457,9 +457,14 @@ SLPAPI int aul_subapp_terminate_request_pid(int pid)
 {
 	char pid_str[MAX_PID_STR_BUFSZ];
 	int ret;
+	app_resultcb_info_t *info;
 
 	if (pid <= 0)
 		return AUL_R_EINVAL;
+
+	info = __find_resultcb(pid);
+	if(info)
+		__remove_resultcb(info);
 
 	snprintf(pid_str, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_TERM_REQ_BY_PID, pid_str, NULL);

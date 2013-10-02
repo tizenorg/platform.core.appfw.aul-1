@@ -198,7 +198,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
 	c->val[_AI_PKGID] = strdup(pkgid);
 
-	_D("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
+	SECURE_LOGD("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
 
 	g_hash_table_insert(cf->tbl, c->val[_AI_FILE], c);
 
@@ -257,7 +257,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 		return;
 	}
 
-	_D("noti_string : %s",noti_string);
+	SECURE_LOGD("noti_string : %s",noti_string);
 
 	type_string = strtok_r(noti_string, ":", &saveptr);
 	appid = strtok_r(NULL, ":", &saveptr);
@@ -268,7 +268,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 			_E("pkgmgrinfo_appinfo_get_appinfo fail");
 		}
 
-		_D("appid : %s /handle : %x", appid, handle);
+		SECURE_LOGD("appid : %s /handle : %x", appid, handle);
 
 		__app_info_insert_handler(handle, data);
 
@@ -397,7 +397,7 @@ const char *appinfo_get_filename(const struct appinfo *c)
 {
 	if (!c) {
 		errno = EINVAL;
-		_E("appinfo get filename: %s", strerror(errno));
+		SECURE_LOGE("appinfo get filename: %s", strerror(errno));
 		return NULL;
 	}
 

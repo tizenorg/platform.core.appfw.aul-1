@@ -143,7 +143,9 @@ int __proc_iter_cmdline(
 
 char *__proc_get_cmdline_bypid(int pid)
 {
-	char buf[MAX_LOCAL_BUFSZ];
+#define MAX_CMD_BUFSZ 1024
+
+	char buf[MAX_CMD_BUFSZ];
 	int ret;
 
 	snprintf(buf, sizeof(buf), "/proc/%d/cmdline", pid);
@@ -152,10 +154,29 @@ char *__proc_get_cmdline_bypid(int pid)
 		return NULL;
 
 	/* support app launched by shell script*/
-	if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0)
+	if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0) {
 		return strdup(&buf[BINSH_SIZE + 1]);
-	else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0)
-		return strdup(&buf[VALGRIND_SIZE + 1]);
+	}
+	else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0) {
+		char* ptr = buf;
+
+		// buf comes with double null-terminated string
+		while (1) {
+			while (*ptr) {
+				ptr++;
+			}
+			ptr++;
+
+			if (*ptr == NULL)
+				break;
+
+			// ignore trailing "--"
+			if (strncmp(ptr, "-", 1) != 0)
+				break;
+		};
+
+		return strdup(ptr);
+	}
 	else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
 		if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
 			if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0) {

@@ -1,9 +1,0 @@
-[Unit]
-Description=Start the preload/preinit daemon
-After=ac.service
-
-[Service]
-ExecStart=/usr/bin/launchpad_preloading_preinitializing_daemon "                                                                                                                                                                                                         "
-
-[Install]
-WantedBy=tizen-middleware.target

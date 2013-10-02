@@ -63,6 +63,8 @@ static void __vconf_cb(keynode_t *key, void *data);
 static int __app_dead_handler(int pid, void *data);
 static int __init();
 
+extern int _status_init(struct amdmgr* amd);
+
 static int __send_to_sigkill(int pid)
 {
 	int pgid;
@@ -209,13 +211,10 @@ static void __vconf_cb(keynode_t *key, void *data)
 	name = vconf_keynode_get_name(key);
 	if( name == NULL ) {
 		return;
-	} else if ( strcmp(name, VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS) != 0)
-	{
-		return;
+	}else if ( strcmp(name, VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS) == 0){
+		limit = vconf_keynode_get_int(key);
+		if(limit>0) __kill_bg_apps(limit);
 	}
-
-	limit = vconf_keynode_get_int(key);
-	if(limit>0) __kill_bg_apps(limit);
 }
 
 static int __app_dead_handler(int pid, void *data)
@@ -260,10 +259,9 @@ static int __init()
 	_launch_init(&amd);
 	_status_init(&amd);
 
-#if !defined  __i386__ && !defined __x86_64__ && !defined __emul__
+#ifndef __emul__
 	_key_init();
 #endif
-
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
 	aul_listen_app_dead_signal(__app_dead_handler, NULL);

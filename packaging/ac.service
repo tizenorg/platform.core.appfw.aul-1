@@ -1,12 +1,15 @@
 #
-#  Systemd script to Launch AMD
+# classical example of a socket activated service?
 #
 
 [Unit]
 Description=Start the Access Control server
 
 [Service]
-ExecStart=/usr/bin/amd
+Environment=DISPLAY=:0
+ExecStartPre=-/bin/mkdir -m 1777 /tmp/alaunch
+ExecStartPre=/usr/bin/chsmack -a '*' /tmp/alaunch
+ExecStart=/bin/sh -c 'while test ! -e /tmp/.wm_ready; do sleep 0.1; done; exec /usr/bin/amd'
 
 OOMScoreAdjust=-100
 

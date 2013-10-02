@@ -313,11 +313,15 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 		pkt = NULL;
 	}
 
+retry_recv:
 	len = recv(fd, &res, sizeof(int), 0);
 	if (len == -1) {
 		if (errno == EAGAIN) {
 			_E("recv timeout : %s", strerror(errno));
 			res = -EAGAIN;
+		} else if (errno == EINTR) {
+			_D("recv : %s", strerror(errno));
+			goto retry_recv;
 		} else {
 			_E("recv error : %s", strerror(errno));
 			res = -ECOMM;
@@ -398,6 +402,76 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 	close(fd);
 
 	return res;
+}
+
+int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen)
+{
+	int fd;
+	int len;
+	int ret;
+	int res = 0;
+	app_pkt_t *pkt = NULL;
+
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+		_E("keybundle error\n");
+		return -EINVAL;
+	}
+
+	_D("pid(%d) : cmd(%d)", pid, cmd);
+
+	fd = __create_client_sock(pid);
+	if (fd < 0)
+		return -ECOMM;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if (NULL == pkt) {
+		_E("Malloc Failed!");
+		return -ENOMEM;
+	}
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+	memcpy(pkt->data, kb_data, datalen);
+
+	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
+		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
+		if(len > 0) {
+			while (len != datalen + 8) {
+				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
+				if (ret < 0) {
+					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
+					if (errno == EPIPE) {
+						_E("pid:%d, fd:%d\n", pid, fd);
+					}
+					close(fd);
+					if (pkt) {
+						free(pkt);
+						pkt = NULL;
+					}
+					return -ECOMM;
+				}
+				len += ret;
+				_D("sendto() len - %d %d", len, datalen + 8);
+			}
+		} else {
+			if (errno == EPIPE) {
+				_E("pid:%d, fd:%d\n", pid, fd);
+			}
+			close(fd);
+			if (pkt) {
+				free(pkt);
+				pkt = NULL;
+			}
+			return -ECOMM;
+		}
+	}
+	if (pkt) {
+		free(pkt);
+		pkt = NULL;
+	}
+
+	return fd;
 }
 
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)

@@ -333,7 +333,7 @@ int mida_add_app(const char *mime_type, const char *pkg_name)
 	cnt = __count_with_field(MIDA_TBL_NAME, MIDA_F_MIMETYPE, mime_type, 0);
 
 	if (cnt == 0) {
-		_D("Inserting (%s, %s)", pkg_name, mime_type);
+		SECURE_LOGD("Inserting (%s, %s)", pkg_name, mime_type);
 		/* insert */
 		_sqlbuf = sqlite3_mprintf(
 			    "INSERT INTO %s (%s,%s) values (\"%s\", \"%s\");",
@@ -343,7 +343,7 @@ int mida_add_app(const char *mime_type, const char *pkg_name)
 		rc = _exec(mida_db, _sqlbuf);
 		sqlite3_free(_sqlbuf);
 	} else {
-		_D("Setting %s for %s", pkg_name, mime_type);
+		SECURE_LOGD("Setting %s for %s", pkg_name, mime_type);
 		/* update */
 		_sqlbuf = sqlite3_mprintf(
 				    "UPDATE %s SET %s = '%s' where %s = '%s';",
@@ -442,7 +442,7 @@ int svc_add_app(const char *svc_name, const char *pkg_name)
 
 	if (cnt == 0) {
 		/* insert */
-		_D("Inserting (%s, %s)", pkg_name, svc_name);
+		SECURE_LOGD("Inserting (%s, %s)", pkg_name, svc_name);
 		_sqlbuf = sqlite3_mprintf(
 		     "INSERT INTO %s (%s,%s) values (\"%s\", \"%s\");",
 		     SVC_TBL_NAME, SVC_F_PKGNAME, SVC_F_SVCNAME, pkg_name,
@@ -452,7 +452,7 @@ int svc_add_app(const char *svc_name, const char *pkg_name)
 		sqlite3_free(_sqlbuf);
 	} else {
 		/* update */
-		_D("Setting %s for %s", pkg_name, svc_name);
+		SECURE_LOGD("Setting %s for %s", pkg_name, svc_name);
 		_sqlbuf = sqlite3_mprintf(
 				    "UPDATE %s SET %s = '%s' where %s = '%s';",
 				    SVC_TBL_NAME, SVC_F_PKGNAME, pkg_name,
@@ -508,7 +508,7 @@ int is_supported_svc(const char *svc_name)
 	if (cnt > 0)
 		rc = 1;
 	else
-		_D("%s is not supported.", svc_name);
+		SECURE_LOGD("%s is not supported.", svc_name);
 
 	__fini();
 	return rc;

@@ -20,20 +20,7 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 # Set required packages
 INCLUDE(FindPkgConfig)
 
-OPTION(MULTI_USER_SUPPORT "Enable multi-user support" OFF)
-OPTION(ENABLE_PRIVACY_MANAGER "Enable privacy manager support" ON)
-IF(ENABLE_PRIVACY_MANAGER)
-    ADD_DEFINITIONS("-DPRIVACY_MANAGER")
-    pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-x ecore-input evas vconf pkgmgr-info app2sd privacy-manager-client)
-ELSE(ENABLE_PRIVACY_MANAGER)
-    pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-x ecore-input evas vconf pkgmgr-info app2sd)
-ENDIF(ENABLE_PRIVACY_MANAGER)
-IF(MULTI_USER_SUPPORT)
-    ADD_DEFINITIONS("-DMULTI_USER_SUPPORT")
-ELSE(MULTI_USER_SUPPORT)
-	ADD_DEFINITIONS("-DDAC_ACTIVATE")
-ENDIF(MULTI_USER_SUPPORT)
-
+pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-x ecore-input evas vconf pkgmgr-info app2sd privacy-manager-client)
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libsmack)
 PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle)
 
