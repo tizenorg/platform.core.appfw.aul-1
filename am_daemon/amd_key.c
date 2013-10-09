@@ -19,11 +19,16 @@
  *
  */
 
-#include <Ecore_X.h>
-#include <Ecore_Input.h>
-#include <utilX.h>
 #include <Ecore.h>
 #include <Evas.h>
+#include <Ecore_Input.h>
+#ifdef X11
+#include <Ecore_X.h>
+#include <utilX.h>
+#endif
+#ifdef WAYLAND
+#include <Ecore_Wayland.h>
+#endif
 #include <aul.h>
 #include <glib.h>
 
@@ -166,6 +171,7 @@ int _unregister_key_event(int pid)
 
 int _key_init()
 {
+#ifdef X11
 	key_info.win = ecore_x_window_input_new(0, 0, 0, 1, 1);
 	if (!key_info.win) {
 		_D("Failed to create hidden window");
@@ -192,6 +198,7 @@ int _key_init()
 	if (!key_info.key_down) {
 		_D("Failed to register a key down event handler");
 	}
+#endif // X11
 
 	return 0;
 }

@@ -23,11 +23,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <Ecore_X.h>
-#include <Ecore_Input.h>
-#include <utilX.h>
 #include <Ecore.h>
+#include <Ecore_Input.h>
 #include <Evas.h>
+#ifdef X11
+#include <Ecore_X.h>
+#include <utilX.h>
+#endif
+#ifdef WAYLAND
+#include <Ecore_Wayland.h>
+#endif
 #include <aul.h>
 #include <vconf.h>
 #include <app-checker-server.h>
@@ -254,7 +259,12 @@ static int __init()
 	ecore_init();
 	evas_init();
 	ecore_event_init();
+#ifdef X11
 	ecore_x_init(NULL);
+#endif
+#ifdef WAYLAND
+    ecore_wl_init(NULL);
+#endif
 
 	appinfo_init(&amd.af);
 	cgutil_create(MOUNT_PATH, AGENT_PATH, &amd.cg);

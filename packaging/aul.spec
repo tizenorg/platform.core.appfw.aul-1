@@ -1,3 +1,5 @@
+%bcond_with wayland
+
 Name:       aul
 Summary:    App utility library
 Version:    0.0.282
@@ -27,7 +29,11 @@ BuildRequires:  pkgconfig(libprivilege-control)
 BuildRequires:  pkgconfig(app-checker)
 BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
+%if %{with wayland}
+BuildRequires:  pkgconfig(ecore-wayland)
+%else
 BuildRequires:  pkgconfig(ecore-x)
+%endif
 BuildRequires:  pkgconfig(ecore-input)
 BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(vconf)
@@ -57,7 +63,11 @@ Application utility library (devel)
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
-%cmake .
+%if %{with wayland}
+%cmake . -DWITH_WAYLAND=On
+%else
+%cmake . -DWITH_WAYLAND=Off
+%endif
 
 make %{?jobs:-j%jobs}
 
@@ -104,7 +114,8 @@ if [ $1 == 1 ]; then
     systemctl restart ac.service
 fi
 
-%postun -p /sbin/ldconfig
+%postun
+/sbin/ldconfig
 systemctl daemon-reload
 
 %files
