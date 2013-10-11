@@ -440,8 +440,11 @@ int app_subapp_terminate_request()
 {
 	if(is_subapp) {
 		subapp_cb(subapp_data);
+
+		return 0;
 	}
-	return 0;
+
+	return -1;
 }
 
 SLPAPI int aul_set_subapp(subapp_fn cb, void *data)
