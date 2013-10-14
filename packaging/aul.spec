@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.282
+Version:    0.0.283
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -56,6 +56,9 @@ Application utility library (devel)
 %if 0%{?simulator}
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
+export CFLAGS="$CFLAGS -DTIZEN_ENGINEER_MODE"
+export CXXFLAGS="$CXXFLAGS -DTIZEN_ENGINEER_MODE"
+export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 
 %cmake .
 
