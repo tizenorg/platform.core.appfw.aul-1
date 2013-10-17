@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.283
+Version:    0.0.284
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -33,7 +33,6 @@ BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(libsmack)
-BuildRequires:	pkgconfig(app2sd)
 BuildRequires:  pkgconfig(privacy-manager-client)
 
 
