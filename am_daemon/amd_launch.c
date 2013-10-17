@@ -27,7 +27,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <app2ext_interface.h>
 #include <sys/prctl.h>
 #include <pkgmgr-info.h>
 #include <poll.h>
@@ -752,9 +751,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		}
 	}
 
-	if(app2ext_get_app_location(pkgid) == APP2EXT_SD_CARD) {
-		app2ext_enable_external_pkg(pkgid);
-	}
+	pkgmgrinfo_client_request_enable_external_pkg(pkgid);
 
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
