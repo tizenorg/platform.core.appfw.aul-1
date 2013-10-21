@@ -1,0 +1,10 @@
+Code-Review+2: Patrick McCarty <patrick.mccarty@linux.intel.com>
+Code-Review+2: Yoonsoo Kim <ys71.kim@samsung.com>
+Code-Review+1: Mikko Ylinen <mikko.ylinen@intel.com>
+Code-Review+1: Rusty Lynch <rusty.lynch@intel.com>
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-by: Patrick McCarty <patrick.mccarty@linux.intel.com>
+Submitted-at: Mon, 21 Oct 2013 14:58:58 -0700
+Reviewed-on: https://review.tizen.org/gerrit/10681
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
