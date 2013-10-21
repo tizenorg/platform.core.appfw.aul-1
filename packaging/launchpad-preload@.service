@@ -3,9 +3,8 @@ Description=Start the preload/preinit daemon
 After=ac.service
 
 [Service]
-EnvironmentFile=/etc/sysconfig/tizen-mobile-ui
+EnvironmentFile=-/etc/sysconfig/launchpad
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%I/dbus/user_bus_socket
-Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/%I
 ExecStart=/usr/bin/launchpad_preloading_preinitializing_daemon "                                                                                                                                                                                                         "
 
