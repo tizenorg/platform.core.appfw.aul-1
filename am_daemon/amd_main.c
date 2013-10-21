@@ -246,7 +246,10 @@ static void _start_services(struct amdmgr *amd)
 
 static int __init()
 {
-	struct amdmgr amd;
+	struct amdmgr amd = {
+		.af = NULL,
+		.cg = NULL
+	};
 
 	ecore_init();
 	evas_init();
