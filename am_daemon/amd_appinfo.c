@@ -308,7 +308,7 @@ static int __cb(int req_id, const char *pkg_type,
 
 	SECURE_LOGD("appid(%s), key(%s), value(%s)", pkgid, key, val);
 
-	if((strncmp(key,"start", 5) == 0) && (strncmp(val, "upgrade", 7) == 0) ) {
+	if((strncmp(key,"start", 5) == 0) && (strncmp(val, "update", 6) == 0) ) {
 		ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &handle);
 		if (ret != PMINFO_R_OK)
 			return -1;
