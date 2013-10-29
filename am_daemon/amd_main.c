@@ -256,11 +256,14 @@ static int __init()
 		.cg = NULL
 	};
 
+	int ret;
+
 	ecore_init();
 	evas_init();
 	ecore_event_init();
 #ifdef X11
-	ecore_x_init(NULL);
+	ret = ecore_x_init(NULL);
+	_D("ecore_x_init initialized %d times\n", ret);
 #endif
 #ifdef WAYLAND
     ecore_wl_init(NULL);
@@ -273,7 +276,8 @@ static int __init()
 	_status_init(&amd);
 
 #ifndef __emul__
-	_key_init();
+        if (ret > 0)
+		_key_init();
 #endif
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
