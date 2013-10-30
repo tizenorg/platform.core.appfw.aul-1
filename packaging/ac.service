@@ -7,6 +7,8 @@ Description=Start the Access Control server
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/prelaunch
+# ecore_x_init depends on DISPLAY to open X connection
+Environment=DISPLAY=:0
 ExecStart=/usr/bin/amd
 
 OOMScoreAdjust=-100
