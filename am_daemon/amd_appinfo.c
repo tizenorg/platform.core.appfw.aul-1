@@ -319,6 +319,7 @@ static int __cb(int req_id, const char *pkg_type,
 		}
 		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 	}
+	return ret;
 }
 
 int appinfo_init(struct appinfomgr **cf)
