@@ -318,6 +318,16 @@ static int __cb(int req_id, const char *pkg_type,
 			return -1;
 		}
 		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	} else if (strncmp(key,"end", 3) == 0) {
+			ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &handle);
+		if (ret != PMINFO_R_OK)
+			return -1;
+		ret = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_insert_handler, user_data);
+		if (ret != PMINFO_R_OK) {
+			pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+			return -1;
+		}
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 	}
 	return ret;
 }
