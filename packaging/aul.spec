@@ -9,6 +9,7 @@ License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 Source101:  launchpad-preload@.service
 Source102:  ac.service
+Source1001: %{name}.manifest
 
 Requires(post): /sbin/ldconfig
 Requires(post): /usr/bin/systemctl
@@ -57,6 +58,7 @@ Application utility library (devel)
 
 %prep
 %setup -q
+cp %{SOURCE1001} .
 
 %build
 %if 0%{?simulator}
@@ -119,7 +121,7 @@ fi
 systemctl daemon-reload
 
 %files
-%manifest aul.manifest
+%manifest %{name}.manifest
 %attr(0644,root,root) %{_libdir}/libaul.so.0
 %attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
 %{_sysconfdir}/init.d/launchpad_run
