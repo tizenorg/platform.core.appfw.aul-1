@@ -1,0 +1,8 @@
+Code-Review+2: Casey Schaufler <casey.schaufler@intel.com>
+Verified+1: Patrick McCarty <patrick.mccarty@linux.intel.com>
+Code-Review+1: Michael Demeter <michael.demeter@intel.com>
+Submitted-by: Young Ik Cho <youngik.cho@samsung.com>
+Submitted-at: Tue, 19 Nov 2013 15:29:50 -0800
+Reviewed-on: https://review.tizen.org/gerrit/12602
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
