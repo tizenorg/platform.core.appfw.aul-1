@@ -1,3 +1,11 @@
+* Tue Nov 19 2013 Patrick McCarty <patrick.mccarty@linux.intel.com> cd1dd9c
+- Move package manifest to the proper location (packaging directory)
+
+* Fri Nov 08 2013 Casey Schaufler <casey@schaufler-ca.com> 7ae8114
+- Assign launchpad_preloading_preinitializing_daemon a Smack execution label of
+  "User". This sets the Smack label on the daemon process upon invocation. This
+  allows the daemon to launch applications into the User security domain.
+
 * Thu Oct 31 2013 Rusty Lynch <rusty.lynch@intel.com> accepted/tizen/20131022.163320@68dbf2e
 - Add warning when ecore_x_init() failes
 - Adding initial changelog so all further development will follow the Tizen 3.0 guidelines
