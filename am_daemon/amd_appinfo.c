@@ -277,13 +277,59 @@ static void __vconf_cb(keynode_t *key, void *data)
 		g_hash_table_remove(cf->tbl, appid);
 	} else if (strncmp(type_string, "update", 6) == 0){
 		/*REMOVE EXISTING ENTRY & CREATE AGAIN*/
-		if (g_hash_table_remove(cf->tbl, appid) == true){
+		if (g_hash_table_remove(cf->tbl, appid)){
 			if (pkgmgrinfo_appinfo_get_appinfo(appid, &handle) == PMINFO_R_OK){
 				__app_info_insert_handler(handle, data);
 				pkgmgrinfo_appinfo_destroy_appinfo(handle);
 			}
 		}
 	}
+}
+
+int app_func(pkgmgrinfo_appinfo_h handle, void *user_data)
+{
+	char *appid = NULL;
+	struct appinfomgr *cf = (struct appinfomgr *)user_data;
+	int r;
+
+	pkgmgrinfo_appinfo_get_appid(handle, &appid);
+	r = g_hash_table_remove(cf->tbl, appid);
+	SECURE_LOGD("upgrading... (%s)", appid);
+
+	return 0;
+}
+
+static int __cb(int req_id, const char *pkg_type,
+		       const char *pkgid, const char *key, const char *val,
+		       const void *pmsg, void *user_data)
+{
+	int ret = 0;
+	pkgmgrinfo_pkginfo_h handle;
+
+	SECURE_LOGD("appid(%s), key(%s), value(%s)", pkgid, key, val);
+
+	if((strncmp(key,"start", 5) == 0) && (strncmp(val, "update", 6) == 0) ) {
+		ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &handle);
+		if (ret != PMINFO_R_OK)
+			return -1;
+		ret = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, app_func, user_data);
+		if (ret != PMINFO_R_OK) {
+			pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+			return -1;
+		}
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	} else if (strncmp(key,"end", 3) == 0) {
+			ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &handle);
+		if (ret != PMINFO_R_OK)
+			return -1;
+		ret = pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_insert_handler, user_data);
+		if (ret != PMINFO_R_OK) {
+			pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+			return -1;
+		}
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	}
+	return ret;
 }
 
 int appinfo_init(struct appinfomgr **cf)
@@ -325,6 +371,12 @@ int appinfo_init(struct appinfomgr **cf)
 	r = vconf_notify_key_changed(VCONFKEY_MENUSCREEN_DESKTOP, __vconf_cb, _cf);
 	if (r < 0)
 		_E("Unable to register vconf notification callback for VCONFKEY_MENUSCREEN_DESKTOP\n");
+
+	int event_type = PMINFO_CLIENT_STATUS_UPGRADE;
+	pkgmgrinfo_client *pc = NULL;
+	pc = pkgmgrinfo_client_new(PMINFO_REQUEST);
+	pkgmgrinfo_client_set_status_type(pc, event_type);
+	pkgmgrinfo_client_listen_status(pc, __cb , _cf);
 
 	*cf = _cf;
 
