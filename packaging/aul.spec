@@ -20,7 +20,6 @@ Requires(preun): /usr/bin/systemctl
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(sqlite3)
-BuildRequires:  pkgconfig(x11)
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
@@ -34,9 +33,10 @@ BuildRequires:  pkgconfig(rua)
 BuildRequires:  pkgconfig(ecore-wayland)
 %else
 BuildRequires:  pkgconfig(ecore-x)
+BuildRequires:  pkgconfig(x11)
+BuildRequires:  pkgconfig(utilX)
 %endif
 BuildRequires:  pkgconfig(ecore-input)
-BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(libsmack)
