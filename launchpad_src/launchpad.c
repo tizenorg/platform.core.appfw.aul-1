@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
+#ifdef X11
 #include <X11/Xlib.h>
+#endif
 #include <sys/types.h>
 #include <signal.h>
 #include <dirent.h>
