@@ -25,11 +25,17 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
-
+#ifdef X11
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
-
+#endif
 #include "simple_util.h"
+#ifdef WAYLAND
+typedef int Atom;
+typedef int Display;
+typedef int XErrorEvent;
+typedef int Window;
+#endif
 
 static Atom a_pid;
 static int (*x_old_error) (Display *, XErrorEvent *);
@@ -39,7 +45,7 @@ static pid_t __get_win_pid(Display *d, Window win);
 static int __find_win(Display *d, Window *win, pid_t pid);
 static int __raise_win(Display *d, Window win);
 static int __cb_x_error(Display *disp, XErrorEvent *ev);
-
+#ifndef WAYLAND
 static pid_t __get_win_pid(Display *d, Window win)
 {
 	int r;
@@ -123,9 +129,14 @@ static int __raise_win(Display *d, Window win)
 
 	return 0;
 }
-
+#endif
 int x_util_raise_win(pid_t pid)
 {
+	#ifdef WAYLAND
+	//In wayland environment, noting to do in this function, FIXME if necessary.
+	_E("In wayland environment, x_util_raise_win() filed\n");
+	return -1;
+	#else
 	int r;
 	int found;
 	Display *d;
@@ -160,10 +171,16 @@ int x_util_raise_win(pid_t pid)
 	XCloseDisplay(d);
 
 	return r;
+	#endif
 }
 
 int x_util_get_default_size(double *w, double *h)
 {
+	#ifdef WAYLAND
+	//In wayland environment, noting to do in this function, FIXME if necessary.
+	_E("In wayland environment, x_util_get_default_size() filed\n");
+	return -1;
+	#else
 	Display *d;
 	int screen_num;
 
@@ -181,23 +198,28 @@ int x_util_get_default_size(double *w, double *h)
 	XCloseDisplay(d);
 
 	return 0;
+	#endif
 }
-
+#ifndef WAYLAND
 static int __cb_x_error(Display *disp, XErrorEvent *ev)
 {
 	_E("X error received - Error Code = %d", ev->error_code);
 	return 0;
 }
-
+#endif
 int x_util_init()
 {
+	#ifndef WAYLAND
 	x_old_error = XSetErrorHandler(__cb_x_error);
+	#endif
 	return 0;
 }
 
 int x_util_fini()
 {
+	#ifndef WAYLAND
 	XSetErrorHandler(x_old_error);
+	#endif
 	return 0;
 }
 
