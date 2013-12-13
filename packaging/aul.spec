@@ -1,4 +1,5 @@
 %bcond_with wayland
+%bcond_with x
 
 Name:       aul
 Summary:    App utility library
@@ -20,7 +21,6 @@ Requires(preun): /usr/bin/systemctl
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(sqlite3)
-BuildRequires:  pkgconfig(x11)
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
@@ -32,11 +32,13 @@ BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
 %if %{with wayland}
 BuildRequires:  pkgconfig(ecore-wayland)
-%else
+%endif
+%if %{with x}
 BuildRequires:  pkgconfig(ecore-x)
+BuildRequires:  pkgconfig(x11)
+BuildRequires:  pkgconfig(utilX)
 %endif
 BuildRequires:  pkgconfig(ecore-input)
-BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(libsmack)

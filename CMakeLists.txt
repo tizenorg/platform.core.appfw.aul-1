@@ -20,10 +20,10 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 # Set required packages
 INCLUDE(FindPkgConfig)
 
-OPTION(WITH_WAYLAND "Build with wayland" OFF)
+OPTION(WITH_WAYLAND "Build with wayland" ON)
 IF(WITH_WAYLAND)
     ADD_DEFINITIONS("-DWAYLAND")
-    pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-wayland ecore-input evas vconf pkgmgr-info privacy-manager-client)
+    pkg_check_modules(pkgs REQUIRED dlog ecore libprivilege-control app-checker rua glib-2.0 ecore-wayland ecore-input evas vconf pkgmgr-info privacy-manager-client)
 ELSE()
     ADD_DEFINITIONS("-DX11")
     pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-x ecore-input evas vconf pkgmgr-info privacy-manager-client)
@@ -120,7 +120,11 @@ add_executable(amd
 		am_daemon/amd_launch.c
 		am_daemon/amd_status.c
                 )
+IF ( WITH_WAYLAND )
+target_link_libraries(amd aul_mods app-checker-server rua glib-2.0 bundle ail aul ${pkgs_LDFLAGS})
+ELSE()
 target_link_libraries(amd aul_mods app-checker-server rua glib-2.0 bundle ail aul utilX ${pkgs_LDFLAGS})
+ENDIF()
 
 SET(REL_AGENT daemon-manager-release-agent)
 ADD_EXECUTABLE(${REL_AGENT} agent/${REL_AGENT}.c)
