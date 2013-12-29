@@ -372,11 +372,14 @@ int appinfo_init(struct appinfomgr **cf)
 	if (r < 0)
 		_E("Unable to register vconf notification callback for VCONFKEY_MENUSCREEN_DESKTOP\n");
 
-	int event_type = PMINFO_CLIENT_STATUS_UPGRADE;
-	pkgmgrinfo_client *pc = NULL;
-	pc = pkgmgrinfo_client_new(PMINFO_REQUEST);
-	pkgmgrinfo_client_set_status_type(pc, event_type);
-	pkgmgrinfo_client_listen_status(pc, __cb , _cf);
+	// FIXME: PMINFO_CLIENT_STATUS_UPGRADE is not declared anywhere and
+	//.neither is pkgmgrinfo_client.
+
+	//int event_type = PMINFO_CLIENT_STATUS_UPGRADE;
+	//pkgmgrinfo_client *pc = NULL;
+	//pc = pkgmgrinfo_client_new(PMINFO_REQUEST);
+	//pkgmgrinfo_client_set_status_type(pc, event_type);
+	//pkgmgrinfo_client_listen_status(pc, __cb , _cf);
 
 	*cf = _cf;
 

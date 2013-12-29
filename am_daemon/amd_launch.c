@@ -751,7 +751,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		}
 	}
 
-	pkgmgrinfo_client_request_enable_external_pkg(pkgid);
+	// FIXME: pkgmgrinfo_client_request_enable_external_pkg is an undefined
+	// reference.
+	//pkgmgrinfo_client_request_enable_external_pkg(pkgid);
 
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
