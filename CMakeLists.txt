@@ -19,14 +19,14 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-
-OPTION(WITH_WAYLAND "Build with wayland" OFF)
+SET(AUL-1_PKG_CHECK_MODULES dlog ecore libprivilege-control app-checker rua glib-2.0 ecore-input evas vconf pkgmgr-info privacy-manager-client)
+OPTION(WITH_WAYLAND "Build with wayland" ON)
 IF(WITH_WAYLAND)
     ADD_DEFINITIONS("-DWAYLAND")
-    pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-wayland ecore-input evas vconf pkgmgr-info privacy-manager-client)
-ELSE()
+    pkg_check_modules(pkgs REQUIRED ${AUL-1_PKG_CHECK_MODULES} ecore-wayland)
+ELSE(WITH_WAYLAND)
     ADD_DEFINITIONS("-DX11")
-    pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control app-checker rua glib-2.0 ecore-x ecore-input evas vconf pkgmgr-info privacy-manager-client)
+    pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} x11 ecore-x)
 ENDIF(WITH_WAYLAND)
 
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libsmack)
@@ -100,10 +100,16 @@ SET_TARGET_PROPERTIES(aul PROPERTIES VERSION ${VERSION})
 
 # launchpad(old avatar) daemon
 SET(AVATAR_NAME "launchpad_preloading_preinitializing_daemon")
+IF (WITH_WAYLAND)
+add_executable(${AVATAR_NAME}
+        launchpad_src/launchpad.c
+        )
+ELSE(WITH_WAYLAND)
 add_executable(${AVATAR_NAME}
 	launchpad_src/launchpad.c
 	launchpad_src/util_x.c
 	)
+ENDIF(WITH_WAYLAND)
 
 MESSAGE("       "${pkgs_LDFLAGS})
 target_link_libraries(${AVATAR_NAME} aul_mods aul ${pkgs_LDFLAGS} ${LIB_DL})
@@ -120,7 +126,12 @@ add_executable(amd
 		am_daemon/amd_launch.c
 		am_daemon/amd_status.c
                 )
-target_link_libraries(amd aul_mods app-checker-server rua glib-2.0 bundle ail aul utilX ${pkgs_LDFLAGS})
+SET(AUL-1_LINK_LIBRARY amd aul_mods app-checker-server rua glib-2.0 bundle ail aul)
+IF (WITH_WAYLAND)
+target_link_libraries(${AUL-1_LINK_LIBRARY} ${pkgs_LDFLAGS})
+ELSE(WITH_WAYLAND)
+target_link_libraries(utilX "${AUL-1_LINK_LIBRARY}" ${pkgs_LDFLAGS})
+ENDIF(WITH_WAYLAND)
 
 SET(REL_AGENT daemon-manager-release-agent)
 ADD_EXECUTABLE(${REL_AGENT} agent/${REL_AGENT}.c)
