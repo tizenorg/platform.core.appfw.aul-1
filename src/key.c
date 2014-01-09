@@ -23,7 +23,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef X11
 #include <utilX.h>
+#endif
 #include <glib.h>
 #include <poll.h>
 #include <bundle.h>
