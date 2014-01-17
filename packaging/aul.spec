@@ -93,7 +93,7 @@ rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 mkdir -p %{buildroot}/usr/lib/systemd/system/graphical.target.wants
 install -m 0644 %SOURCE101 %{buildroot}/usr/lib/systemd/system/launchpad-preload@.service
 install -m 0644 %SOURCE102 %{buildroot}/usr/lib/systemd/system/ac.service
-ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@app.service
+ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@5000.service
 ln -s ../ac.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/ac.service
 
 mkdir -p %{buildroot}/opt/etc/smack/accesses.d
@@ -105,7 +105,7 @@ cp LICENSE %{buildroot}/usr/share/license/%{name}
 
 %preun
 if [ $1 == 0 ]; then
-    systemctl stop launchpad-preload@app.service
+    systemctl stop launchpad-preload@5000.service
     systemctl stop ac.service
 fi
 
@@ -113,7 +113,7 @@ fi
 /sbin/ldconfig
 systemctl daemon-reload
 if [ $1 == 1 ]; then
-    systemctl restart launchpad-preload@app.service
+    systemctl restart launchpad-preload@5000.service
     systemctl restart ac.service
 fi
 
@@ -141,7 +141,7 @@ systemctl daemon-reload
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
 %{_bindir}/launchpad_preloading_preinitializing_daemon
-/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@app.service
+/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@5000.service
 /usr/lib/systemd/system/graphical.target.wants/ac.service
 /usr/lib/systemd/system/launchpad-preload@.service
 /usr/lib/systemd/system/ac.service
