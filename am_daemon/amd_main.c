@@ -61,12 +61,12 @@
 typedef struct _r_app_info_t{
 	char pkg_name[MAX_PACKAGE_STR_SIZE];
 	int pid;
+	uid_t user;
 } r_app_info_t;
 
 GSList *r_app_info_list = NULL;
 
 static void __vconf_cb(keynode_t *key, void *data);
-static int __app_dead_handler(int pid, void *data);
 static int __init();
 
 extern int _status_init(struct amdmgr* amd);
@@ -110,7 +110,7 @@ static int __kill_bg_apps(int limit)
 	return 0;
 }
 
-static int __remove_item_running_list(int pid)
+static int __remove_item_running_list(int pid, uid_t user)
 {
 	r_app_info_t *info_t = NULL;
 	GSList *iter = NULL;
@@ -118,7 +118,7 @@ static int __remove_item_running_list(int pid)
 	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (r_app_info_t *)iter->data;
-		if(pid == info_t->pid) {
+		if( (pid == info_t->pid) && (user == info_t->user || 0 == info_t->pid )) {
 			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
 			free(info_t);
 			break;
@@ -138,14 +138,14 @@ gboolean __add_item_running_list(gpointer user_data)
 	int limit;
 	char *pkgname;
 	int pid;
-
+    uid_t user;
 	item_pkt_t *item;
 
 	item = (item_pkt_t *)user_data;
 
 	pkgname = item->appid;
 	pid = item->pid;
-
+    user = item->uid;
 	if (vconf_get_int(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, &limit) != 0){
 		_E("Unable to get VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
 	}
@@ -175,7 +175,7 @@ gboolean __add_item_running_list(gpointer user_data)
 	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (r_app_info_t *)iter->data;
-		if(pid == info_t->pid) {
+		if((pid == info_t->pid) && (user == info_t->user))  {
 			found = 1;
 			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
 			r_app_info_list = g_slist_append(r_app_info_list, info_t);
@@ -223,11 +223,14 @@ static void __vconf_cb(keynode_t *key, void *data)
 	}
 }
 
-static int __app_dead_handler(int pid, void *data)
+int __app_dead_handler(int pid)
 {
+	// this function was called in single user mode as a callback to aul_listen_app_dead_signal
+	// but in multiuser mode, AMD daemon can't listen any more on DBUS system to catch those events
+	// AMD Agents must connect to AMD Daemon to signal a dead process
 	_unregister_key_event(pid);
-	__remove_item_running_list(pid);
-	_status_remove_app_info_list(pid);
+	__remove_item_running_list(pid, getuid());
+	_status_remove_app_info_list(pid, getuid());
 	return 0;
 }
 
@@ -257,7 +260,7 @@ static int __init()
 		.cg = NULL
 	};
 
-	int ret;
+	int ret=0;
 
 	ecore_init();
 	evas_init();
@@ -282,7 +285,6 @@ static int __init()
 #endif
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
-	aul_listen_app_dead_signal(__app_dead_handler, NULL);
 
 	_start_services(&amd);
 

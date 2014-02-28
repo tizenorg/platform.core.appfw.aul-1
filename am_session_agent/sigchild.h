@@ -19,8 +19,7 @@
  *
  */
 
-
-#include <pthread.h>
+#include "aul_util.h"
 #include "app_signal.h"
 
 static struct sigaction old_sigchild;
@@ -52,10 +51,40 @@ static inline void __socket_garbage_collector()
 	closedir(dp);
 }
 
-static inline int __send_app_dead_signal(int dead_pid)
+static inline int __send_app_dead_signal_amd(int dead_pid) {
+	bundle* kb=NULL;
+	char tmpbuf[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	// send signal to AMD daemon using direct request
+	kb=bundle_create();
+	if (kb==NULL) {
+		_E("bundle creation failed");
+		return -1;
+	}
+
+	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", dead_pid);
+	bundle_add(kb,AUL_K_PID,tmpbuf);
+
+	ret=app_send_cmd_with_noreply(AUL_UTIL_PID, APP_DEAD_SIGNAL,kb);
+
+	if (ret) {
+		_E("unable to send dead signal to amd proc PID %d",dead_pid);
+	}
+	else {
+		_D("send_app_dead_signal_amd done (pid=%d)\n",dead_pid);
+	}
+
+	bundle_free(kb);
+
+	return ret;
+}
+
+static inline int __send_app_dead_signal_dbus(int dead_pid)
 {
 	DBusMessage *message;
 
+	// send over session dbus for other applications
 	if (bus == NULL)
 		return -1;
 
@@ -78,12 +107,12 @@ static inline int __send_app_dead_signal(int dead_pid)
 	dbus_connection_flush(bus);
 	dbus_message_unref(message);
 
-	_D("send dead signal done\n");
+	_D("send_app_dead_signal_dbus done (pid=%d)\n",dead_pid);
 
 	return 0;
 }
 
-static inline int __send_app_launch_signal(int launch_pid)
+static inline int __send_app_launch_signal_dbus(int launch_pid)
 {
 	DBusMessage *message;
 
@@ -109,7 +138,7 @@ static inline int __send_app_launch_signal(int launch_pid)
 	dbus_connection_flush(bus);
 	dbus_message_unref(message);
 
-	_D("send launch signal done\n");
+	_D("send_app_launch_signal_dbus done (pid=%d)",launch_pid);
 
 	return 0;
 }
@@ -123,7 +152,8 @@ static int __sigchild_action(void *data)
 	if (dead_pid <= 0)
 		goto end;
 
-	__send_app_dead_signal(dead_pid);
+	__send_app_dead_signal_amd(dead_pid);
+	__send_app_dead_signal_dbus(dead_pid);
 
 	snprintf(buf, MAX_LOCAL_BUFSZ, "%s/%d", AUL_SOCK_PREFIX, dead_pid);
 	unlink(buf);
@@ -133,7 +163,7 @@ static int __sigchild_action(void *data)
 	return 0;
 }
 
-static void __launchpad_sig_child(int signo, siginfo_t *info, void *data)
+static void __agent_sig_child(int signo, siginfo_t *info, void *data)
 {
 	int status;
 	pid_t child_pid;
@@ -181,16 +211,16 @@ static inline int __signal_set_sigchld(void)
 
 	dbus_error_init(&error);
 	dbus_threads_init_default();
-	bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error);
+	bus = dbus_bus_get_private(DBUS_BUS_SESSION, &error);
 	if (!bus) {
 		_E("Failed to connect to the D-BUS daemon: %s", error.message);
 		dbus_error_free(&error);
 		return -1;
 	}
-	/* TODO: if process stop mechanism is included, 
+	/* TODO: if process stop mechanism is included,
 	should be modified (SA_NOCLDSTOP)*/
 	act.sa_handler = NULL;
-	act.sa_sigaction = __launchpad_sig_child;
+	act.sa_sigaction = __agent_sig_child;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
 

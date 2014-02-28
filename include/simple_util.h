@@ -27,18 +27,23 @@
 #include <ctype.h>
 #include <dlog.h>
 
+#undef LOG_TAG
+#define LOG_TAG "AUL"
+
 #ifdef LAUNCHPAD_LOG
 #undef LOG_TAG
 #define LOG_TAG "AUL_PAD"
-#else
-#undef LOG_TAG
-#define LOG_TAG "AUL"
 #endif
+
 #ifdef AMD_LOG
 #undef LOG_TAG
 #define LOG_TAG "AUL_AMD"
 #endif
 
+#ifdef AGENT_LOG
+#undef LOG_TAG
+#define LOG_TAG "AUL_AGENT"
+#endif
 
 #define MAX_LOCAL_BUFSZ 128
 #define MAX_PID_STR_BUFSZ 20
@@ -68,6 +73,7 @@ int __proc_iter_cmdline(int (*iterfunc)
 int __proc_iter_pgid(int pgid, int (*iterfunc) (int pid, void *priv),
 		     void *priv);
 char *__proc_get_cmdline_bypid(int pid);
+char *__proc_get_exe_bypid(int pid);
 
 static inline const char *FILENAME(const char *filename)
 {

@@ -28,7 +28,6 @@
 #include "aul.h"
 
 #define ROOT_UID 0
-#define TMP_FILE "/tmp/.testpkg"
 
 static char **gargv;
 static int gargc;
@@ -70,8 +69,6 @@ static bundle *create_internal_bundle(int start)
 
 int launch()
 {
-	FILE *fp;
-	int ret = -1;
 	int pid = -1;
 
 	kb = create_internal_bundle(2);
@@ -79,18 +76,7 @@ int launch()
 		printf("bundle creation fail\n");
 		return -1;
 	}
-
 	pid = aul_launch_app(gargv[1], kb);
-
-	/* Write the package name to TMP_FILE*/
-	fp = fopen(TMP_FILE, "w");
-	if (fp == NULL)
-		return -1;
-	ret = fprintf(fp, "%d", pid);
-	fclose(fp);
-	if (ret < 0)
-		return -1;
-
 	return pid;
 }
 

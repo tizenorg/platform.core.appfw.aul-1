@@ -247,6 +247,8 @@ static void __vconf_cb(keynode_t *key, void *data)
 	char *noti_string;
 	char *type_string;
 	char *appid;
+	char *uid_string;
+	uid_t uid;
 	char *saveptr;
 	pkgmgrinfo_appinfo_h handle;
 	struct appinfomgr *cf = (struct appinfomgr *)data;
@@ -258,12 +260,16 @@ static void __vconf_cb(keynode_t *key, void *data)
 	}
 
 	SECURE_LOGD("noti_string : %s",noti_string);
-
 	type_string = strtok_r(noti_string, ":", &saveptr);
 	appid = strtok_r(NULL, ":", &saveptr);
+	uid_string = strtok_r(NULL, ":", &saveptr);
+	uid = atoi(uid_string);
 
+	_D("type_string: [%s]\n", type_string);
+	_D("appid: [%s]\n", appid);
+	_D("uid: %d\n", uid);
 	if ( strncmp(type_string, "create", 6) == 0) {
-		ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
+		ret = pkgmgrinfo_appinfo_get_appinfo_user(appid, uid, &handle);
 		if(ret < 0) {
 			_E("pkgmgrinfo_appinfo_get_appinfo fail");
 		}
@@ -278,7 +284,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 	} else if (strncmp(type_string, "update", 6) == 0){
 		/*REMOVE EXISTING ENTRY & CREATE AGAIN*/
 		if (g_hash_table_remove(cf->tbl, appid)){
-			if (pkgmgrinfo_appinfo_get_appinfo(appid, &handle) == PMINFO_R_OK){
+			if (pkgmgrinfo_appinfo_get_appinfo_user(appid, uid, &handle) == PMINFO_R_OK){
 				__app_info_insert_handler(handle, data);
 				pkgmgrinfo_appinfo_destroy_appinfo(handle);
 			}
@@ -413,15 +419,115 @@ void appinfo_delete(struct appinfomgr *cf, const char *pkg_name)
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 }
 
-const struct appinfo *appinfo_find(struct appinfomgr *cf, const char *filename)
+const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 {
-	if (!cf || !filename || !*filename) {
-		errno = EINVAL;
-		_E("appinfo find: %s", strerror(errno));
-		return NULL;
+	struct appinfo *res;
+	gboolean r;
+	bool multiple;
+	bool preload;
+	bool onboot;
+	char *exec;
+	bool restart;
+	char *pkgid;
+	char *type;
+	pkgmgrinfo_app_hwacceleration hwacc;
+	pkgmgrinfo_appinfo_h handle;
+	pkgmgrinfo_app_component component;
+	pkgmgrinfo_permission_type permission;
+	int ret;
+
+	ret = pkgmgrinfo_appinfo_get_appinfo( appid, &handle);
+	if (ret != PMINFO_R_OK){
+		ret = pkgmgrinfo_appinfo_get_appinfo_user(appid , caller_uid , &handle);
 	}
 
-	return g_hash_table_lookup(cf->tbl, FILENAME(filename));
+	res = calloc(1, sizeof(*res));
+	if (!res) {
+		_E("create appinfo: %s", strerror(errno));
+		return -1;
+	}
+
+	memset(res, 0, sizeof(struct appinfo));
+
+	res->val[_AI_FILE] = strdup(appid);
+	if (!res->val[_AI_FILE]) {
+		_E("create appinfo: %s", strerror(errno));
+		_free_appinfo(res);
+		return -1;
+	}
+
+	res->val[_AI_NAME] = strdup(appid); //TODO :
+
+	pkgmgrinfo_appinfo_get_component(handle, &component);
+	if(component == PMINFO_UI_APP) {
+		res->val[_AI_COMP] = strdup("ui"); //TODO :
+
+		r = pkgmgrinfo_appinfo_is_multiple(handle, &multiple);
+		if(multiple == true)
+			res->val[_AI_MULTI] = strdup("true");
+		else res->val[_AI_MULTI] = strdup("false");
+
+		r = pkgmgrinfo_appinfo_is_preload(handle, &preload);
+		if (preload == false) {
+			res->val[_AI_PRELOAD] = strdup("false");
+		} else {
+			res->val[_AI_PRELOAD] = strdup("true");
+		}
+
+		if(gles == 0) {
+			res->val[_AI_HWACC] = strdup("NOT_USE");
+		} else {
+
+			r = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
+			if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
+				res->val[_AI_HWACC] = strdup("USE");
+			} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
+				res->val[_AI_HWACC] = strdup("SYS");
+			} else {
+				res->val[_AI_HWACC] = strdup("NOT_USE");
+			}
+		}
+	} else {
+		res->val[_AI_COMP] = strdup("svc");
+
+		r = pkgmgrinfo_appinfo_is_onboot(handle, &onboot);
+		if(onboot == true)
+			res->val[_AI_ONBOOT] = strdup("true");
+		else res->val[_AI_ONBOOT] = strdup("false");
+
+		r = pkgmgrinfo_appinfo_is_autorestart(handle, &restart);
+		if(restart == true)
+			res->val[_AI_RESTART] = strdup("true");
+		else res->val[_AI_RESTART] = strdup("false");
+	}
+
+	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
+	res->val[_AI_EXEC] = strdup(exec);
+
+	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
+	if(strncmp(type, "capp", 4) == 0 ) {
+		res->val[_AI_TYPE] = strdup("rpm");
+	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6) == 0) {
+		res->val[_AI_TYPE] = strdup("tpk");
+	} else if (strncmp(type, "webapp", 6) == 0) {
+		res->val[_AI_TYPE] = strdup("wgt");
+	}
+
+	r = pkgmgrinfo_appinfo_get_permission_type(handle, &permission);
+	if (permission == PMINFO_PERMISSION_SIGNATURE) {
+		res->val[_AI_PERM] = strdup("signature");
+	} else if (permission == PMINFO_PERMISSION_PRIVILEGE) {
+		res->val[_AI_PERM] = strdup("privilege");
+	} else {
+		res->val[_AI_PERM] = strdup("normal");
+	}
+
+	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
+	res->val[_AI_PKGID] = strdup(pkgid);
+
+	SECURE_LOGD("%s : %s : %s", res->val[_AI_FILE], res->val[_AI_COMP], res->val[_AI_TYPE]);
+
+	return res;
 }
 
 const char *appinfo_get_value(const struct appinfo *c, enum appinfo_type type)

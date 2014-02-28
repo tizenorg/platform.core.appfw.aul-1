@@ -24,7 +24,7 @@ void appinfo_fini(struct appinfomgr **cf);
 const struct appinfo *appinfo_insert(struct appinfomgr *cf, const char *filename);
 void appinfo_delete(struct appinfomgr *cf, const char *filename);
 
-const struct appinfo *appinfo_find(struct appinfomgr *cf, const char *filename);
+const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid);
 const char *appinfo_get_value(const struct appinfo *c, enum appinfo_type type);
 const char *appinfo_get_filename(const struct appinfo *c);
 int appinfo_get_boolean(const struct appinfo *c, enum appinfo_type type);

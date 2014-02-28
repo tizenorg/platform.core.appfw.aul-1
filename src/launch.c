@@ -89,6 +89,94 @@ static int app_terminate()
 }
 
 
+
+
+/**
+ * @brief	encode kb and send it to 'pid'
+ * @param[in]	pid		receiver's pid
+ * @param[in]	cmd		message's status (APP_START | APP_RESULT)
+ * @param[in]	kb		data
+ */
+SLPAPI int app_agent_send_cmd(int uid, int cmd, bundle *kb)
+{
+	int datalen;
+	bundle_raw *kb_data;
+	int res;
+
+	bundle_encode(kb, &kb_data, &datalen);
+	if ((res = __app_agent_send_raw(uid, cmd, kb_data, datalen)) < 0) {
+		switch (res) {
+		case -EINVAL:
+			res = AUL_R_EINVAL;
+			break;
+		case -ECOMM:
+			res = AUL_R_ECOMM;
+			break;
+		case -EAGAIN:
+			res = AUL_R_ETIMEOUT;
+			break;
+		case -ELOCALLAUNCH_ID:
+			res = AUL_R_LOCAL;
+			break;
+		case -EILLEGALACCESS:
+			res = AUL_R_EILLACC;
+			break;
+		case -ETERMINATING:
+			res = AUL_R_ETERMINATING;
+			break;
+		case -ENOLAUNCHPAD:
+			res = AUL_R_ENOLAUNCHPAD;
+			break;
+		default:
+			res = AUL_R_ERROR;
+		}
+	}
+	free(kb_data);
+
+	return res;
+}
+
+SLPAPI int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb)
+{
+	int datalen;
+	bundle_raw *kb_data;
+	int res;
+
+	bundle_encode(kb, &kb_data, &datalen);
+	if ((res = __app_send_raw_with_noreply(uid, cmd, kb_data, datalen)) < 0) {
+		switch (res) {
+		case -EINVAL:
+			res = AUL_R_EINVAL;
+			break;
+		case -ECOMM:
+			res = AUL_R_ECOMM;
+			break;
+		case -EAGAIN:
+			res = AUL_R_ETIMEOUT;
+			break;
+		case -ELOCALLAUNCH_ID:
+			res = AUL_R_LOCAL;
+			break;
+		case -EILLEGALACCESS:
+			res = AUL_R_EILLACC;
+			break;
+		default:
+			res = AUL_R_ERROR;
+		}
+	}
+	free(kb_data);
+
+	return res;
+}
+
+
+
+
+
+
+
+
+
 /**
  * @brief	encode kb and send it to 'pid'
  * @param[in]	pid		receiver's pid

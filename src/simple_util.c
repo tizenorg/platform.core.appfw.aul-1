@@ -40,9 +40,9 @@
 #define OPTION_VALGRIND_NAME	"valgrind"
 #define OPTION_VALGRIND_SIZE	8
 
-
 #define PROC_STAT_GID_POS	5
 
+#define MAX_CMD_BUFSZ 1024
 
 static inline int __read_proc(const char *path, char *buf, int size);
 static inline int __find_pid_by_cmdline(const char *dname,
@@ -143,8 +143,6 @@ int __proc_iter_cmdline(
 
 char *__proc_get_cmdline_bypid(int pid)
 {
-#define MAX_CMD_BUFSZ 1024
-
 	char buf[MAX_CMD_BUFSZ];
 	int ret;
 
@@ -186,6 +184,21 @@ char *__proc_get_cmdline_bypid(int pid)
 	}
 
 	return strdup(buf);
+}
+
+char *__proc_get_exe_bypid(int pid)
+{
+	char buf[MAX_CMD_BUFSZ];
+	char buf2[MAX_CMD_BUFSZ];
+	int ret;
+	ssize_t len;
+
+	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
+	len=readlink(buf,buf2,MAX_CMD_BUFSZ);
+	if (len<=0)
+		return NULL;
+
+	return strdup(buf2);
 }
 
 static inline int __get_pgid_from_stat(int pid)

@@ -53,6 +53,8 @@ struct cginfo *_rcg;
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
 
+extern int __app_dead_handler(int pid);
+
 static int __send_result_to_client(int fd, int res)
 {
 	if (send(fd, &res, sizeof(int), MSG_NOSIGNAL) < 0) {
@@ -135,11 +137,6 @@ static int __app_process_by_pid(int cmd,
 	if (pkg_name == NULL)
 		return -1;
 
-	if ((cr->uid != 0) && (cr->uid != INHOUSE_UID)) {
-		_E("reject by security rule, your uid is %u\n", cr->uid);
-		return -1;
-	}
-
 	pid = atoi(pkg_name);
 	if (pid <= 1) {
 		_E("invalid pid");
@@ -174,15 +171,15 @@ static gboolean __add_history_handler(gpointer user_data)
 	char *appid = NULL;
 	char *app_path = NULL;
 	struct appinfo *ai;
-	app_pkt_t *pkt = (app_pkt_t *)user_data;
+	pkt_t *pkt_uid = (pkt_t *)user_data;
 
-	if (!pkt)
+	if (!pkt_uid)
 		return FALSE;
 
-	kb = bundle_decode(pkt->data, pkt->len);
+	kb = bundle_decode(pkt_uid->pkt->data, pkt_uid->pkt->len);
 	appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
 
-	ai = (struct appinfo *)appinfo_find(_raf, appid);
+	ai = (struct appinfo *)appinfo_find(pkt_uid->caller_uid, appid);
 	app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
 
 	memset((void *)&rec, 0, sizeof(rec));
@@ -190,8 +187,8 @@ static gboolean __add_history_handler(gpointer user_data)
 	rec.pkg_name = appid;
 	rec.app_path = app_path;
 
-	if(pkt->len > 0) {
-		rec.arg = (char *)pkt->data;
+	if(pkt_uid->pkt->len > 0) {
+		rec.arg = (char *)pkt_uid->pkt->data;
 	}
 
 	SECURE_LOGD("add rua history %s %s", rec.pkg_name, rec.app_path);
@@ -202,7 +199,8 @@ static gboolean __add_history_handler(gpointer user_data)
 
 	if (kb != NULL)
 		bundle_free(kb);
-	free(pkt);
+	free(pkt_uid->pkt);
+	free(pkt_uid);
 
 	return FALSE;
 }
@@ -252,7 +250,7 @@ static int __releasable(const char *filename)
 	return 0;
 }
 
-static int __release_srv(const char *filename)
+static int __release_srv(uid_t caller_uid, const char *filename)
 {
 	int r;
 	const struct appinfo *ai;
@@ -261,7 +259,7 @@ static int __release_srv(const char *filename)
 	if (r == -1)
 		return -1;
 
-	ai = (struct appinfo *)appinfo_find(_raf, filename);
+	ai = (struct appinfo *)appinfo_find(caller_uid, filename);
 	if (!ai) {
 		SECURE_LOGE("release service: '%s' not found", filename);
 		return -1;
@@ -285,6 +283,42 @@ static int __release_srv(const char *filename)
 	return 0;
 }
 
+static int __handle_dead_signal(bundle* kb,int clifd, struct ucred * pcr) {
+	int ret=-1;
+	const char *pid_str;
+	int pid=0;
+
+	/* check the credentials from the caller: must be the amd agent */
+	// exe of calling process
+	char * caller=__proc_get_exe_bypid(pcr->pid);
+	if (!caller) {
+		_D("handle_dead_signal: unable to get caller exe");
+		return -1;
+	}
+
+	if (strcmp(caller,"/usr/bin/amd_session_agent")) {
+		_D("handle_dead_signal: caller is not amd session agent");
+		free(caller);
+		return -1;
+	}
+	free(caller);
+
+	/* get app pid from bundle */
+	pid_str = bundle_get_val(kb, AUL_K_PID);
+	if(!pid_str)
+		return -1;
+
+	pid=atoi(pid_str);
+	if (pid<=1)
+		return -1;
+
+	_D("APP_DEAD_SIGNAL : %d",pid);
+
+	ret=__app_dead_handler(pid);
+
+	return ret;
+}
+
 static gboolean __request_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
@@ -301,6 +335,7 @@ static gboolean __request_handler(gpointer data)
 	int pid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
+	pkt_t *pkt_uid;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -319,10 +354,15 @@ static gboolean __request_handler(gpointer data)
 			if(ret > 0) {
 				item = calloc(1, sizeof(item_pkt_t));
 				item->pid = ret;
+				item->uid = cr.uid;
 				strncpy(item->appid, appid, 511);
 				free_pkt = 0;
 
-				g_timeout_add(1000, __add_history_handler, pkt);
+				pkt_uid = calloc(1, sizeof(pkt_t));
+				pkt_uid->caller_uid = cr.uid;
+				pkt_uid->pkt = pkt;
+
+				g_timeout_add(1000, __add_history_handler, pkt_uid);
 				g_timeout_add(1200, __add_item_running_list, item);
 			}
 
@@ -346,12 +386,12 @@ static gboolean __request_handler(gpointer data)
 			__real_send(clifd, ret);
 			break;
 		case APP_RUNNING_INFO:
-			_status_send_running_appinfo_v2(clifd);
+			_status_send_running_appinfo(clifd);
 			break;
 		case APP_IS_RUNNING:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-			ret = _status_app_is_running_v2(appid);
+			ret = _status_app_is_running(appid, cr.uid);
 			SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
 			__send_result_to_client(clifd, ret);
 			free(appid);
@@ -371,14 +411,14 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_STATUS_UPDATE:
 			status = (int *)pkt->data;
-			ret = _status_update_app_info_list(cr.pid, *status);
+			ret = _status_update_app_info_list(cr.pid, *status, cr.uid);
 			//__send_result_to_client(clifd, ret);
 			close(clifd);
 			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-			ret = __release_srv(appid);
+			ret = __release_srv(cr.uid,appid);
 			__send_result_to_client(clifd, ret);
 			free(appid);
 			break;
@@ -391,6 +431,10 @@ static gboolean __request_handler(gpointer data)
 			  ret = _status_add_app_info_list(appid, app_path, pid);*/
 			ret = 0;
 			__send_result_to_client(clifd, ret);
+			break;
+		case APP_DEAD_SIGNAL:
+			kb = bundle_decode(pkt->data, pkt->len);
+			ret=__handle_dead_signal(kb,clifd,&cr);
 			break;
 		default:
 			_E("no support packet");

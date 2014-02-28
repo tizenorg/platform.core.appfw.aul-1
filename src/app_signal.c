@@ -96,7 +96,7 @@ int __app_dbus_signal_handler_init()
 		return 0;
 
 	dbus_error_init(&error);
-	bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error);
+	bus = dbus_bus_get_private(DBUS_BUS_SESSION, &error);
 	if (!bus) {
 		_E("Failed to connect to the D-BUS daemon: %s", error.message);
 		dbus_error_free(&error);
@@ -115,7 +115,7 @@ int __app_dbus_signal_handler_init()
 		return -1;
 	}
 
-	if (dbus_connection_add_filter(bus, 
+	if (dbus_connection_add_filter(bus,
 		__app_dbus_signal_filter, NULL, NULL) == FALSE)
 		return -1;
 

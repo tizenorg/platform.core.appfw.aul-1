@@ -142,6 +142,103 @@ int __create_server_sock(int pid)
 	return fd;
 }
 
+
+int __create_server_sock_by_path(char *path)
+{
+	struct sockaddr_un saddr;
+	struct sockaddr_un p_saddr;
+	int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+	/*  support above version 2.6.27*/
+	if (fd < 0) {
+		if (errno == EINVAL) {
+			fd = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (fd < 0) {
+				_E("second chance - socket create error");
+				return -1;
+			}
+		} else {
+			_E("socket error");
+			return -1;
+		}
+	}
+
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "%s", path);
+	unlink(saddr.sun_path);
+
+	if (bind(fd, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
+		_E("bind error");
+		close(fd);
+		return -1;
+	}
+
+	if (chmod(saddr.sun_path, (S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
+		/* Flawfinder: ignore*/
+		_E("failed to change the socket permission");
+		close(fd);
+		return -1;
+	}
+	__set_sock_option(fd, 0);
+	if (listen(fd, 128) == -1) {
+		_E("listen error");
+		close(fd);
+		return -1;
+	}
+	return fd;
+}
+
+
+
+
+
+
+int __create_agent_client_sock(int uid)
+{
+	int fd = -1;
+	struct sockaddr_un saddr = { 0, };
+	int retry = 1;
+	int ret = -1;
+
+	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);	
+	/*  support above version 2.6.27*/
+	if (fd < 0) {
+		if (errno == EINVAL) {
+			fd = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (fd < 0) {
+				_E("second chance - socket create error");
+				return -1;
+			}
+		} else {
+			_E("socket error");
+			return -1;
+		}
+	}
+
+	saddr.sun_family = AF_UNIX;
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/amd_agent", uid);
+ retry_con:
+	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
+			100 * 1000);
+	if (ret < -1) {
+		_E("maybe peer not launched or peer daed\n");
+		if (retry > 0) {
+			usleep(100 * 1000);
+			retry--;
+			goto retry_con;
+		}
+	}
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
+
+	__set_sock_option(fd, 1);
+
+	return fd;
+}
+
+
 int __create_client_sock(int pid)
 {
 	int fd = -1;
@@ -332,6 +429,171 @@ retry_recv:
 	return res;
 }
 
+
+int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen)
+{
+	int fd;
+	int len;
+	int ret;
+	int res = 0;
+	app_pkt_t *pkt = NULL;
+
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+		_E("keybundle error\n");
+		return -EINVAL;
+	}
+
+	_D("uid(%d) : cmd(%d)", uid, cmd);
+
+	fd = __create_agent_client_sock(uid);
+	if (fd < 0)
+		return -ECOMM;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if (NULL == pkt) {
+		_E("Malloc Failed!");
+		return -ENOMEM;
+	}
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+	memcpy(pkt->data, kb_data, datalen);
+
+	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
+		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
+		if(len > 0) {
+			while (len != datalen + 8) {
+				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
+				if (ret < 0) {
+					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
+					if (errno == EPIPE) {
+						_E("uid:%d, fd:%d\n", uid, fd);
+					}
+					close(fd);
+					if (pkt) {
+						free(pkt);
+						pkt = NULL;
+					}
+					return -ECOMM;
+				}
+				len += ret;
+				_D("sendto() len - %d %d", len, datalen + 8);
+			}
+		} else {
+			if (errno == EPIPE) {
+				_E("uid:%d, fd:%d\n", uid, fd);
+			}
+			close(fd);
+			if (pkt) {
+				free(pkt);
+				pkt = NULL;
+			}
+			return -ECOMM;
+		}
+	}
+	if (pkt) {
+		free(pkt);
+		pkt = NULL;
+	}
+
+retry_recv:
+	len = recv(fd, &res, sizeof(int), 0);
+	if (len == -1) {
+		if (errno == EAGAIN) {
+			_E("recv timeout : %s", strerror(errno));
+			res = -EAGAIN;
+		} else if (errno == EINTR) {
+			_D("recv : %s", strerror(errno));
+			goto retry_recv;
+		} else {
+			_E("recv error : %s", strerror(errno));
+			res = -ECOMM;
+		}
+	}
+	close(fd);
+
+	return res;
+}
+
+
+int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, int datalen)
+{
+	int fd;
+	int len;
+	int ret;
+	int res = 0;
+	app_pkt_t *pkt = NULL;
+
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+		_E("keybundle error\n");
+		return -EINVAL;
+	}
+
+	_D("uid(%d) : cmd(%d)", uid, cmd);
+
+	fd = __create_agent_client_sock(uid);
+	if (fd < 0)
+		return -ECOMM;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if (NULL == pkt) {
+		_E("Malloc Failed!");
+		return -ENOMEM;
+	}
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+	memcpy(pkt->data, kb_data, datalen);
+
+	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
+		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
+		if(len > 0) {
+			while (len != datalen + 8) {
+				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
+				if (ret < 0) {
+					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
+					if (errno == EPIPE) {
+						_E("uid:%d, fd:%d\n", uid, fd);
+					}
+					close(fd);
+					if (pkt) {
+						free(pkt);
+						pkt = NULL;
+					}
+					return -ECOMM;
+				}
+				len += ret;
+				_D("sendto() len - %d %d", len, datalen + 8);
+			}
+		} else {
+			if (errno == EPIPE) {
+				_E("uid:%d, fd:%d\n", uid, fd);
+			}
+			close(fd);
+			if (pkt) {
+				free(pkt);
+				pkt = NULL;
+			}
+			return -ECOMM;
+		}
+	}
+	if (pkt) {
+		free(pkt);
+		pkt = NULL;
+	}
+
+	close(fd);
+
+	return res;
+}
+
+
+
+
+
+
 int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
@@ -403,6 +665,11 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 
 	return res;
 }
+
+
+
+
+
 
 int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen)
 {

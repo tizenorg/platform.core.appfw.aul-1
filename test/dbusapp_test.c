@@ -40,7 +40,7 @@ gboolean result_func(gpointer data)
 
 	dbus_error_init(&error);
 
-	bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
+	bus = dbus_bus_get(DBUS_BUS_SESSION, &error);
 
 	reply = dbus_message_new_method_return(msg);
 	dbus_message_unref(msg);
@@ -101,7 +101,7 @@ static int init_dbus()
 
 	dbus_error_init(&error);
 
-	bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
+	bus = dbus_bus_get(DBUS_BUS_SESSION, &error);
 	if (!bus)
 		_E("couldn't access session bus");
 

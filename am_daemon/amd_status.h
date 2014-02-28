@@ -19,16 +19,18 @@
  *
  */
 
+#include <unistd.h>
+#include <sys/types.h>
 
 
-int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid);
-int _status_update_app_info_list(int pid, int status);
-int _status_remove_app_info_list(int pid);
+
+int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid, uid_t uid);
+int _status_update_app_info_list(int pid, int status,  uid_t uid);
+int _status_remove_app_info_list(int pid, uid_t uid);
 int _status_get_app_info_status(int pid);
-int _status_app_is_running(char *appid);
 int _status_send_running_appinfo(int fd);
-int _status_app_is_running_v2(char *appid);
-int _status_send_running_appinfo_v2(int fd);
+int _status_app_is_running(char *appid,  uid_t uid);
+int _status_send_running_appinfo_v2(int fd); //depcrecated
 int _status_get_appid_bypid(int fd, int pid);
 
 
@@ -38,6 +40,7 @@ int _status_get_appid_bypid(int fd, int pid);
 
 typedef struct _item_pkt_t {
 	int pid;
+	uid_t uid;
 	char appid[512];
 } item_pkt_t;
 

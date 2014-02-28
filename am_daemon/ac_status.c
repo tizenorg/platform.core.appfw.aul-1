@@ -27,7 +27,7 @@
 
 GSList *app_status_info_list = NULL;
 
-int _add_app_status_info_list(char *appid, int pid)
+int _add_app_status_info_list(char *appid, int pid, uid_t uid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
@@ -44,6 +44,7 @@ int _add_app_status_info_list(char *appid, int pid)
 	strncpy(info_t->appid, appid, MAX_PACKAGE_STR_SIZE-1);
 	info_t->status = STATUS_LAUNCHING;
 	info_t->pid = pid;
+	info_t->user = uid;
 	app_status_info_list = g_slist_append(app_status_info_list, info_t);
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
@@ -56,7 +57,7 @@ int _add_app_status_info_list(char *appid, int pid)
 	return 0;
 }
 
-int _update_app_status_info_list(int pid, int status)
+int _update_app_status_info_list(int pid, int status, uid_t uid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
@@ -64,7 +65,7 @@ int _update_app_status_info_list(int pid, int status)
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
-		if(pid == info_t->pid) {
+		if((pid == info_t->pid) && ((info_t->user == uid) || (info_t->user == 0))) {
 			info_t->status = status;
 			break;
 		}
@@ -80,7 +81,7 @@ int _update_app_status_info_list(int pid, int status)
 	return 0;
 }
 
-int _remove_app_status_info_list(int pid)
+int _remove_app_status_info_list(int pid, uid_t uid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
@@ -88,7 +89,7 @@ int _remove_app_status_info_list(int pid)
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
-		if(pid == info_t->pid) {
+		if((pid == info_t->pid) && ((info_t->user == uid) || (info_t->user == 0))) {
 			app_status_info_list = g_slist_remove(app_status_info_list, info_t);
 			free(info_t);
 			break;

@@ -21,15 +21,12 @@
 
 
 /*
- * simple AUL daemon - launchpad 
+ * AMD user session agent
  */
 
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
-#ifdef X11
-#include <X11/Xlib.h>
-#endif
 #include <sys/types.h>
 #include <signal.h>
 #include <dirent.h>
@@ -40,10 +37,10 @@
 #include <sys/prctl.h>
 #include <malloc.h>
 
+#include "agent_config.h"
+
 #include "app_sock.h"
 #include "aul.h"
-
-#include "config.h"
 
 #include "menu_db_util.h"
 #include "simple_util.h"
@@ -51,26 +48,20 @@
 #include "preload.h"
 #include "preexec.h"
 #include "perf.h"
-#include "sigchild.h"
 #include "aul_util.h"
-
-#include "heap_dbg.h"
-
-#include "util_x.h"
-
-#include "gl.h"
+#include "sigchild.h"
 
 #include <app-checker.h>
 #include <sqlite3.h>
 
 #define _static_ static inline
 #define POLLFD_MAX 1
-#define SQLITE_FLUSH_MAX	(1048576)	/* (1024*1024) */
+#define SQLITE_FLUSH_MAX       (1048576)       /* (1024*1024) */
 #define AUL_POLL_CNT		15
 #define AUL_PR_NAME			16
 
 
-static char *launchpad_cmdline;
+static char *agent_cmdline;
 static int initialized = 0;
 
 
@@ -83,7 +74,7 @@ _static_ int __fake_launch_app(int cmd, int pid, bundle * kb);
 _static_ char **__create_argc_argv(bundle * kb, int *margc);
 _static_ int __normal_fork_exec(int argc, char **argv);
 _static_ void __real_launch(const char *app_path, bundle * kb);
-static inline int __parser(const char *arg, char *out, int out_size);
+_static_ int __parser(const char *arg, char *out, int out_size);
 _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			    app_info_from_db * menu_info, int cmd);
 _static_ int __child_raise_win_by_x(int pid, void *priv);
@@ -93,11 +84,9 @@ _static_ int __term_app(int pid);
 _static_ int __resume_app(int pid);
 _static_ int __real_send(int clifd, int ret);
 _static_ void __send_result_to_caller(int clifd, int ret);
-_static_ void __launchpad_main_loop(int main_fd);
-_static_ int __launchpad_pre_init(int argc, char **argv);
-_static_ int __launchpad_post_init();
-
-extern ail_error_e ail_db_close(void);
+_static_ void __agent_main_loop(int main_fd);
+_static_ int __agent_pre_init(int argc, char **argv);
+_static_ int __agent_post_init();
 
 
 
@@ -106,7 +95,7 @@ _static_ void __set_oom()
 	char buf[MAX_LOCAL_BUFSZ];
 	FILE *fp;
 
-	/* we should reset oomadj value as default because child 
+	/* we should reset oomadj value as default because child
 	inherits from parent oom_adj*/
 	snprintf(buf, MAX_LOCAL_BUFSZ, "/proc/%d/oom_adj", getpid());
 	fp = fopen(buf, "w");
@@ -120,8 +109,6 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 {
 	const char *str;
 	const char **str_array;
-	int len;
-	int i;
 
 	setenv("PKG_NAME", _get_pkgname(menu_info), 1);
 
@@ -158,7 +145,7 @@ _static_ int __prepare_exec(const char *pkg_name,
 		 _D("pkg_name : %s / pkg_type : %s / app_path : %s ", pkg_name, menu_info->pkg_type, app_path);
 		if ((ret = __set_access(pkg_name, menu_info->pkg_type, app_path)) < 0) {
 			 _D("fail to set privileges - check your package's credential : %d\n", ret);
-			return -1;
+             return -1;
 		}
 	}
 	/* SET DUMPABLE - for coredump*/
@@ -241,10 +228,10 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	PERF("setup argument done");
 
 	/* Temporary log: launch time checking */
-	LOG(LOG_DEBUG, "LAUNCH", "[%s:Platform:launchpad:done]", app_path);
-
+	LOG(LOG_DEBUG, "LAUNCH", "[%s:Platform:agent:done]", app_path);
+#ifdef PRELOAD_ACTIVATE
 	__preload_exec(app_argc, app_argv);
-
+#endif
 	__normal_fork_exec(app_argc, app_argv);
 }
 
@@ -392,7 +379,11 @@ _static_ void __modify_bundle(bundle * kb, int caller_pid,
 
 _static_ int __child_raise_win_by_x(int pid, void *priv)
 {
+#ifdef X11
 	return x_util_raise_win(pid);
+#else
+	return 0;
+#endif
 }
 
 _static_ int __raise_win_by_x(int pid)
@@ -488,6 +479,23 @@ end:
 	return pid;
 }
 
+static int __get_caller_uid(bundle *kb)
+{
+	const char *uid_str;
+	int uid;
+
+	uid_str = bundle_get_val(kb, AUL_K_CALLER_UID);
+	if (uid_str == NULL)
+		return -1;
+
+end:
+	uid = atoi(uid_str);
+	if (uid <0)
+		return -1;
+
+	return uid;
+}
+
 _static_ int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 {
 	int pid;
@@ -549,7 +557,7 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 		if (cmdline == NULL) {
 			_E("error founded when being launched with %d", ret);
 
-		} else if (strcmp(cmdline, launchpad_cmdline)) {
+		} else if (strcmp(cmdline, agent_cmdline)) {
 			free(cmdline);
 			cmdline_changed = 1;
 			break;
@@ -571,12 +579,14 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 	if (!cmdline_changed)
 		_E("process launched, but cmdline not changed");
 
+	_D("send_result_to_caller: %d",ret);
+
 	if(__real_send(clifd, ret) < 0) {
 		r = kill(ret, SIGKILL);
 		if (r == -1)
 			_E("send SIGKILL: %s", strerror(errno));
 	}
-	
+
 	return;
 }
 
@@ -605,7 +615,7 @@ static app_info_from_db *_get_app_info_from_bundle_by_pkgname(
 	return menu_info;
 }
 
-_static_ void __launchpad_main_loop(int main_fd)
+_static_ void __agent_main_loop(int main_fd)
 {
 	bundle *kb = NULL;
 	app_pkt_t *pkt = NULL;
@@ -614,11 +624,14 @@ _static_ void __launchpad_main_loop(int main_fd)
 	const char *pkg_name = NULL;
 	const char *app_path = NULL;
 	int pid = -1;
+	int uid = -1;
 	int clifd = -1;
 	struct ucred cr;
 	int is_real_launch = 0;
 
 	char sock_path[UNIX_PATH_MAX] = {0,};
+
+	_D("received request");
 
 	pkt = __app_recv_raw(main_fd, &clifd, &cr);
 	if (!pkt) {
@@ -638,9 +651,21 @@ _static_ void __launchpad_main_loop(int main_fd)
 	pkg_name = bundle_get_val(kb, AUL_K_PKG_NAME);
 	SECURE_LOGD("pkg name : %s\n", pkg_name);
 
+	/* get caller uid and check if not coming from someone else than AMD */
+	uid = __get_caller_uid(kb);
+	_D("caller uid: %d",uid);
+	if (uid<0) {
+		_E("Invalid caller uid");
+		goto end;
+	}
+	if ((uid != 0) && (uid != getuid())) {
+		_E("Invalid request coming from another user");
+		goto end;
+	}
+
 	menu_info = _get_app_info_from_bundle_by_pkgname(pkg_name, kb);
 	if (menu_info == NULL) {
-		_D("such pkg no found");
+		_D("package not found");
 		goto end;
 	}
 
@@ -657,8 +682,10 @@ _static_ void __launchpad_main_loop(int main_fd)
 	__modify_bundle(kb, cr.pid, menu_info, pkt->cmd);
 	pkg_name = _get_pkgname(menu_info);
 
-	PERF("get package information & modify bundle done");
+	_D("start %s: type=%s caller_uid=%d path=%s",pkg_name,menu_info->pkg_type,uid,app_path);
 
+	PERF("get package information & modify bundle done");
+	if( !strcmp(menu_info->pkg_type, "wgt") || !strcmp(menu_info->pkg_type, "rpm") || !strcmp(menu_info->pkg_type, "tpk"))
 	{
 		pid = fork();
 		if (pid == 0) {
@@ -693,7 +720,6 @@ _static_ void __launchpad_main_loop(int main_fd)
 		SECURE_LOGD("==> real launch pid : %d %s\n", pid, app_path);
 		is_real_launch = 1;
 	}
-
  end:
 	__send_result_to_caller(clifd, pid);
 
@@ -701,7 +727,7 @@ _static_ void __launchpad_main_loop(int main_fd)
 		if (is_real_launch) {
 			/*TODO: retry*/
 			__signal_block_sigchld();
-			__send_app_launch_signal(pid);
+			__send_app_launch_signal_dbus(pid);
 			__signal_unblock_sigchld();
 		}
 	}
@@ -714,7 +740,6 @@ _static_ void __launchpad_main_loop(int main_fd)
 	if (pkt != NULL)
 		free(pkt);
 
-	/* Active Flusing for Daemon */
 	if (initialized > AUL_POLL_CNT) {
 		sqlite3_release_memory(SQLITE_FLUSH_MAX);
 		malloc_trim(0);
@@ -723,39 +748,40 @@ _static_ void __launchpad_main_loop(int main_fd)
 
 }
 
-_static_ int __launchpad_pre_init(int argc, char **argv)
+_static_ int __agent_pre_init(int argc, char **argv)
 {
 	int fd;
-
+	char *socket_path = NULL;
 	/* signal init*/
 	__signal_init();
 
-	/* get my(launchpad) command line*/
-	launchpad_cmdline = __proc_get_cmdline_bypid(getpid());
-	if (launchpad_cmdline == NULL) {
-		_E("launchpad cmdline fail to get");
-		return -1;
-	}
-	_D("launchpad cmdline = %s", launchpad_cmdline);
+    /* get my(agent) command line*/
+    agent_cmdline = __proc_get_cmdline_bypid(getpid());
+    if (agent_cmdline == NULL) {
+        _E("agent cmdline fail to get");
+        return -1;
+    }
+    _D("agent cmdline = %s", agent_cmdline);
 
-	/* create launchpad sock        */
-	fd = __create_server_sock(LAUNCHPAD_PID);
+	/* create agent socket */
+    asprintf(&socket_path,"/run/user/%d/amd_agent",getuid());
+	if(socket_path)
+		fd = __create_server_sock_by_path(socket_path);
+	else
+		return -1;
+	free(socket_path);
 	if (fd < 0) {
 		_E("server sock error");
 		return -1;
 	}
 
-	__preload_init(argc, argv);
-
-	__preexec_init(argc, argv);
-
 	return fd;
 }
 
-_static_ int __launchpad_post_init()
+_static_ int __agent_post_init()
 {
-	/* Setting this as a global variable to keep track 
-	of launchpad poll cnt */
+	/* Setting this as a global variable to keep track
+	of agent poll cnt */
 	/* static int initialized = 0;*/
 
 	if (initialized) {
@@ -777,10 +803,12 @@ int main(int argc, char **argv)
 	struct pollfd pfds[POLLFD_MAX];
 	int i;
 
+	_D("amd_session_agent starting");
+
 	/* init without concerning X & EFL*/
-	main_fd = __launchpad_pre_init(argc, argv);
+	main_fd = __agent_pre_init(argc, argv);
 	if (main_fd < 0) {
-		_E("launchpad pre init failed");
+		_E("agent pre init failed");
 		exit(-1);
 	}
 
@@ -792,16 +820,16 @@ int main(int argc, char **argv)
 		if (poll(pfds, POLLFD_MAX, -1) < 0)
 			continue;
 
-		/* init with concerning X & EFL (because of booting 
+		/* init with concerning X & EFL (because of booting
 		sequence problem)*/
-		if (__launchpad_post_init() < 0) {
-			_E("launcpad post init failed");
+		if (__agent_post_init() < 0) {
+			_E("agent post init failed");
 			exit(-1);
 		}
 
 		for (i = 0; i < POLLFD_MAX; i++) {
 			if ((pfds[i].revents & POLLIN) != 0) {
-				__launchpad_main_loop(pfds[i].fd);
+				__agent_main_loop(pfds[i].fd);
 			}
 		}
 	}

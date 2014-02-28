@@ -70,8 +70,6 @@ static bundle *create_internal_bundle(int start)
 
 int launch()
 {
-	FILE *fp;
-	int ret = -1;
 	int pid = -1;
 
 	kb = create_internal_bundle(2);
@@ -81,16 +79,6 @@ int launch()
 	}
 
 	pid = aul_open_app(gargv[1]);
-
-	/* Write the package name to TMP_FILE*/
-	fp = fopen(TMP_FILE, "w");
-	if (fp == NULL)
-		return -1;
-	ret = fprintf(fp, "%d", pid);
-	fclose(fp);
-	if (ret < 0)
-		return -1;
-
 	return pid;
 }
 

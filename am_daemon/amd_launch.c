@@ -51,6 +51,8 @@
 #define INIT_PID 1
 
 #define AUL_PR_NAME			16
+
+// SDK related defines
 #define PATH_APP_ROOT tzplatform_getenv(TZ_USER_APP)
 #define PATH_DATA "/data"
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
@@ -100,7 +102,6 @@ static void _set_sdk_env(const char* appid, char* str) {
 	}
 }
 
-#define USE_ENGINE(engine) setenv("ELM_ENGINE", engine, 1);
 
 static void _set_env(const char *appid, bundle * kb, const char *hwacc)
 {
@@ -151,7 +152,7 @@ static void _prepare_exec(const char *appid, bundle *kb)
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGCHLD, SIG_DFL);
 
-	ai = appinfo_find(_laf, appid);
+	ai = appinfo_find(getuid(), appid);
 
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
@@ -682,7 +683,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	const char *app_path = NULL;
 	const char *pkg_type = NULL;
 	int pid = -1;
-	char tmp_pid[MAX_PID_STR_BUFSZ];
+	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
 	const char *permission;
 	const char *pkgid;
@@ -693,8 +694,13 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	int pad_pid = LAUNCHPAD_PID;
 	bool consented = true;
 
-	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", caller_pid);
-	bundle_add(kb, AUL_K_CALLER_PID, tmp_pid);
+	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
+	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
+
+	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_uid);
+	bundle_add(kb, AUL_K_CALLER_UID, tmpbuf);
+
+	_D("_start_app: caller pid=%d uid=%d",caller_pid,caller_uid);
 
 	if (cmd == APP_START_RES)
 		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
@@ -704,7 +710,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
 	}
 
-	ai = appinfo_find(_laf, appid);
+	ai = appinfo_find(caller_uid, appid);
 
 	if(ai == NULL) {
 		__real_send(fd, -1);
@@ -726,7 +732,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			appid = PRIVACY_POPUP;
 			bundle_del(kb, AUL_K_PKG_NAME);
 			bundle_add(kb, AUL_K_PKG_NAME, appid);
-			ai = appinfo_find(_laf, appid);
+			ai = appinfo_find(caller_uid, appid);
 		}
 	}
 
@@ -739,7 +745,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
 			const struct appinfo *caller_ai;
-			caller_ai = appinfo_find(_laf, caller_appid);
+			caller_ai = appinfo_find(caller_uid, caller_appid);
 			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
 			if( preload && strncmp(preload, "true", 4) != 0 ) {
 				pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
@@ -757,7 +763,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	if (componet && strncmp(componet, "ui", 2) == 0) {
 		multiple = appinfo_get_value(ai, AIT_MULTI);
 		if (!multiple || strncmp(multiple, "false", 5) == 0) {
-			pid = _status_app_is_running_v2(appid);
+			pid = _status_app_is_running(appid, caller_uid);
 		}
 
 		if (pid > 0) {
@@ -778,19 +784,11 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			bundle_add(kb, AUL_K_HWACC, hwacc);
 			bundle_add(kb, AUL_K_EXEC, app_path);
 			bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
-			if(bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE) {
-				pad_pid = DEBUG_LAUNCHPAD_PID;		
-			} else if(strncmp(pkg_type, "wgt", 3) == 0) {
-				pad_pid = WEB_LAUNCHPAD_PID;
-			}
-			pid = app_send_cmd(pad_pid, cmd, kb);
-			if(pid == -3) {
-				pid = -ENOLAUNCHPAD;
-			}
-			//_add_cgroup(_lcg, appid, pid);
+			pid = app_agent_send_cmd(caller_uid, cmd, kb);
+
 		}
 	} else if (componet && strncmp(componet, "svc", 3) == 0) {
-		pid = _status_app_is_running_v2(appid);
+		pid = _status_app_is_running_v2(caller_uid,appid);
 		if (pid > 0) {
 			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
 				pid = ret;
@@ -806,7 +804,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		__real_send(fd, pid);
 
 	if(pid > 0) {
-		_status_add_app_info_list(appid, app_path, pid, pad_pid);
+		_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
 		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
 		return ret != AC_R_ERROR ? pid : -1;
 	}

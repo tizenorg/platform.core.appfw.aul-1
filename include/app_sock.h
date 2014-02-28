@@ -51,7 +51,10 @@ enum app_cmd {
 	APP_STATUS_UPDATE,
 	APP_RELEASED,
 	APP_RUNNING_LIST_UPDATE,
-	APP_TERM_REQ_BY_PID
+	APP_TERM_REQ_BY_PID,
+
+	/* reserved for AMD Agent */
+	APP_DEAD_SIGNAL
 };
 
 #define AUL_SOCK_PREFIX "/tmp/alaunch"
@@ -70,6 +73,11 @@ typedef struct _app_pkt_t {
 	unsigned char data[1];
 } app_pkt_t;
 
+typedef struct _pkt_t {
+	uid_t caller_uid;
+	app_pkt_t *pkt;
+} pkt_t;
+
 int __create_server_sock(int pid);
 int __create_client_sock(int pid);
 int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen);
@@ -77,6 +85,7 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen);
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr);
 app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, int datalen);
+int __create_agent_client_sock(int uid);
 
 
 #endif

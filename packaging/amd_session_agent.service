@@ -1,0 +1,12 @@
+#
+#  Systemd script to Launch AMD Session agent
+#
+
+[Unit]
+Description=Start the USER Access Control Agent
+
+[Service]
+ExecStart=/usr/bin/amd_session_agent
+
+[Install]
+WantedBy=default.target

@@ -1,15 +1,15 @@
 %bcond_with wayland
 %bcond_with x
-
 Name:       aul
 Summary:    App utility library
-Version:    0.0.286
+Version:    0.0.300
 Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 Source101:  launchpad-preload@.service
 Source102:  ac.service
+Source103:  amd_session_agent.service
 Source1001: %{name}.manifest
 
 Requires(post): /sbin/ldconfig
@@ -66,10 +66,11 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
+%cmake . \
 %if %{with wayland}
-%cmake . -DWITH_WAYLAND=On
+ -DWITH_WAYLAND=On \
 %else
-%cmake . -DWITH_WAYLAND=Off
+ -DWITH_WAYLAND=Off \
 %endif
 
 make %{?jobs:-j%jobs}
@@ -91,16 +92,14 @@ sqlite3 %{buildroot}%{TZ_SYS_DB}/.mida.db < %{buildroot}/usr/share/aul/mida_db.s
 rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 
 mkdir -p %{buildroot}/usr/lib/systemd/system/graphical.target.wants
+mkdir -p %{buildroot}/usr/lib/systemd/user/default.target.wants
 install -m 0644 %SOURCE101 %{buildroot}/usr/lib/systemd/system/launchpad-preload@.service
 install -m 0644 %SOURCE102 %{buildroot}/usr/lib/systemd/system/ac.service
 ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@5000.service
 ln -s ../ac.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/ac.service
 
-mkdir -p %{buildroot}%{TZ_SYS_SMACK}/accesses.d
-
-mkdir -p %{buildroot}/usr/share/license
-cp LICENSE %{buildroot}/usr/share/license/%{name}
-
+install -m 0644 %SOURCE103 %{buildroot}/usr/lib/systemd/user/amd_session_agent.service
+ln -s ../amd_session_agent.service %{buildroot}/usr/lib/systemd/user/default.target.wants/amd_session_agent.service
 
 %preun
 if [ $1 == 0 ]; then
@@ -121,6 +120,7 @@ fi
 systemctl daemon-reload
 
 %files
+%license LICENSE
 %manifest %{name}.manifest
 %attr(0644,root,root) %{_libdir}/libaul.so.0
 %attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
@@ -135,19 +135,20 @@ systemctl daemon-reload
 %{_bindir}/aul_test
 %{_bindir}/launch_app
 %{_bindir}/open_app
+%{_bindir}/amd_session_agent
 /usr/share/aul/miregex/*
 /usr/share/aul/service/*
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
-%{_bindir}/launchpad_preloading_preinitializing_daemon
 /usr/lib/systemd/system/graphical.target.wants/launchpad-preload@5000.service
 /usr/lib/systemd/system/graphical.target.wants/ac.service
 /usr/lib/systemd/system/launchpad-preload@.service
 /usr/lib/systemd/system/ac.service
+/usr/lib/systemd/user/amd_session_agent.service
+/usr/lib/systemd/user/default.target.wants/amd_session_agent.service
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
 /usr/bin/daemon-manager-launch-agent
-/usr/share/license/%{name}
 
 %files devel
 /usr/include/aul/*.h

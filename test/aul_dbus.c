@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
 	dbus_error_init(&error);
 
-	bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
+	bus = dbus_bus_get(DBUS_BUS_SESSION, &error);
 	if (bus == NULL)
 		_E("Failed to open bus to bus")
 

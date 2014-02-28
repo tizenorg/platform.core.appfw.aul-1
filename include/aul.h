@@ -147,6 +147,11 @@ typedef enum _aul_type{
 /** AUL public key - To check callee's secuirty */
 #define AUL_K_CALLEE_PID	"__AUL_CALLEE_PID__"
 
+/** AUL public key - added for multiuser mode */
+#define AUL_K_CALLER_UID	"__AUL_CALLER_UID__"
+/** AUL public key - added for multiuser mode */
+#define AUL_K_CALLEE_UID	"__AUL_CALLEE_UID__"
+
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_APPID	"__AUL_CALLER_APPID__"
 /** AUL public key - To check caller's secuirty */
