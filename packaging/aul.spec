@@ -65,6 +65,9 @@ cp %{SOURCE1001} .
 %if 0%{?simulator}
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
+export CFLAGS="$CFLAGS -DTIZEN_ENGINEER_MODE"
+export CXXFLAGS="$CXXFLAGS -DTIZEN_ENGINEER_MODE"
+export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 
 %if %{with wayland}
 %cmake . -DWITH_WAYLAND=On
