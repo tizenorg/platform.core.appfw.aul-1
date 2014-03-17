@@ -31,6 +31,7 @@
 #include <pkgmgr-info.h>
 #include <poll.h>
 #include <privacy_manager_client.h>
+#include <tzplatform_config.h>
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -50,7 +51,7 @@
 #define INIT_PID 1
 
 #define AUL_PR_NAME			16
-#define PATH_APP_ROOT "/opt/usr/apps"
+#define PATH_APP_ROOT tzplatform_getenv(TZ_USER_APP)
 #define PATH_DATA "/data"
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
@@ -88,7 +89,7 @@ static void _set_sdk_env(const char* appid, char* str) {
 	/* GCOV_PREFIX_STRIP indicates the how many initial directory names */
 	/*		to stripoff the hardwired absolute paths. Default value is 0. */
 	if (strncmp(str, SDK_CODE_COVERAGE, strlen(str)) == 0) {
-		snprintf(buf, MAX_LOCAL_BUFSZ, PATH_APP_ROOT"/%s"PATH_DATA, appid);
+		snprintf(buf, MAX_LOCAL_BUFSZ, "%s/%s"PATH_DATA, PATH_APP_ROOT, appid);
 		ret = setenv("GCOV_PREFIX", buf, 1);
 		_D("GCOV_PREFIX : %d", ret);
 		ret = setenv("GCOV_PREFIX_STRIP", "4096", 1);

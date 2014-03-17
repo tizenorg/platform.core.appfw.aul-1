@@ -31,6 +31,7 @@
 #include <glib.h>
 #include <bundle.h>
 #include <rua.h>
+#include <tzplatform_config.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -44,7 +45,7 @@
 #include "amd_status.h"
 
 
-#define INHOUSE_UID     5000
+#define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 
 struct appinfomgr *_raf;
 struct cginfo *_rcg;

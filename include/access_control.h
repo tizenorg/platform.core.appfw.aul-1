@@ -23,8 +23,8 @@
 #ifdef DAC_ACTIVATE
 
 #include <privilege-control.h>
-
-#define INHOUSE_UID     5000
+#include <tzplatform_config.h>
+#define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME);
 static inline int __set_access(const char* pkg_name, const char* pkg_type, const char* app_path)
 {
 	return set_app_privilege(pkg_name, pkg_type, app_path);

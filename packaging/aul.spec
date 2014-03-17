@@ -43,7 +43,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(privacy-manager-client)
-
+BuildRequires:  pkgconfig(libtzplatform-config)
 
 %description
 Application utility library
@@ -86,8 +86,8 @@ mkdir -p %{buildroot}/etc/rc.d/rc4.d
 ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
 ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 
-mkdir -p %{buildroot}/opt/dbspace
-sqlite3 %{buildroot}/opt/dbspace/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
+mkdir -p %{buildroot}%{TZ_SYS_DB}
+sqlite3 %{buildroot}%{TZ_SYS_DB}/.mida.db < %{buildroot}/usr/share/aul/mida_db.sql
 rm -rf %{buildroot}/usr/share/aul/mida_db.sql
 
 mkdir -p %{buildroot}/usr/lib/systemd/system/graphical.target.wants
@@ -130,8 +130,8 @@ systemctl daemon-reload
 %attr(0755,root,root) %{_bindir}/aul_service_test.sh
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
-%config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db
-%config(noreplace) %attr(0644,root,app) /opt/dbspace/.mida.db-journal
+%config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db
+%config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db-journal
 %attr(0755,root,root) %{_bindir}/aul_mime.sh
 %{_bindir}/aul_test
 %{_bindir}/launch_app
