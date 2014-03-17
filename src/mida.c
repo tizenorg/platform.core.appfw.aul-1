@@ -23,11 +23,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <tzplatform_config.h>
 #include "mida.h"
 #include "menu_db_util.h"
 #include "simple_util.h"
 
-#define MIDA_DB_PATH	"/opt/dbspace/.mida.db"
+#define MIDA_DB_PATH	tzplatform_mkpath(TZ_SYS_DB,".mida.db")
 #define QUERY_MAXLEN	4096
 #define BUF_MAX_LEN		1024
 

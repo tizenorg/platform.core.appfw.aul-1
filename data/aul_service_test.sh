@@ -1,3 +1,4 @@
+source /etc/tizen-platform.conf
 usage()
 {
 	echo "---------------------------------"
@@ -12,4 +13,4 @@ then
 	exit
 fi
 
-sqlite3 /opt/dbspace/.mida.db "insert into system_svc(svc_name) values ('$1')"
+sqlite3 $TZ_SYS_DB/.mida.db "insert into system_svc(svc_name) values ('$1')"

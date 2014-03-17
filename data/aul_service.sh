@@ -1,3 +1,4 @@
+source /etc/tizen-platform.conf
 usage()
 {
 	echo "--------------------------------------------------------------------------"
@@ -23,6 +24,6 @@ pkg=$1
 shift
 while [ "$*" != "" ]
 do
-	sqlite3 /opt/dbspace/.mida.db "insert into svc(pkg_name,svc_name) values ('$pkg','$1')"
+	sqlite3 $TZ_SYS_DB/.mida.db "insert into svc(pkg_name,svc_name) values ('$pkg','$1')"
 	shift
 done
