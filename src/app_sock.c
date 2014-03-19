@@ -82,7 +82,7 @@ int __create_server_sock(int pid)
 
 	/* labeling to socket for SMACK */
 	if(getuid() == 0) {	// this is meaningful iff current user is ROOT
-		if(smack_fsetlabel(fd, "@", SMACK_LABEL_IPOUT) != 0) {
+		if(fsetxattr(fd, "security.SMACK64IPOUT", "@", 1) < 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
@@ -91,7 +91,7 @@ int __create_server_sock(int pid)
 				return -1;
 			}
 		}
-		if(smack_fsetlabel(fd, "*", SMACK_LABEL_IPIN) != 0) {
+		if(fsetxattr(fd, "security.SMACK64IPIN", "*", 1) < 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
