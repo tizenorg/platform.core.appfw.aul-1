@@ -29,7 +29,7 @@ ELSE(WITH_WAYLAND)
     pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} x11 ecore-x)
 ENDIF(WITH_WAYLAND)
 
-pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libsmack libtzplatform-config)
+pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config)
 PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle)
 
 FIND_LIBRARY(LIB_DL dl)

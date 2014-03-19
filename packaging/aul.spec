@@ -41,7 +41,7 @@ BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(ecore-input)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
-BuildRequires:  pkgconfig(libsmack)
+BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(privacy-manager-client)
 BuildRequires:  pkgconfig(libtzplatform-config)
 

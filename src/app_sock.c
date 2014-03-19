@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/smack.h>
+#include <sys/xattr.h>
 #include <errno.h>
 #include <fcntl.h>
 
@@ -82,7 +82,7 @@ int __create_server_sock(int pid)
 
 	/* labeling to socket for SMACK */
 	if(getuid() == 0) {	// this is meaningful iff current user is ROOT
-		if(smack_fsetlabel(fd, "@", SMACK_LABEL_IPOUT) != 0) {
+		if(fsetxattr(fd, "security.SMACK64IPOUT", "@", 1, 0) < 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
@@ -91,7 +91,7 @@ int __create_server_sock(int pid)
 				return -1;
 			}
 		}
-		if(smack_fsetlabel(fd, "*", SMACK_LABEL_IPIN) != 0) {
+		if(fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0) < 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
 			if((errno != EOPNOTSUPP) && (errno != EPERM)) {
@@ -219,7 +219,7 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
 	timeout.tv_sec = 0;
 	timeout.tv_usec = nsec;
 
-	if ((ret = select(fd + 1, &readfds, &writefds, NULL, 
+	if ((ret = select(fd + 1, &readfds, &writefds, NULL,
 			nsec ? &timeout : NULL)) == 0) {
 		close(fd);	/* timeout */
 		errno = ETIMEDOUT;
