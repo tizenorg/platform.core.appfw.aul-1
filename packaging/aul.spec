@@ -96,8 +96,8 @@ install -m 0644 %SOURCE102 %{buildroot}/usr/lib/systemd/system/ac.service
 ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/launchpad-preload@5000.service
 ln -s ../ac.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/ac.service
 
-mkdir -p %{buildroot}/opt/etc/smack/accesses.d
-install -m 644 aul.rule %{buildroot}/opt/etc/smack/accesses.d
+mkdir -p %{buildroot}%{TZ_SYS_SMACK}/accesses.d
+install -m 644 aul.rule %{buildroot}%{TZ_SYS_SMACK}/accesses.d
 
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
@@ -148,7 +148,7 @@ systemctl daemon-reload
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
 /usr/bin/daemon-manager-launch-agent
-/opt/etc/smack/accesses.d/aul.rule
+%{TZ_SYS_SMACK}/accesses.d/aul.rule
 /usr/share/license/%{name}
 
 %files devel
