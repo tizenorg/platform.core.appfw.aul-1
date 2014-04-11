@@ -1,3 +1,0 @@
-aul system::homedir arwxt
-aul device::sys_logging w
-aul device::app_logging w
