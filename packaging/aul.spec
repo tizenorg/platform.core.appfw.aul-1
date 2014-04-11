@@ -97,7 +97,6 @@ ln -s ../launchpad-preload@.service %{buildroot}/usr/lib/systemd/system/graphica
 ln -s ../ac.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/ac.service
 
 mkdir -p %{buildroot}%{TZ_SYS_SMACK}/accesses.d
-install -m 644 aul.rule %{buildroot}%{TZ_SYS_SMACK}/accesses.d
 
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
@@ -148,7 +147,6 @@ systemctl daemon-reload
 /usr/bin/amd
 /usr/bin/daemon-manager-release-agent
 /usr/bin/daemon-manager-launch-agent
-%{TZ_SYS_SMACK}/accesses.d/aul.rule
 /usr/share/license/%{name}
 
 %files devel
