@@ -139,6 +139,7 @@ systemctl daemon-reload
 /usr/share/aul/service/*
 /usr/share/aul/preload_list.txt
 /usr/share/aul/preexec_list.txt
+/usr/share/aul/amd_ready_noti_file
 %{_bindir}/launchpad_preloading_preinitializing_daemon
 /usr/lib/systemd/system/graphical.target.wants/launchpad-preload@5000.service
 /usr/lib/systemd/system/graphical.target.wants/ac.service

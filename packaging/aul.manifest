@@ -4,5 +4,6 @@
  </request>
  <assign>
     <filesystem path="/usr/bin/launchpad_preloading_preinitializing_daemon" exec_label="User" />
+    <filesystem path="/usr/share/aul/amd_ready_nofi_file" label="System::Shared" />
  </assign>
 </manifest>
