@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 #include <Ecore.h>
 #include <Ecore_Input.h>
 #include <Evas.h>
@@ -290,12 +291,34 @@ static int __init()
 
 gboolean  __amd_ready(gpointer user_data)
 {
-	int handle;
+	int fd;
+	int ret;
 
-	handle = creat("/tmp/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	if (handle != -1)
-		close(handle);
+	fd = creat("/run/amd_ready_tmp", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
+	if (fd == -1) {
+		_E("failed to create /run/amd_ready_tmp: %s\n",
+			strerror(errno));
+		return FALSE;
+	}
+
+	/* /run/amd_ready file is for notifying that the amd is ready,
+	   So, it is labeld to '_' intentionally. */
+	ret = fsetxattr(fd, "security.SMACK64", "_", 1, 0);
+	if (ret == -1) {
+		_E("failed to set _ label to /run/amd_ready_tmp: %s\n",
+			strerror(errno));
+		close(fd);
+		return FALSE;
+	}
+
+	/* rename after setxattr to make the creation of /run/amd_ready with
+	   label '_' to be atomic */
+	ret = rename("/run/amd_ready_tmp", "/run/amd_ready");
+	if (ret == -1)
+		_E("failed to create /run/amd_ready: %s\n", strerror(errno));
+
+	close(fd);
 	return FALSE;
 }
 
