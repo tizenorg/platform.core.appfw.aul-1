@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 #include <Ecore.h>
 #include <Ecore_Input.h>
 #include <Evas.h>
@@ -290,12 +291,18 @@ static int __init()
 
 gboolean  __amd_ready(gpointer user_data)
 {
-	int handle;
+	int fd;
+	int ret;
 
-	handle = creat("/tmp/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	if (handle != -1)
-		close(handle);
+	fd = creat("/run/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
+	if (fd == -1) {
+		_E("failed to create /run/amd_ready: %s\n",
+			strerror(errno));
+		return FALSE;
+	}
+
+	close(fd);
 	return FALSE;
 }
 
