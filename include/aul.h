@@ -70,6 +70,7 @@ extern "C" {
  * @brief Return values in AUL.
  */
 typedef enum _aul_return_val {
+	AUL_R_ENOAPP = -11,		/**< Failed to find app ID or pkg ID */
 	AUL_R_ENOLAUNCHPAD = -10,	/**< no launchpad */
 	AUL_R_ETERMINATING = -9,	/**< application terminating */
 	AUL_R_EILLACC = -8,		/**< Illegal Access */
@@ -1607,6 +1608,29 @@ int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
  *
  */
 int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
+
+
+const char *aul_get_app_external_root_path(void);
+const char *aul_get_app_root_path(void);
+const char *aul_get_app_data_path(void);
+const char *aul_get_app_cache_path(void);
+const char *aul_get_app_resource_path(void);
+const char *aul_get_app_shared_data_path(void);
+const char *aul_get_app_shared_resource_path(void);
+const char *aul_get_app_shared_trusted_path(void);
+const char *aul_get_app_external_data_path(void);
+const char *aul_get_app_external_cache_path(void);
+const char *aul_get_app_external_shared_data_path(void);
+const char *aul_get_app_specific_path(void);
+const char *aul_get_app_external_specific_path(void);
+int aul_get_app_shared_data_path_by_appid(const char *app_id, char **path);
+int aul_get_app_shared_resource_path_by_appid(const char *app_id, char **path);
+int aul_get_app_shared_trusted_path_by_appid(const char *app_id, char **path);
+int aul_get_app_external_shared_data_path_by_appid(const char *app_id, char **path);
+int aul_get_app_usr_shared_data_path_by_appid(const char *app_id, char **path);
+int aul_get_app_usr_shared_resource_path_by_appid(const char *app_id, char **path);
+int aul_get_app_usr_shared_trusted_path_by_appid(const char *app_id, char **path);
+int aul_get_app_usr_external_shared_data_path_by_appid(const char *app_id, char **path);
 
 
 typedef int (*subapp_fn)(void *data);
