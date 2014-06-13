@@ -4,6 +4,6 @@
  </request>
  <assign>
     <filesystem path="/usr/bin/launchpad_preloading_preinitializing_daemon" exec_label="User" />
-    <filesystem path="/opt/dbspace/.mida.db*" label="User" />
+    <filesystem path="TZ_SYS_DB/.mida.db*" label="User" />
  </assign>
 </manifest>

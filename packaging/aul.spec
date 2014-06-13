@@ -59,6 +59,7 @@ Application utility library (devel)
 
 %prep
 %setup -q
+sed -i 's|TZ_SYS_DB|%{TZ_SYS_DB}|g' %{SOURCE1001}
 cp %{SOURCE1001} .
 
 %build
