@@ -6,7 +6,7 @@
 Description=Start the USER Access Control Agent
 
 [Service]
-ExecStart=/usr/bin/amd_session_agent
+ExecStart=/bin/sh -l -c "/usr/bin/amd_session_agent"
 
 [Install]
 WantedBy=default.target

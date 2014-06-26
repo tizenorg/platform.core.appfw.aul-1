@@ -112,8 +112,6 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 
 	setenv("PKG_NAME", _get_pkgname(menu_info), 1);
 
-	USE_ENGINE("gl")
-
 	str = bundle_get_val(kb, AUL_K_STARTTIME);
 	if (str != NULL)
 		setenv("APP_START_TIME", str, 1);
