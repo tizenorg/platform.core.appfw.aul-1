@@ -27,6 +27,9 @@
 #include <ctype.h>
 #include <dlog.h>
 
+#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
+
+
 #undef LOG_TAG
 #define LOG_TAG "AUL"
 

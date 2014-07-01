@@ -120,20 +120,30 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	if (menu_info == NULL) {
 		return NULL;
 	}
-
-	ret = ail_get_appinfo(pkgname, &handle);
+	//is_admin is global
+	if (getuid() != GLOBAL_USER)
+		ret = ail_get_usr_appinfo(pkgname, getuid(), &handle);
+	else
+		ret = ail_get_appinfo(pkgname, &handle);
+    
 	if (ret != AIL_ERROR_OK) {
 		_free_app_info_from_db(menu_info);
 		return NULL;
 	}
-
-	ret = ail_appinfo_get_str(handle, AIL_PROP_PACKAGE_STR, &str);
+//is admin is global
+	if (getuid() != GLOBAL_USER)
+		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_PACKAGE_STR, getuid(), &str);
+	else
+		ret = ail_appinfo_get_str(handle, AIL_PROP_PACKAGE_STR, &str);
 	if (str) {
 		menu_info->pkg_name = strdup(str);	
 		str = NULL;
 	}
-
-	ret = ail_appinfo_get_str(handle, AIL_PROP_EXEC_STR, &str);
+	//is_admin is global
+	if (getuid() != GLOBAL_USER)
+		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_EXEC_STR, getuid(), &str);
+	else
+		ret = ail_appinfo_get_str(handle, AIL_PROP_EXEC_STR, &str);
 	if (str) {
 		menu_info->app_path = strdup(str);
 		str = NULL;
@@ -141,8 +151,12 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 
 	if (menu_info->app_path != NULL)
 		menu_info->original_app_path = strdup(menu_info->app_path);
-
-	ret = ail_appinfo_get_str(handle, AIL_PROP_X_SLP_PACKAGETYPE_STR, &str);
+	//is_admin is gobal
+	if (getuid() != GLOBAL_USER)
+  	ret = ail_appinfo_get_usr_str(handle, AIL_PROP_X_SLP_PACKAGETYPE_STR, getuid(), &str);
+  else
+		ret = ail_appinfo_get_str(handle, AIL_PROP_X_SLP_PACKAGETYPE_STR, &str);
+	
 	if (str) {
 		menu_info->pkg_type = strdup(str);
 		str = NULL;
@@ -169,8 +183,11 @@ static inline ail_cb_ret_e __appinfo_func(const ail_appinfo_h appinfo, void *use
 
 	if (!menu_info)
 		return ret;
-
-	ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &package);
+	//is_admin is global
+	if (getuid() != GLOBAL_USER)
+		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, getuid(), &package);
+	else
+		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &package);
 	if (package) {
 		menu_info->pkg_name = strdup(package);
 		ret = AIL_CB_RET_CANCEL;
@@ -207,7 +224,10 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 		return NULL;
 	}
 
-	ret = ail_filter_count_appinfo(filter, &count);
+	if (getuid() != GLOBAL_USER)
+		ret = ail_filter_count_usr_appinfo(filter, &count, getuid());
+	else
+		ret = ail_filter_count_appinfo(filter, &count);
 	if (ret != AIL_ERROR_OK) {
 		ail_filter_destroy(filter);
 		_free_app_info_from_db(menu_info);
@@ -218,8 +238,11 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 		_free_app_info_from_db(menu_info);
 		return NULL;
 	}
-
-	ail_filter_list_appinfo_foreach(filter, __appinfo_func, (void *)menu_info);
+//is_admin is global
+	if (getuid() != GLOBAL_USER)
+    ail_filter_list_usr_appinfo_foreach(filter, __appinfo_func, (void *)menu_info, getuid());
+	else
+		ail_filter_list_appinfo_foreach(filter, __appinfo_func, (void *)menu_info);
 
 	ail_filter_destroy(filter);
 
