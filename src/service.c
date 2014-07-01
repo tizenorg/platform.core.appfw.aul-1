@@ -62,8 +62,11 @@ static ail_cb_ret_e __defapp_with_service_func(
 {
 	char **package = (char **)user_data;
 	char *str;
-
-	ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
+//isglobal is_admin
+	if(!getuid())
+		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
+	else
+		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, getuid(), &str);
 
 	_D("defapp from desktop = %s", str);
 
@@ -92,14 +95,23 @@ static int __get_defapp_from_desktop(const char *svcname, char *defapp, int len)
 		_E("ail_filter_add_str failed");
 		goto out;
 	}
-
-	ail_filter_count_appinfo(filter, &pkg_count);
-
-	
+	//if(__isadmin())
+	//{
+	if(!getuid())	
+		ail_filter_count_appinfo(filter, &pkg_count);
+//	}
+	else
+		ail_filter_count_usr_appinfo(filter, &pkg_count, getuid());
 	/* TODO: Prioritizing inhouse app depending on the UX policy */
 	if (pkg_count == 1) {
-		ail_filter_list_appinfo_foreach(filter, 
-			__defapp_with_service_func, (void *)&pkgname);
+		//is_admin is global
+		if(!getuid())
+			ail_filter_list_appinfo_foreach(filter,
+				__defapp_with_service_func, (void *)&pkgname);
+
+		else
+			ail_filter_list_usr_appinfo_foreach(filter,
+				__defapp_with_service_func, (void *)&pkgname, getuid());
 
 		if(pkgname) {
 			strncpy(defapp,pkgname,len);
@@ -172,7 +184,11 @@ SLPAPI int aul_open_service(const char *svcname, bundle *kb,
 		}
 		return ret;
 	} else {
-		ail_ret = ail_get_appinfo(defapp, &handle);
+		//is_admin is global
+		if(!getuid())
+			ail_ret = ail_get_appinfo(defapp, &handle);
+		else
+			ail_ret = ail_get_usr_appinfo(defapp, getuid(), &handle);
 
 		if (ail_ret == AIL_ERROR_OK) {
 			ail_destroy_appinfo(handle);

@@ -224,9 +224,11 @@ static ail_cb_ret_e __defapp_with_mime_func(
 {
 	char **package = (char **)user_data;
 	char *str;
-
-	ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
-
+//is_admin is_global
+	if(!getuid())
+		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
+	else
+		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, getuid(), &str);
 	_D("defapp from desktop = %s", str);
 
 	*package = strdup(str);
@@ -250,12 +252,20 @@ static int get_defapp_from_desktop(const char *mimetype, char *defapp, int len)
 		ret = -1;
 		goto out;
 	}
-	
-	ail_filter_count_appinfo(filter, &pkg_count);
+	//is_admin is global
+	if(getuid())
+		ail_filter_count_usr_appinfo(filter, &pkg_count, getuid());
+	else
+		ail_filter_count_appinfo(filter, &pkg_count);
 
 	if (pkg_count == 1) {
-		ail_filter_list_appinfo_foreach(filter, 
-			__defapp_with_mime_func, (void *)&tmp);
+		//is_admin is global
+		if(!getuid())
+			ail_filter_list_appinfo_foreach(filter,
+				__defapp_with_mime_func, (void *)&tmp);
+		else
+			ail_filter_list_usr_appinfo_foreach(filter,
+				__defapp_with_mime_func, (void *)&tmp, getuid());
 
 		if(tmp) {
 			strncpy(defapp,tmp,len);
@@ -361,7 +371,11 @@ static int __launch_with_defapp(const char *mime_type, const char *mime_content)
 		if (ret > 0)
 			ret = 0;
 	} else {
-		ail_ret = ail_get_appinfo(defapp, &handle);
+		//is_admin is global
+		if(!getuid())
+			ail_ret = ail_get_appinfo(defapp, &handle);
+		else
+			ail_ret = ail_get_usr_appinfo(defapp, getuid(), &handle);
 
 		if (ail_ret == AIL_ERROR_OK) {
 			ail_destroy_appinfo(handle);

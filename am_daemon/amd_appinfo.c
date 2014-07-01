@@ -14,6 +14,7 @@
 
 
 #define SERVICE_GROUP "Service"
+#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
 
 struct appinfomgr {
 	GHashTable *tbl; /* key is filename, value is struct appinfo */
@@ -105,7 +106,6 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 		_E("null app handle");
 		return -1;
 	}
-
 	ret = pkgmgrinfo_appinfo_get_appid(handle, &appid);
 	if (ret < 0) {
 		_E("fail to get appinfo");
@@ -217,12 +217,13 @@ static int __app_info_delete_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	return 0;
 }
 
-static int _read_pkg_info(struct appinfomgr *cf)
+static int _read_pkg_info(struct appinfomgr *cf, uid_t uid)
 {
 	int r;
-
-	r = pkgmgrinfo_appinfo_get_install_list(__app_info_insert_handler, cf);
-
+	if(uid != GLOBAL_USER)
+		r = pkgmgrinfo_appinfo_get_usr_install_list(__app_info_insert_handler, uid, cf);
+	else
+		r = pkgmgrinfo_appinfo_get_install_list(__app_info_insert_handler, cf);		
 	return r;
 }
 
@@ -269,7 +270,9 @@ static void __vconf_cb(keynode_t *key, void *data)
 	_D("appid: [%s]\n", appid);
 	_D("uid: %d\n", uid);
 	if ( strncmp(type_string, "create", 6) == 0) {
-		ret = pkgmgrinfo_appinfo_get_appinfo_user(appid, uid, &handle);
+		//is_admin
+		//ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);		
+		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &handle);
 		if(ret < 0) {
 			_E("pkgmgrinfo_appinfo_get_appinfo fail");
 		}
@@ -284,7 +287,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 	} else if (strncmp(type_string, "update", 6) == 0){
 		/*REMOVE EXISTING ENTRY & CREATE AGAIN*/
 		if (g_hash_table_remove(cf->tbl, appid)){
-			if (pkgmgrinfo_appinfo_get_appinfo_user(appid, uid, &handle) == PMINFO_R_OK){
+			if (pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &handle) == PMINFO_R_OK){
 				__app_info_insert_handler(handle, data);
 				pkgmgrinfo_appinfo_destroy_appinfo(handle);
 			}
@@ -368,7 +371,7 @@ int appinfo_init(struct appinfomgr **cf)
 	if (!_cf)
 		return -1;
 
-	r = _read_pkg_info(_cf);
+	r = _read_pkg_info(_cf, getuid());
 	if (r != PMINFO_R_OK) {
 		_fini(_cf);
 		return -1;
@@ -436,9 +439,9 @@ const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 	pkgmgrinfo_permission_type permission;
 	int ret;
 
-	ret = pkgmgrinfo_appinfo_get_appinfo( appid, &handle);
+	ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
 	if (ret != PMINFO_R_OK){
-		ret = pkgmgrinfo_appinfo_get_appinfo_user(appid , caller_uid , &handle);
+		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid , caller_uid , &handle);
 	}
 
 	res = calloc(1, sizeof(*res));

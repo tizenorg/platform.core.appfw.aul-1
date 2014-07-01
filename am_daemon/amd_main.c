@@ -156,8 +156,9 @@ gboolean __add_item_running_list(gpointer user_data)
 		if(limit>0) __kill_bg_apps(limit-1);
 		return false;
 	}
-
-	ail_ret = ail_package_get_appinfo(pkgname, &handle);
+	//is admin is global
+	ail_ret = ail_package_get_usr_appinfo(pkgname, user, &handle);
+	//ail_ret = ail_package_get_appinfo(pkgname, &handle);
 	if (ail_ret != AIL_ERROR_OK) {
 		_E("ail_get_appinfo with %s failed", pkgname);
 		return false;
