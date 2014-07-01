@@ -58,6 +58,7 @@
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
 #define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
+#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
 
 struct appinfomgr *_laf;
 struct cginfo *_lcg;
@@ -748,7 +749,11 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			caller_ai = appinfo_find(caller_uid, caller_appid);
 			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
 			if( preload && strncmp(preload, "true", 4) != 0 ) {
-				pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
+				//is admin is global
+				if(caller_uid != GLOBAL_USER)
+					pkgmgrinfo_pkginfo_compare_usr_app_cert_info(caller_appid, appid, caller_uid, &compare_result);
+				else
+					pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
 				if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
 					pid = -EILLEGALACCESS;
 					__real_send(fd, pid);
