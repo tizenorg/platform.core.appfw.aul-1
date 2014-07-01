@@ -118,7 +118,7 @@ static int __remove_item_running_list(int pid, uid_t user)
 	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (r_app_info_t *)iter->data;
-		if( (pid == info_t->pid) && (user == info_t->user || 0 == info_t->pid )) {
+		if( (pid == info_t->pid) && (user == info_t->user || 0 == info_t->user )) {
 			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
 			free(info_t);
 			break;
@@ -223,14 +223,14 @@ static void __vconf_cb(keynode_t *key, void *data)
 	}
 }
 
-int __app_dead_handler(int pid)
+int __app_dead_handler(int pid, uid_t user)
 {
 	// this function was called in single user mode as a callback to aul_listen_app_dead_signal
 	// but in multiuser mode, AMD daemon can't listen any more on DBUS system to catch those events
 	// AMD Agents must connect to AMD Daemon to signal a dead process
 	_unregister_key_event(pid);
-	__remove_item_running_list(pid, getuid());
-	_status_remove_app_info_list(pid, getuid());
+	__remove_item_running_list(pid, user);
+	_status_remove_app_info_list(pid, user);
 	return 0;
 }
 

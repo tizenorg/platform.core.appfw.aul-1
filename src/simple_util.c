@@ -197,7 +197,7 @@ char *__proc_get_exe_bypid(int pid)
 	len=readlink(buf,buf2,MAX_CMD_BUFSZ);
 	if (len<=0)
 		return NULL;
-
+	buf2[len] = 0;
 	return strdup(buf2);
 }
 

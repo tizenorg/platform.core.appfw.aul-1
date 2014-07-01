@@ -53,7 +53,7 @@ struct cginfo *_rcg;
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
 
-extern int __app_dead_handler(int pid);
+extern int __app_dead_handler(int pid, uid_t user);
 
 static int __send_result_to_client(int fd, int res)
 {
@@ -297,7 +297,7 @@ static int __handle_dead_signal(bundle* kb,int clifd, struct ucred * pcr) {
 	}
 
 	if (strcmp(caller,"/usr/bin/amd_session_agent")) {
-		_D("handle_dead_signal: caller is not amd session agent");
+		_D("handle_dead_signal: caller is not amd session agent, %d : '%s'", pcr->pid,caller);
 		free(caller);
 		return -1;
 	}
@@ -314,7 +314,7 @@ static int __handle_dead_signal(bundle* kb,int clifd, struct ucred * pcr) {
 
 	_D("APP_DEAD_SIGNAL : %d",pid);
 
-	ret=__app_dead_handler(pid);
+	ret=__app_dead_handler(pid,pcr->uid);
 
 	return ret;
 }
