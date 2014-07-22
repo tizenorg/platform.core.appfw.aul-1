@@ -1,5 +1,3 @@
-%bcond_with wayland
-%bcond_with x
 Name:       aul
 Summary:    App utility library
 Version:    0.0.300
@@ -21,7 +19,6 @@ Requires(preun): /usr/bin/systemctl
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(sqlite3)
-BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(ail)
@@ -30,15 +27,6 @@ BuildRequires:  pkgconfig(libprivilege-control)
 BuildRequires:  pkgconfig(app-checker)
 BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
-%if %{with wayland}
-BuildRequires:  pkgconfig(ecore-wayland)
-%endif
-%if %{with x}
-BuildRequires:  pkgconfig(ecore-x)
-BuildRequires:  pkgconfig(x11)
-BuildRequires:  pkgconfig(utilX)
-%endif
-BuildRequires:  pkgconfig(ecore-input)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  libattr-devel
@@ -67,12 +55,7 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
-%cmake . \
-%if %{with wayland}
- -DWITH_WAYLAND=On \
-%else
- -DWITH_WAYLAND=Off \
-%endif
+%cmake .
 
 make %{?jobs:-j%jobs}
 

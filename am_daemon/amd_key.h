@@ -22,7 +22,6 @@
 #ifndef __AUL_AMD_KEY_H_
 #define __AUL_AMD_KEY_H_
 
-int _key_init(void);
 int _register_key_event(int pid);
 int _unregister_key_event(int pid);
 
