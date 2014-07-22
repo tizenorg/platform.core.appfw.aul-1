@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <Ecore.h>
+#include <stdlib.h>
 
 #include "menu_db_util.h"
 #include "aul.h"
@@ -120,10 +120,6 @@ static void cb_func(bundle *kb, int is_cancel, void *data)
 		printf("==== %d : result packet ===\n", num);
 		bundle_iterate(kb, prt_recvd_bundle, NULL);
 	}
-
-	if ((strcmp(cmd, "launch_res") == 0)
-	    || (strcmp(cmd, "open_svc_res") == 0))
-		ecore_main_loop_quit();
 }
 
 int open_test()
@@ -175,14 +171,13 @@ static test_func_t scn_func[] = {
 	{"n", launch_test, "launch_test", ""}
 };
 
-static Eina_Bool run_all_test(void *data)
+int all_test()
 {
 	static int pos = 0;
 	int ret;
 
 	if (pos > sizeof(scn_func) / sizeof(test_func_t) - 1) {
 		printf("all internal test done\n");
-		ecore_main_loop_quit();
 		return 0;
 	}
 
@@ -199,12 +194,6 @@ static Eina_Bool run_all_test(void *data)
 	}
 	pos++;
 
-	return 1;
-}
-
-int all_test()
-{
-	ecore_timer_add(2, run_all_test, NULL);
 	return 0;
 }
 
@@ -387,10 +376,10 @@ static int set_pkg_func()
 
 	pkgname = gargv[2];
 	apppath = gargv[3];
-	
+
 	appname = strrchr(apppath,'/')+1;
 	snprintf(ai.app_icon_path, PATH_LEN, "aul_test_icon_path/%d",getpid());
-	snprintf(ai.desktop_path, PATH_LEN, 
+	snprintf(ai.desktop_path, PATH_LEN,
 		"aul_test_desktop_path/%d",getpid());
 
 	snprintf (query, sizeof(query), "insert into "TABLE_MENU"(\
@@ -570,7 +559,7 @@ static test_func_t test_func[] = {
 		"[usage] getallpkg all"},
 	{"getpkgpid", get_pkgpid_test, "aul_app_get_appid_bypid test",
 		"[usage] getpkgpid <pid>"},
-	
+
 	{"open_file", open_file_test, "aul_open_file test",
 		"[usage] open_file <filename>"},
 	{"open_content", open_content_test, "aul_open_content test",
@@ -602,7 +591,7 @@ static test_func_t test_func[] = {
 		"[usage] set_defapp_svc <svcname> <defapp to be set>"},
 	{"get_defapp_svc", get_defapp_svc_test, "aul_get_defapp_from_svc test"
 		"[usage] get_defapp_svc <svcname>"},
-	
+
 	{"getpkg", get_pkg_func, "get package",
 	      	"[usage] getpkg <pkgname>"},
 	{"update_list", update_running_list, "update running list",
@@ -661,28 +650,12 @@ void print_usage(char *progname)
 		"cmd is internal purpose\n");
 }
 
-static Eina_Bool run_func(void *data)
-{
-	callfunc(cmd);
-
-	if (strcmp(cmd, "launch_res") == 0 || strcmp(cmd, "all") == 0
-	    || strcmp(cmd, "dbuslaunch") == 0
-	    || strcmp(cmd, "open_svc_res") == 0)
-		return 0;
-	else
-		ecore_main_loop_quit();
-
-	return 0;
-}
-
 int main(int argc, char **argv)
 {
 	if (argc < 3) {
 		print_usage(argv[0]);
 		exit(0);
 	}
-
-	ecore_init();
 
 	cmd = argv[1];
 	gargc = argc;
@@ -694,9 +667,12 @@ int main(int argc, char **argv)
 	/*aul_listen_app_dead_signal(dead_tracker,NULL); */
 	/*aul_listen_app_dead_signal(NULL,NULL); */
 
-	ecore_idler_add(run_func, NULL);
+	callfunc(cmd);
 
-	ecore_main_loop_begin();
+	if (strcmp(cmd, "launch_res") == 0 || strcmp(cmd, "all") == 0
+	    || strcmp(cmd, "dbuslaunch") == 0
+	    || strcmp(cmd, "open_svc_res") == 0)
+		return 0;
 
 	return 0;
 }

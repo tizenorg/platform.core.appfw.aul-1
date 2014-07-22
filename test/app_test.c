@@ -22,11 +22,9 @@
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/time.h>
 #include "aul.h"
-
-/* ecore-glib integration */
-
-#include <Ecore.h>
 
 extern int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
 
@@ -42,24 +40,6 @@ void do_resume()
 	printf("=================================\n");
 	printf("resumed - %d\n", times++);
 	printf("=================================\n");
-}
-
-static Eina_Bool send_result(void *data)
-{
-	bundle *kb;
-	bundle *res_b;
-	kb = (bundle *) data;
-
-	aul_create_result_bundle(kb, &res_b);
-	if (res_b == NULL)
-		return 0;
-
-	aul_send_service_result(res_b);
-	bundle_free(res_b);
-
-	bundle_free(kb);
-
-	return 0;
 }
 
 static void prt_bundle(const char *key, const char *value, void *d)
@@ -93,8 +73,6 @@ int do_start(void *data)
 	bundle_del(kb, AUL_K_STARTTIME);
 
 	bundle_iterate(kb, prt_bundle, NULL);
-
-	ecore_timer_add(5, send_result, bundle_dup(kb));
 
 	return 0;
 }
@@ -134,8 +112,6 @@ int app_launch_handler(int pid, void *data)
 __attribute__ ((visibility("default")))
 int main(int argc, char **argv)
 {
-	ecore_init();
-
 	do_create();
 
 	if (aul_launch_init(aul_handler, NULL) < 0)
@@ -152,12 +128,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	ecore_main_loop_begin();
 	return 0;
 }
-
-/* vi: set ts=8 sts=8 sw=8: */
-
-
 
 /* vi: set ts=8 sts=8 sw=8: */

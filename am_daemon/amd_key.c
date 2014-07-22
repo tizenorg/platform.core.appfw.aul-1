@@ -19,105 +19,16 @@
  *
  */
 
-#include <Ecore.h>
-#include <Evas.h>
-#include <Ecore_Input.h>
-#ifdef X11
-#include <Ecore_X.h>
-#include <utilX.h>
-#endif
-#ifdef WAYLAND
-#include <Ecore_Wayland.h>
-#endif
 #include <aul.h>
 #include <glib.h>
+#include <stdlib.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
 #include "app_sock.h"
 #include "launch.h"
 
-static struct {
-	Evas_Object *win;
-	Ecore_Event_Handler *key_up;
-	Ecore_Event_Handler *key_down;
-} key_info = {
-	.win = NULL,
-	.key_up = NULL,
-	.key_down = NULL,
-};
-
 GSList *key_pid_list = NULL;
-
-static Eina_Bool __key_release_cb(void *data, int type, void *event);
-static Eina_Bool __key_press_cb(void *data, int type, void *event);
-
-static Eina_Bool __key_release_cb(void *data, int type, void *event)
-{
-	Evas_Event_Key_Up *ev = event;
-	int ret;
-	GSList *entry;
-	int *pid_data;
-	bundle *kb;
-
-	_D("Released");
-
-	if (!ev) {
-		_D("Invalid event object");
-		return ECORE_CALLBACK_RENEW;
-	}
-
-	entry = key_pid_list;
-	if (entry && entry->data) {
-		pid_data = (int *) entry->data;
-
-		kb = bundle_create();
-		bundle_add(kb, AUL_K_MULTI_KEY, ev->keyname);
-		bundle_add(kb, AUL_K_MULTI_KEY_EVENT, AUL_V_KEY_RELEASED);
-
-		ret = app_send_cmd(*pid_data, APP_KEY_EVENT, kb);
-		if (ret < 0)
-			_E("app_send_cmd failed with error %d\n", ret);
-
-		bundle_free(kb);
-	}
-
-	return ECORE_CALLBACK_RENEW;
-}
-
-
-static Eina_Bool __key_press_cb(void *data, int type, void *event)
-{
-	Evas_Event_Key_Down *ev = event;
-	int ret;
-	GSList *entry;
-	int *pid_data;
-	bundle *kb;
-
-	_D("Pressed");
-
-	if (!ev) {
-		_D("Invalid event object");
-		return ECORE_CALLBACK_RENEW;
-	}
-
-	entry = key_pid_list;
-	if (entry && entry->data) {
-		pid_data = (int *) entry->data;
-
-		kb = bundle_create();
-		bundle_add(kb, AUL_K_MULTI_KEY, ev->keyname);
-		bundle_add(kb, AUL_K_MULTI_KEY_EVENT, AUL_V_KEY_PRESSED);
-
-		ret = app_send_cmd(*pid_data, APP_KEY_EVENT, kb);
-		if (ret < 0)
-			_E("app_send_cmd failed with error %d\n", ret);
-
-		bundle_free(kb);
-	}
-
-	return ECORE_CALLBACK_RENEW;
-}
 
 int _register_key_event(int pid)
 {
@@ -171,35 +82,6 @@ int _unregister_key_event(int pid)
 
 int _key_init()
 {
-#ifdef X11
-	key_info.win = ecore_x_window_input_new(0, 0, 0, 1, 1);
-	if (!key_info.win) {
-		_D("Failed to create hidden window");
-	}
-
-	ecore_x_icccm_title_set(key_info.win, "acdaemon,key,receiver");
-	ecore_x_netwm_name_set(key_info.win, "acdaemon,key,receiver");
-	ecore_x_netwm_pid_set(key_info.win, getpid());
-
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_PLAYCD, EXCLUSIVE_GRAB);
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_STOPCD, EXCLUSIVE_GRAB);
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_PAUSECD, EXCLUSIVE_GRAB);
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_NEXTSONG, EXCLUSIVE_GRAB);
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_PREVIOUSSONG, EXCLUSIVE_GRAB);
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_REWIND, EXCLUSIVE_GRAB);
-	utilx_grab_key(ecore_x_display_get(), key_info.win, KEY_FASTFORWARD, EXCLUSIVE_GRAB);
-
-	key_info.key_up = ecore_event_handler_add(ECORE_EVENT_KEY_UP, __key_release_cb, NULL);
-	if (!key_info.key_up) {
-		_D("Failed to register a key up event handler");
-	}
-
-	key_info.key_down = ecore_event_handler_add(ECORE_EVENT_KEY_DOWN, __key_press_cb, NULL);
-	if (!key_info.key_down) {
-		_D("Failed to register a key down event handler");
-	}
-#endif // X11
-
 	return 0;
 }
 

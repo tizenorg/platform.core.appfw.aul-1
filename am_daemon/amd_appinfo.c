@@ -86,8 +86,8 @@ static void _fini(struct appinfomgr *cf)
 static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
 {
 	struct appinfo *c;
-	struct appinfomgr *cf = (struct appinfomgr *)data;
 	gboolean r;
+	struct appinfomgr *cf = (struct appinfomgr *)data;
 	char *exec;
 	char *type;
 	char *appid;

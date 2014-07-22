@@ -146,7 +146,6 @@ int __create_server_sock(int pid)
 int __create_server_sock_by_path(char *path)
 {
 	struct sockaddr_un saddr;
-	struct sockaddr_un p_saddr;
 	int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
 	if (fd < 0) {
@@ -200,7 +199,7 @@ int __create_agent_client_sock(int uid)
 	int retry = 1;
 	int ret = -1;
 
-	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);	
+	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
 	if (fd < 0) {
 		if (errno == EINVAL) {
@@ -246,7 +245,7 @@ int __create_client_sock(int pid)
 	int retry = 1;
 	int ret = -1;
 
-	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);	
+	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
 	if (fd < 0) {
 		if (errno == EINVAL) {
@@ -301,7 +300,7 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
 	error = 0;
 	if ((ret = connect(fd, (struct sockaddr *)saptr, salen)) < 0) {
 		if (errno != EAGAIN && errno != EINPROGRESS) {
-			fcntl(fd, F_SETFL, flags);	
+			fcntl(fd, F_SETFL, flags);
 			return (-2);
 		}
 	}
@@ -676,7 +675,6 @@ int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, in
 	int fd;
 	int len;
 	int ret;
-	int res = 0;
 	app_pkt_t *pkt = NULL;
 
 	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {

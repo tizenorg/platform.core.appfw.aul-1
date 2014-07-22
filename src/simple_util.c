@@ -165,7 +165,7 @@ char *__proc_get_cmdline_bypid(int pid)
 			}
 			ptr++;
 
-			if (*ptr == NULL)
+			if (!(*ptr))
 				break;
 
 			// ignore trailing "--"
@@ -190,7 +190,6 @@ char *__proc_get_exe_bypid(int pid)
 {
 	char buf[MAX_CMD_BUFSZ];
 	char buf2[MAX_CMD_BUFSZ];
-	int ret;
 	ssize_t len;
 
 	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);

@@ -24,7 +24,6 @@
 #include <glib.h>
 #include <aul.h>
 #include <string.h>
-#include <Ecore.h>
 
 #include "amd_config.h"
 #include "amd_status.h"
@@ -77,20 +76,6 @@ int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid,
 	return 0;
 }
 
-static Eina_Bool __app_terminate_timer_cb(void *data)
-{
-	int pid = (int)data;
-	int ret = 0;
-
-	_D("pid(%d)", pid);
-
-	ret = kill(pid, SIGKILL);
-	if (ret == -1)
-		_D("send SIGKILL: %s", strerror(errno));
-
-	return ECORE_CALLBACK_CANCEL;
-}
-
 int _status_update_app_info_list(int pid, int status, uid_t uid)
 {
 	GSList *iter = NULL;
@@ -101,10 +86,6 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 		info_t = (app_status_info_t *)iter->data;
 		if((pid == info_t->pid) && ((info_t->user == uid) || (info_t->user == 0))) {
 			info_t->status = status;
-			if(status == STATUS_DYING) {
-				if(info_t->pad_pid != DEBUG_LAUNCHPAD_PID)
-					ecore_timer_add(2, __app_terminate_timer_cb, info_t->pid);
-			}
 			break;
 		}
 	}

@@ -23,7 +23,6 @@
 /*
  * AMD user session agent
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
@@ -77,8 +76,6 @@ _static_ void __real_launch(const char *app_path, bundle * kb);
 _static_ int __parser(const char *arg, char *out, int out_size);
 _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			    app_info_from_db * menu_info, int cmd);
-_static_ int __child_raise_win_by_x(int pid, void *priv);
-_static_ int __raise_win_by_x(int pid);
 _static_ int __send_to_sigkill(int pid);
 _static_ int __term_app(int pid);
 _static_ int __resume_app(int pid);
@@ -108,7 +105,6 @@ _static_ void __set_oom()
 _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 {
 	const char *str;
-	const char **str_array;
 
 	setenv("PKG_NAME", _get_pkgname(menu_info), 1);
 
@@ -375,34 +371,6 @@ _static_ void __modify_bundle(bundle * kb, int caller_pid,
 	}
 }
 
-_static_ int __child_raise_win_by_x(int pid, void *priv)
-{
-#ifdef X11
-	return x_util_raise_win(pid);
-#else
-	return 0;
-#endif
-}
-
-_static_ int __raise_win_by_x(int pid)
-{
-	int pgid;
-	if (x_util_raise_win(pid) == 0)
-		return 0;
-
-	/* support app launched by shell script*/
-	pgid = getpgid(pid);
-	_D("X raise failed. try to find first child & raise it - c:%d p:%d\n",
-	   pgid, pid);
-
-	if (pgid <= 1)
-		return -1;
-	if (__proc_iter_pgid(pgid, __child_raise_win_by_x, NULL) < 0)
-		return -1;
-
-	return 0;
-}
-
 _static_ int __send_to_sigkill(int pid)
 {
 	int pgid;
@@ -441,16 +409,6 @@ _static_ int __resume_app(int pid)
 			    sizeof(int))) < 0) {
 		if (ret == -EAGAIN)
 			_E("resume packet timeout error");
-		else {
-			_D("resume packet send error - use raise win");
-			if (__raise_win_by_x(pid) < 0) {
-				_E("raise failed - %d resume fail\n", pid);
-				_E("we will term the app - %d\n", pid);
-				__send_to_sigkill(pid);
-				ret = -1;
-			} else
-				ret = 0;
-		}
 	}
 	_D("resume done\n");
 	return ret;
@@ -486,7 +444,6 @@ static int __get_caller_uid(bundle *kb)
 	if (uid_str == NULL)
 		return -1;
 
-end:
 	uid = atoi(uid_str);
 	if (uid <0)
 		return -1;

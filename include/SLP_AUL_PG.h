@@ -211,7 +211,6 @@ int main(int argc, char *argv[])
 // Callee application
 #include <aul.h>
 #include <bundle.h>
-#include <Ecore.h>
 
 static int aul_handler(aul_type type, bundle *kb,void* data)
 {
@@ -234,13 +233,10 @@ static int aul_handler(aul_type type, bundle *kb,void* data)
 
 int main(int argc, char** argv)
 {
-	ecore_init();
-
 	aul_launch_init(aul_handler,NULL);
 	// enable this if you want to handle at aul_handler when launch
 	aul_launch_argv_handler(argc, argv);
 
-	ecore_main_loop_begin();  // You must need ecore or glib mainloop
 	return 0;
 } 
 @endcode

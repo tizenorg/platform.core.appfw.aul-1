@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <string.h>
 
-#include <Ecore.h>
 #include "aul.h"
 
 #define ROOT_UID 0
@@ -86,44 +86,6 @@ void print_usage(char *progname)
 	       progname);
 }
 
-static int __launch_app_dead_handler(int pid, void *data)
-{
-	int listen_pid = (int) data;
-
-	if(listen_pid == pid)
-		ecore_main_loop_quit();
-
-	return 0;
-}
-
-static Eina_Bool run_func(void *data)
-{
-	int pid = -1;
-	char *str = NULL;
-
-	if ((pid = launch()) > 0) {
-		printf("... successfully launched\n");
-		str	 = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
-
-		if( str && strcmp(str, "SYNC") == 0 ) {
-			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
-		} else {
-			ecore_main_loop_quit();
-        }
-	} else {
-		printf("... launch failed\n");
-		ecore_main_loop_quit();
-	}
-
-	if (kb) {
-		bundle_free(kb);
-		kb = NULL;
-	}
-
-	return 0;
-}
-
-
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
@@ -131,16 +93,23 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	ecore_init();
-
 	gargc = argc;
 	gargv = argv;
 
 	aul_launch_init(NULL, NULL);
 
-	ecore_idler_add(run_func, NULL);
+	int pid = -1;
 
-	ecore_main_loop_begin();
+	if ((pid = launch()) > 0) {
+		printf("... successfully launched\n");
+	} else {
+		printf("... launch failed\n");
+	}
+
+	if (kb) {
+		bundle_free(kb);
+		kb = NULL;
+	}
 
 	return 0;
 }
