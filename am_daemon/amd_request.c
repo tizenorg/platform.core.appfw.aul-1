@@ -38,7 +38,6 @@
 #include "app_sock.h"
 #include "aul_util.h"
 #include "amd_request.h"
-#include "amd_key.h"
 #include "amd_launch.h"
 #include "amd_appinfo.h"
 #include "amd_cgutil.h"
@@ -402,12 +401,12 @@ static gboolean __request_handler(gpointer data)
 			_D("APP_GET_APPID_BYPID : %d : %d", pid, ret);
 			break;
 		case APP_KEY_RESERVE:
-			ret = _register_key_event(cr.pid);
-			__send_result_to_client(clifd, ret);
+			// support for key events has been removed (sdx-20140813)
+			__send_result_to_client(clifd, 0);
 			break;
 		case APP_KEY_RELEASE:
-			ret = _unregister_key_event(cr.pid);
-			__send_result_to_client(clifd, ret);
+			// support for key events has been removed (sdx-20140813)
+			__send_result_to_client(clifd, 0);
 			break;
 		case APP_STATUS_UPDATE:
 			status = (int *)pkt->data;

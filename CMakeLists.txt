@@ -19,15 +19,8 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_PKG_CHECK_MODULES dlog ecore libprivilege-control app-checker rua glib-2.0 ecore-input evas vconf pkgmgr-info privacy-manager-client)
-OPTION(WITH_WAYLAND "Build with wayland" OFF)
-IF(WITH_WAYLAND)
-    ADD_DEFINITIONS("-DWAYLAND")
-    pkg_check_modules(pkgs REQUIRED ${AUL-1_PKG_CHECK_MODULES} ecore-wayland)
-ELSE(WITH_WAYLAND)
-    ADD_DEFINITIONS("-DX11")
-    pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} x11 ecore-x)
-ENDIF(WITH_WAYLAND)
+SET(AUL-1_PKG_CHECK_MODULES dlog libprivilege-control app-checker rua glib-2.0 vconf pkgmgr-info privacy-manager-client)
+pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config)
 PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle)
@@ -113,7 +106,6 @@ set_target_properties(${AM_SESSION_AGENT_NAME}
 
 add_executable(amd
                 am_daemon/amd_main.c
-		am_daemon/amd_key.c
 		am_daemon/amd_request.c
 		am_daemon/amd_appinfo.c
 		am_daemon/amd_cgutil.c
@@ -121,11 +113,7 @@ add_executable(amd
 		am_daemon/amd_status.c
                 )
 SET(AUL-1_LINK_LIBRARY amd aul_mods app-checker-server rua glib-2.0 bundle ail aul)
-IF (WITH_WAYLAND)
 target_link_libraries(${AUL-1_LINK_LIBRARY} ${pkgs_LDFLAGS})
-ELSE(WITH_WAYLAND)
-target_link_libraries(${AUL-1_LINK_LIBRARY} utilX ${pkgs_LDFLAGS})
-ENDIF(WITH_WAYLAND)
 
 SET(REL_AGENT daemon-manager-release-agent)
 ADD_EXECUTABLE(${REL_AGENT} agent/${REL_AGENT}.c)

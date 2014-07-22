@@ -23,8 +23,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <string.h>
+#include <glib.h>
 
-#include <Ecore.h>
 #include "aul.h"
 
 #define ROOT_UID 0
@@ -34,6 +35,7 @@ static char **gargv;
 static int gargc;
 bundle *kb = NULL;
 
+static GMainLoop *mainloop = NULL;
 
 static bundle *create_internal_bundle(int start)
 {
@@ -93,12 +95,12 @@ static int __launch_app_dead_handler(int pid, void *data)
 	int listen_pid = (int) data;
 
 	if(listen_pid == pid)
-		ecore_main_loop_quit();
+		g_main_loop_quit(mainloop);
 
 	return 0;
 }
 
-static Eina_Bool run_func(void *data)
+static gboolean run_func(void *data)
 {
 	int pid = -1;
 	char *str = NULL;
@@ -113,7 +115,7 @@ static Eina_Bool run_func(void *data)
 	if( str && strcmp(str, "SYNC") == 0 ) {
 		aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
 	} else {
-		ecore_main_loop_quit();
+		g_main_loop_quit(mainloop);
 	}
 
 	if (kb) {
@@ -121,8 +123,9 @@ static Eina_Bool run_func(void *data)
 		kb = NULL;
 	}
 
-	return 0;
+	return TRUE;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -131,16 +134,19 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	ecore_init();
-
 	gargc = argc;
 	gargv = argv;
 
 	aul_launch_init(NULL, NULL);
 
-	ecore_idler_add(run_func, NULL);
+	g_idle_add(run_func, NULL);
 
-	ecore_main_loop_begin();
+	mainloop = g_main_loop_new(NULL, FALSE);
+	if (!mainloop) {
+		printf("failed to create glib main loop\n");
+		exit(EXIT_FAILURE);
+	}
+	g_main_loop_run(mainloop);
 
 	return 0;
 }

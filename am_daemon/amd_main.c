@@ -24,28 +24,18 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <Ecore.h>
-#include <Ecore_Input.h>
-#include <Evas.h>
-#ifdef X11
-#include <Ecore_X.h>
-#include <utilX.h>
-#endif
-#ifdef WAYLAND
-#include <Ecore_Wayland.h>
-#endif
 #include <aul.h>
 #include <vconf.h>
 #include <app-checker-server.h>
 #include <ail.h>
 #include <glib.h>
+#include <stdlib.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
 #include "aul_util.h"
 #include "amd_appinfo.h"
 #include "amd_cgutil.h"
-#include "amd_key.h"
 #include "amd_status.h"
 #include "amd_launch.h"
 #include "amd_request.h"
@@ -229,7 +219,6 @@ int __app_dead_handler(int pid, uid_t user)
 	// this function was called in single user mode as a callback to aul_listen_app_dead_signal
 	// but in multiuser mode, AMD daemon can't listen any more on DBUS system to catch those events
 	// AMD Agents must connect to AMD Daemon to signal a dead process
-	_unregister_key_event(pid);
 	__remove_item_running_list(pid, user);
 	_status_remove_app_info_list(pid, user);
 	return 0;
@@ -263,27 +252,12 @@ static int __init()
 
 	int ret=0;
 
-	ecore_init();
-	evas_init();
-	ecore_event_init();
-#ifdef X11
-	ret = ecore_x_init(NULL);
-	_D("ecore_x_init initialized %d times\n", ret);
-#endif
-#ifdef WAYLAND
-    ecore_wl_init(NULL);
-#endif
-
 	appinfo_init(&amd.af);
 	cgutil_create(MOUNT_PATH, AGENT_PATH, &amd.cg);
 	_requset_init(&amd);
 	_launch_init(&amd);
 	_status_init(&amd);
 
-#ifndef __emul__
-        if (ret > 0)
-		_key_init();
-#endif
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, __vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
 
@@ -295,7 +269,6 @@ static int __init()
 gboolean  __amd_ready(gpointer user_data)
 {
 	int fd;
-	int ret;
 
 	fd = creat("/run/amd_ready", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
@@ -311,6 +284,8 @@ gboolean  __amd_ready(gpointer user_data)
 
 int main(int argc, char *argv[])
 {
+	GMainLoop *mainloop = NULL;
+
 	if (ac_server_initialize() != AC_R_OK){
 		_E("ac_server_initialize failed!\n");
 		return -1;
@@ -322,7 +297,12 @@ int main(int argc, char *argv[])
 
 	g_idle_add(__amd_ready, NULL);
 
-	ecore_main_loop_begin();
+	mainloop = g_main_loop_new(NULL, FALSE);
+	if (!mainloop) {
+		_E("failed to create glib main loop");
+		return -1;
+	}
+	g_main_loop_run(mainloop);
 
 	return 0;
 }

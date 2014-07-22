@@ -23,6 +23,7 @@
 #include <ail.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "simple_util.h"
 
 #define MAX_PATH_LEN	1024
@@ -136,7 +137,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	else
 		ret = ail_appinfo_get_str(handle, AIL_PROP_PACKAGE_STR, &str);
 	if (str) {
-		menu_info->pkg_name = strdup(str);	
+		menu_info->pkg_name = strdup(str);
 		str = NULL;
 	}
 	//is_admin is global
@@ -161,7 +162,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		menu_info->pkg_type = strdup(str);
 		str = NULL;
 	}
-	
+
 	ret = ail_destroy_appinfo(handle);
 	if (ret != AIL_ERROR_OK) {
 		_E("ail_destroy_appinfo failed");
@@ -203,7 +204,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 	ail_filter_h filter;
 	ail_error_e ret;
 	int count;
-	
+
 	if (apppath == NULL)
 		return NULL;
 
@@ -250,6 +251,6 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 	menu_info->original_app_path = strdup(apppath);
 
 	return menu_info;
-	
+
 }
 

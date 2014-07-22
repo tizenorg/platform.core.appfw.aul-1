@@ -24,7 +24,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <Ecore.h>
+#include <stdlib.h>
+#include <glib.h>
 
 #include "menu_db_util.h"
 #include "aul.h"
@@ -38,6 +39,7 @@ static char **gargv;
 static int gargc;
 static char *cmd;
 static int apn_pid;
+static GMainLoop *mainloop = NULL;
 
 typedef struct _test_func_t {
 	char *name;
@@ -123,7 +125,8 @@ static void cb_func(bundle *kb, int is_cancel, void *data)
 
 	if ((strcmp(cmd, "launch_res") == 0)
 	    || (strcmp(cmd, "open_svc_res") == 0))
-		ecore_main_loop_quit();
+		g_main_loop_quit(mainloop);
+
 }
 
 int open_test()
@@ -175,14 +178,14 @@ static test_func_t scn_func[] = {
 	{"n", launch_test, "launch_test", ""}
 };
 
-static Eina_Bool run_all_test(void *data)
+static gboolean run_all_test(void *data)
 {
 	static int pos = 0;
 	int ret;
 
 	if (pos > sizeof(scn_func) / sizeof(test_func_t) - 1) {
 		printf("all internal test done\n");
-		ecore_main_loop_quit();
+		g_main_loop_quit(mainloop);
 		return 0;
 	}
 
@@ -204,7 +207,27 @@ static Eina_Bool run_all_test(void *data)
 
 int all_test()
 {
-	ecore_timer_add(2, run_all_test, NULL);
+	static int pos = 0;
+	int ret;
+
+	if (pos > sizeof(scn_func) / sizeof(test_func_t) - 1) {
+		printf("all internal test done\n");
+		return 0;
+	}
+
+	if (strncmp(scn_func[pos].name, "n", 1) == 0) {
+		printf("[test %d] %s , pkgname = %s\n", pos, scn_func[pos].desc,
+		       gargv[2]);
+		apn_pid = scn_func[pos].func();
+		printf("... return pid = %d\n", apn_pid);
+	} else {
+		printf("[test %d] %s , pid = %d\n", pos, scn_func[pos].desc,
+		       apn_pid);
+		ret = scn_func[pos].func();
+		printf("... return res = %d\n", ret);
+	}
+	pos++;
+
 	return 0;
 }
 
@@ -387,10 +410,10 @@ static int set_pkg_func()
 
 	pkgname = gargv[2];
 	apppath = gargv[3];
-	
+
 	appname = strrchr(apppath,'/')+1;
 	snprintf(ai.app_icon_path, PATH_LEN, "aul_test_icon_path/%d",getpid());
-	snprintf(ai.desktop_path, PATH_LEN, 
+	snprintf(ai.desktop_path, PATH_LEN,
 		"aul_test_desktop_path/%d",getpid());
 
 	snprintf (query, sizeof(query), "insert into "TABLE_MENU"(\
@@ -570,7 +593,7 @@ static test_func_t test_func[] = {
 		"[usage] getallpkg all"},
 	{"getpkgpid", get_pkgpid_test, "aul_app_get_appid_bypid test",
 		"[usage] getpkgpid <pid>"},
-	
+
 	{"open_file", open_file_test, "aul_open_file test",
 		"[usage] open_file <filename>"},
 	{"open_content", open_content_test, "aul_open_content test",
@@ -602,7 +625,7 @@ static test_func_t test_func[] = {
 		"[usage] set_defapp_svc <svcname> <defapp to be set>"},
 	{"get_defapp_svc", get_defapp_svc_test, "aul_get_defapp_from_svc test"
 		"[usage] get_defapp_svc <svcname>"},
-	
+
 	{"getpkg", get_pkg_func, "get package",
 	      	"[usage] getpkg <pkgname>"},
 	{"update_list", update_running_list, "update running list",
@@ -661,7 +684,7 @@ void print_usage(char *progname)
 		"cmd is internal purpose\n");
 }
 
-static Eina_Bool run_func(void *data)
+static gboolean run_func(void *data)
 {
 	callfunc(cmd);
 
@@ -670,7 +693,7 @@ static Eina_Bool run_func(void *data)
 	    || strcmp(cmd, "open_svc_res") == 0)
 		return 0;
 	else
-		ecore_main_loop_quit();
+		g_main_loop_quit(mainloop);
 
 	return 0;
 }
@@ -682,8 +705,6 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	ecore_init();
-
 	cmd = argv[1];
 	gargc = argc;
 	gargv = argv;
@@ -694,9 +715,14 @@ int main(int argc, char **argv)
 	/*aul_listen_app_dead_signal(dead_tracker,NULL); */
 	/*aul_listen_app_dead_signal(NULL,NULL); */
 
-	ecore_idler_add(run_func, NULL);
+	g_idle_add(run_func,NULL);
 
-	ecore_main_loop_begin();
+	mainloop = g_main_loop_new(NULL, FALSE);
+	if (!mainloop) {
+		printf("failed to create glib main loop\n");
+		exit(EXIT_FAILURE);
+	}
+	g_main_loop_run(mainloop);
 
 	return 0;
 }

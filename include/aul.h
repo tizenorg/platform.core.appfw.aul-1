@@ -235,10 +235,10 @@ typedef int (*aul_handler_fn) (aul_type type, bundle * b, void *data);
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ECANCELD	- aul handler was installed already by others
  * @retval	AUL_R_ECOMM	- error to create internal ipc
- * @retval	AUL_R_ERROR	- error to attach glib main loop or ecore main loop
+ * @retval	AUL_R_ERROR	- error to attach glib main loop
  *
  * @warning	If you use AppCore, you should NOT use this API.\n
- *		You need glib main loop or ecore main loop.\n
+ *		You need glib main loop.\n
  * @pre
  *	you must have aul handler to use this API.
  *	aul_luanch_init register aul handler.
@@ -267,12 +267,15 @@ typedef int (*aul_handler_fn) (aul_type type, bundle * b, void *data);
  *      return 0;
  * }
  *
+ * static GMainLoop *mainloop = NULL;
+ *
  * int main(int argc, char **argv)
  * {
- *	ecore_init();
  *      aul_launch_init(aul_handler,NULL);
  *      aul_launch_argv_handler(argc, argv);
- *	ecore_main_loop_begin();
+ *
+ *      mainloop = g_main_loop_new(NULL, FALSE);
+ *      g_main_loop_run(mainloop);
  * }
  *
  * @endcode

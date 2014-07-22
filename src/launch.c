@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -373,7 +374,7 @@ static int __send_result_to_launchpad(int fd, int res)
 }
 
 /**
- * @brief	caller & callee's sock handler	
+ * @brief	caller & callee's sock handler
  */
 int aul_sock_handler(int fd)
 {
@@ -484,7 +485,7 @@ int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb)
 			_E("Malloc failed");
 			return AUL_R_ERROR;
 		}
-	
+
 		bundle_add(*kb, AUL_K_ARGV0, buf);
 	}
 	if (buf) {		/*Prevent FIX: ID 38717 */
