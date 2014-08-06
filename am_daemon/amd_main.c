@@ -35,7 +35,6 @@
 #include "simple_util.h"
 #include "aul_util.h"
 #include "amd_appinfo.h"
-#include "amd_cgutil.h"
 #include "amd_key.h"
 #include "amd_status.h"
 #include "amd_launch.h"
@@ -254,7 +253,6 @@ static int __init()
 	int ret=0;
 
 	appinfo_init(&amd.af);
-	cgutil_create(MOUNT_PATH, AGENT_PATH, &amd.cg);
 	_requset_init(&amd);
 	_launch_init(&amd);
 	_status_init(&amd);

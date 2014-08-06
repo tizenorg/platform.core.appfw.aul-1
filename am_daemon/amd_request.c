@@ -41,7 +41,6 @@
 #include "amd_key.h"
 #include "amd_launch.h"
 #include "amd_appinfo.h"
-#include "amd_cgutil.h"
 #include "amd_status.h"
 
 
@@ -215,49 +214,10 @@ static int __get_pid_cb(void *user_data, const char *group, pid_t pid)
 	return -1; /* stop the iteration */
 }
 
-static int __releasable(const char *filename)
-{
-	int sz;
-	int r;
-
-	if (!filename || !*filename) {
-		_E("release service: name is empty");
-		return -1;
-	}
-
-	r = cgutil_exist_group(_rcg, CTRL_MGR, filename);
-	if (r == -1) {
-		SECURE_LOGE("release service: exist: %s", strerror(errno));
-		return -1;
-	}
-	if (r == 0) {
-		SECURE_LOGE("release service: '%s' already not exist", filename);
-		return -1;
-	}
-
-	sz = 0;
-	r = cgutil_group_foreach_pid(_rcg, CTRL_MGR, filename,
-			__get_pid_cb, &sz);
-	if (r == -1) {
-		SECURE_LOGE("release service: '%s' read pid error", filename);
-		return -1;
-	}
-	if (sz > 0) {
-		SECURE_LOGE("release service: '%s' group has process", filename);
-		return -1;
-	}
-
-	return 0;
-}
-
 static int __release_srv(uid_t caller_uid, const char *filename)
 {
 	int r;
 	const struct appinfo *ai;
-
-	r = __releasable(filename);
-	if (r == -1)
-		return -1;
 
 	ai = (struct appinfo *)appinfo_find(caller_uid, filename);
 	if (!ai) {
@@ -273,12 +233,6 @@ static int __release_srv(uid_t caller_uid, const char *filename)
 	}
 
 	service_release(filename);
-
-	r = cgutil_remove_group(_rcg, CTRL_MGR, filename);
-	if (r == -1) {
-		SECURE_LOGE("'%s' group remove error: %s", filename, strerror(errno));
-		return -1;
-	}
 
 	return 0;
 }
