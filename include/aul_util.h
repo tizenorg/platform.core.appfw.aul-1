@@ -46,7 +46,6 @@ typedef struct _app_status_info_t{
 
 struct amdmgr {
 	struct appinfomgr *af;  /* appinfo manager */
-	struct cginfo *cg;  /* cgroup infomation */
 };
 
 int _add_app_status_info_list(char *appid, int pid, uid_t uid);

@@ -108,7 +108,6 @@ add_executable(amd
                 am_daemon/amd_main.c
 		am_daemon/amd_request.c
 		am_daemon/amd_appinfo.c
-		am_daemon/amd_cgutil.c
 		am_daemon/amd_launch.c
 		am_daemon/amd_status.c
                 )
