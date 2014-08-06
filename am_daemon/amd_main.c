@@ -35,18 +35,10 @@
 #include "simple_util.h"
 #include "aul_util.h"
 #include "amd_appinfo.h"
-#include "amd_cgutil.h"
 #include "amd_status.h"
 #include "amd_launch.h"
 #include "amd_request.h"
 
-#ifndef MOUNT_PATH
-#  define MOUNT_PATH "/sys/fs/cgroup"
-#endif
-
-#ifndef AGENT_PATH
-#  define AGENT_PATH "/usr/bin/daemon-manager-release-agent"
-#endif
 
 typedef struct _r_app_info_t{
 	char pkg_name[MAX_PACKAGE_STR_SIZE];
@@ -253,7 +245,6 @@ static int __init()
 	int ret=0;
 
 	appinfo_init(&amd.af);
-	cgutil_create(MOUNT_PATH, AGENT_PATH, &amd.cg);
 	_requset_init(&amd);
 	_launch_init(&amd);
 	_status_init(&amd);

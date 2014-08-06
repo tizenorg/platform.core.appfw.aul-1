@@ -39,7 +39,6 @@
 #include "amd_status.h"
 #include "app_sock.h"
 #include "simple_util.h"
-#include "amd_cgutil.h"
 #include "launch.h"
 
 #define DAC_ACTIVATE
@@ -77,7 +76,6 @@ struct ktimer {
 	pid_t pid;
 	char *group;
 	guint tid; /* timer ID */
-	struct cginfo *cg;
 };
 
 
@@ -189,35 +187,6 @@ static void _prepare_exec(const char *appid, bundle *kb)
 	/* TODO: do security job */
 	/* TODO: setuid */
 }
-
-static int _add_cgroup(struct cginfo *cg, const char *group, int pid)
-{
-	int r;
-
-	r = cgutil_exist_group(cg, CTRL_MGR, group);
-	if (r == -1) {
-		_E("exist check error: %s", strerror(errno));
-		return -1;
-	}
-
-	if (r == 0) { /* not exist */
-		r = cgutil_create_group(cg, CTRL_MGR, group);
-		if (r == -1) {
-			_E("create group error");
-			return -1;
-		}
-	}
-
-	r = cgutil_group_add_pid(cg, CTRL_MGR, group, pid);
-	if (r == -1) {
-		_E("add pid to group error");
-		cgutil_remove_group(cg, CTRL_MGR, group);
-		return -1;
-	}
-
-	return 0;
-}
-
 static char **__create_argc_argv(bundle * kb, int *margc)
 {
 	char **argv;
@@ -228,7 +197,7 @@ static char **__create_argc_argv(bundle * kb, int *margc)
 	*margc = argc;
 	return argv;
 }
-static void _do_exec(struct cginfo *cg, const char *cmd, const char *group, bundle *kb)
+static void _do_exec(const char *cmd, const char *group, bundle *kb)
 {
 	gchar **argv;
 	gint argc;
@@ -236,10 +205,6 @@ static void _do_exec(struct cginfo *cg, const char *cmd, const char *group, bund
 	int b_argc;
 	gboolean b;
 	int r;
-
-	r = _add_cgroup(cg, group, getpid());
-	if (r == -1)
-		return;
 
 	b = g_shell_parse_argv(cmd, &argc, &argv, NULL);
 
@@ -273,7 +238,7 @@ int service_start(struct cginfo *cg, const char *group, const char *cmd, bundle 
 	p = fork();
 	switch (p) {
 	case 0: /* child process */
-		_do_exec(cg, cmd, group, kb);
+		_do_exec(cmd, group, kb);
 		/* exec error */
 		exit(0);
 		break;
@@ -317,29 +282,16 @@ static void _free_kt(struct ktimer *kt)
 {
 	if (!kt)
 		return;
-
-	cgutil_unref(&kt->cg);
 	free(kt->group);
 	free(kt);
 }
 
-static void _kill_pid(struct cginfo *cg, const char *group, pid_t pid)
+static void _kill_pid( pid_t pid)
 {
 	int r;
 
 	if (pid <= INIT_PID) /* block sending to all process or init */
 		return;
-
-	r = cgutil_exist_group(cg, CTRL_MGR, group);
-	if (r == -1) {
-		_E("send SIGKILL: exist: %s", strerror(errno));
-		return;
-	}
-	if (r == 0) {
-		_D("send SIGKILL: '%s' not exist", group);
-		return;
-	}
-
 	/* TODO: check pid exist in group */
 
 	r = kill(pid, 0);
@@ -357,7 +309,7 @@ static gboolean _ktimer_cb(gpointer data)
 {
 	struct ktimer *kt = data;
 
-	_kill_pid(kt->cg, kt->group, kt->pid);
+	_kill_pid(kt->pid);
 	_kill_list = g_list_remove(_kill_list, kt);
 	_free_kt(kt);
 
@@ -378,8 +330,6 @@ static void _add_list(struct cginfo *cg, const char *group, pid_t pid)
 		free(kt);
 		return;
 	}
-
-	kt->cg = cgutil_ref(cg);
 	kt->tid = g_timeout_add_seconds(TERM_WAIT_SEC, _ktimer_cb, kt);
 
 	_kill_list = g_list_append(_kill_list, kt);
@@ -413,17 +363,6 @@ static int _kill_pid_cb(void *user_data, const char *group, pid_t pid)
 	_add_list(user_data, group, pid);
 
 	return 0;
-}
-
-int service_stop(struct cginfo *cg, const char *group)
-{
-	if (!cg || !group || !*group) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	return cgutil_group_foreach_pid(cg, CTRL_MGR, FILENAME(group),
-			_kill_pid_cb, cg);
 }
 
 void service_release(const char *group)
