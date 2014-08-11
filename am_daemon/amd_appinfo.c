@@ -442,7 +442,7 @@ const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 
 	ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
 	if (ret != PMINFO_R_OK){
-		ret = pkgmgrinfo_appinfo_get_appinfo_user(appid , caller_uid , &handle);
+		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid , caller_uid , &handle);
 		if (ret != PMINFO_R_OK){
 		  _E("appid is not found in DB %s", appid);
 		  return NULL;
