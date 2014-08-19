@@ -50,8 +50,8 @@ __app_dbus_signal_filter(DBusConnection *conn, DBusMessage *message,
 	if (sender == NULL)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-	if (dbus_bus_get_unix_user(conn, sender, &error) != 0) {
-		_E("reject by security issue - no allowed sender\n");
+	if (dbus_bus_get_unix_user(conn, sender, &error) < 0) {
+		_E("reject because of invalid user ID\n");
 		dbus_error_free(&error);
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 	}
