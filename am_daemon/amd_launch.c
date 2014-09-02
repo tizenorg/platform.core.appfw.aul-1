@@ -57,7 +57,7 @@
 #define SDK_CODE_COVERAGE "CODE_COVERAGE"
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
 #define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
-#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
 struct appinfomgr *_laf;
 
