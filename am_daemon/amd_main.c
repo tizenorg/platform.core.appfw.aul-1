@@ -30,6 +30,7 @@
 #include <ail.h>
 #include <glib.h>
 #include <stdlib.h>
+#include <tzplatform_config.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -39,6 +40,8 @@
 #include "amd_launch.h"
 #include "amd_request.h"
 
+
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
 typedef struct _r_app_info_t{
 	char pkg_name[MAX_PACKAGE_STR_SIZE];
@@ -120,7 +123,7 @@ gboolean __add_item_running_list(gpointer user_data)
 	int limit;
 	char *pkgname;
 	int pid;
-    uid_t user;
+	uid_t user;
 	item_pkt_t *item;
 
 	item = (item_pkt_t *)user_data;
@@ -139,8 +142,10 @@ gboolean __add_item_running_list(gpointer user_data)
 		return false;
 	}
 	//is admin is global
-	ail_ret = ail_package_get_usr_appinfo(pkgname, user, &handle);
-	//ail_ret = ail_package_get_appinfo(pkgname, &handle);
+	if (user != GLOBAL_USER)
+		ail_ret = ail_package_get_usr_appinfo(pkgname, user, &handle);
+	else
+		ail_ret = ail_package_get_appinfo(pkgname, &handle);
 	if (ail_ret != AIL_ERROR_OK) {
 		_E("ail_get_appinfo with %s failed", pkgname);
 		return false;

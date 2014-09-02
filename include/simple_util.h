@@ -26,9 +26,9 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <dlog.h>
+#include <tzplatform_config.h>
 
-#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
-
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
 #undef LOG_TAG
 #define LOG_TAG "AUL"
