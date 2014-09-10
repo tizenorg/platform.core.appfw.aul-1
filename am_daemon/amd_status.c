@@ -235,14 +235,14 @@ int _status_app_is_running_v2(uid_t caller_uid, char *appid)
 	return ret;
 }
 
-static int __get_pkginfo(const char *dname, const char *cmdline, void *priv)
+static int __get_pkginfo(const char *dname, const char *cmdline, void *priv,uid_t uid)
 {
 	app_info_from_db *menu_info;
 	char *r_info;
 
 	r_info = (char *)priv;
 
-	if ((menu_info = _get_app_info_from_db_by_apppath(cmdline)) == NULL)
+	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL)
 		goto out;
 	else {
 		strncat(r_info, dname, 8);
@@ -296,12 +296,16 @@ static int __get_pkgname_bypid(int pid, char *pkgname, int len)
 {
 	char *cmdline;
 	app_info_from_db *menu_info;
-
+	uid_t uid;
 	cmdline = __proc_get_cmdline_bypid(pid);
 	if (cmdline == NULL)
 		return -1;
 
-	if ((menu_info = _get_app_info_from_db_by_apppath(cmdline)) == NULL) {
+	uid = __proc_get_usr_bypid(pid);
+	if (uid == -1)
+		return -1;
+
+	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
 		free(cmdline);
 		return -1;
 	} else {
