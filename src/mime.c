@@ -220,13 +220,13 @@ SLPAPI int aul_set_defapp_with_mime(const char *mimetype, const char *defapp)
 }
 
 static ail_cb_ret_e __defapp_with_mime_func(
-			const ail_appinfo_h appinfo, void *user_data)
+			const ail_appinfo_h appinfo, void *user_data,uid_t uid)
 {
 	char **package = (char **)user_data;
 	char *str;
 //is_admin is_global
   if (getuid() != GLOBAL_USER)
-		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, getuid(), &str);
+		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, uid, &str);
 	else
 		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
 	_D("defapp from desktop = %s", str);

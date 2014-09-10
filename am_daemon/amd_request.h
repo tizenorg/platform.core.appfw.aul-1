@@ -25,7 +25,5 @@
 
 int _requset_init(struct amdmgr *amd);
 
-
-
 #endif
 
