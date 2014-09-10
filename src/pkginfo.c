@@ -93,12 +93,13 @@ static int __get_pkgname_bypid(int pid, char *pkgname, int len)
 {
 	char *cmdline;
 	app_info_from_db *menu_info;
-
+	uid_t uid;
 	cmdline = __proc_get_cmdline_bypid(pid);
+	uid = __proc_get_usr_bypid(pid);
 	if (cmdline == NULL)
 		return -1;
 
-	if ((menu_info = _get_app_info_from_db_by_apppath(cmdline)) == NULL) {
+	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
 		free(cmdline);
 		return -1;
 	} else
