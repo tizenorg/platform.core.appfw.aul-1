@@ -197,8 +197,9 @@ static inline ail_cb_ret_e __appinfo_func(const ail_appinfo_h appinfo, void *use
 	return ret;
 }
 
-static inline app_info_from_db *_get_app_info_from_db_by_apppath(
-							const char *apppath)
+
+static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
+							const char *apppath, uid_t uid)
 {
 	app_info_from_db *menu_info = NULL;
 	ail_filter_h filter;
@@ -225,7 +226,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 		return NULL;
 	}
 
-	if (getuid() != GLOBAL_USER)
+	if (uid != GLOBAL_USER)
 		ret = ail_filter_count_usr_appinfo(filter, &count, getuid());
 	else
 		ret = ail_filter_count_appinfo(filter, &count);
@@ -240,8 +241,8 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 		return NULL;
 	}
 //is_admin is global
-	if (getuid() != GLOBAL_USER)
-    ail_filter_list_usr_appinfo_foreach(filter, __appinfo_func, (void *)menu_info, getuid());
+	if (uid != GLOBAL_USER)
+		ail_filter_list_usr_appinfo_foreach(filter, __appinfo_func, (void *)menu_info, getuid());
 	else
 		ail_filter_list_appinfo_foreach(filter, __appinfo_func, (void *)menu_info);
 
@@ -251,6 +252,14 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 	menu_info->original_app_path = strdup(apppath);
 
 	return menu_info;
+
+}
+
+
+static inline app_info_from_db *_get_app_info_from_db_by_apppath(
+							const char *apppath)
+{
+	return _get_app_info_from_db_by_apppath_user(apppath,GLOBAL_USER);
 
 }
 
