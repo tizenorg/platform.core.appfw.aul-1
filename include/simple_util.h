@@ -29,6 +29,7 @@
 #include <tzplatform_config.h>
 
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define DEFAULT_USER tzplatform_getuid(TZ_SYS_DEFAULT_USER)
 
 #undef LOG_TAG
 #define LOG_TAG "AUL"

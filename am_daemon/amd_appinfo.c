@@ -372,7 +372,7 @@ int appinfo_init(struct appinfomgr **cf)
 	if (!_cf)
 		return -1;
 
-	r = _read_pkg_info(_cf, getuid());
+	r = _read_pkg_info(_cf, GLOBAL_USER);
 	if (r != PMINFO_R_OK) {
 		_fini(_cf);
 		return -1;

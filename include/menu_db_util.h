@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "simple_util.h"
-
 #define MAX_PATH_LEN	1024
 
 #define AUL_APP_INFO_FLD_PKG_NAME		"package"
@@ -176,17 +175,21 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	return menu_info;
 }
 
-static inline ail_cb_ret_e __appinfo_func(const ail_appinfo_h appinfo, void *user_data)
+static inline ail_cb_ret_e __appinfo_func(const ail_appinfo_h appinfo, void *user_data, uid_t uid)
 {
 	app_info_from_db *menu_info = (app_info_from_db *)user_data;
 	char *package;
 	ail_cb_ret_e ret = AIL_CB_RET_CONTINUE;
 
+	if(uid == 0) {
+		_E("Root user request to start app assumming this is done by system deamon... Please fix it...switch to DEFAULT_USER");
+		uid = DEFAULT_USER;
+	}
 	if (!menu_info)
 		return ret;
 	//is_admin is global
-	if (getuid() != GLOBAL_USER)
-		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, getuid(), &package);
+	if (uid != GLOBAL_USER)
+		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, uid, &package);
 	else
 		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &package);
 	if (package) {
@@ -205,7 +208,10 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 	ail_filter_h filter;
 	ail_error_e ret;
 	int count;
-
+	if(uid == 0) {
+		_E("Root user request to start app assumming this is done by system deamon... Please fix it...switch to DEFAULT_USER");
+		uid = DEFAULT_USER;
+	}
 	if (apppath == NULL)
 		return NULL;
 
@@ -227,7 +233,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 	}
 
 	if (uid != GLOBAL_USER)
-		ret = ail_filter_count_usr_appinfo(filter, &count, getuid());
+		ret = ail_filter_count_usr_appinfo(filter, &count, uid);
 	else
 		ret = ail_filter_count_appinfo(filter, &count);
 	if (ret != AIL_ERROR_OK) {
@@ -242,7 +248,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 	}
 //is_admin is global
 	if (uid != GLOBAL_USER)
-		ail_filter_list_usr_appinfo_foreach(filter, __appinfo_func, (void *)menu_info, getuid());
+		ail_filter_list_usr_appinfo_foreach(filter, __appinfo_func, (void *)menu_info, uid);
 	else
 		ail_filter_list_appinfo_foreach(filter, __appinfo_func, (void *)menu_info);
 
