@@ -28,6 +28,7 @@ BuildRequires:  pkgconfig(app-checker)
 BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
 BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(privacy-manager-client)
