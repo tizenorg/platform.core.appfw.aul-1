@@ -14,4 +14,4 @@ ExecStart=/usr/bin/amd
 OOMScoreAdjust=-100
 
 [Install]
-WantedBy=graphical.target
+WantedBy=default.target
