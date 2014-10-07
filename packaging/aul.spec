@@ -5,7 +5,6 @@ Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
-Source101:  launchpad-preload@.service
 Source102:  ac.service
 Source103:  amd_session_agent.service
 Source1001: %{name}.manifest
@@ -75,27 +74,25 @@ mkdir -p %{buildroot}%{TZ_SYS_DB}
 sqlite3 %{buildroot}%{TZ_SYS_DB}/.mida.db < %{buildroot}%{_datadir}/aul/mida_db.sql
 rm -rf %{buildroot}%{_datadir}/aul/mida_db.sql
 
-mkdir -p %{buildroot}%{_unitdir}/graphical.target.wants
-mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
-install -m 0644 %SOURCE101 %{buildroot}%{_unitdir}/launchpad-preload@.service
+mkdir -p %{buildroot}%{_unitdir}
+mkdir -p %{buildroot}%{_unitdir_user}
 install -m 0644 %SOURCE102 %{buildroot}%{_unitdir}/ac.service
-ln -s ../launchpad-preload@.service %{buildroot}%{_unitdir}/graphical.target.wants/launchpad-preload@5000.service
-ln -s ../ac.service %{buildroot}%{_unitdir}/graphical.target.wants/ac.service
 
 install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.service
-ln -s ../amd_session_agent.service %{buildroot}%{_unitdir_user}/default.target.wants/amd_session_agent.service
 
 %preun
 if [ $1 == 0 ]; then
-    systemctl stop launchpad-preload@5000.service
     systemctl stop ac.service
 fi
+systemctl disable ac
+systemctl --global disable amd_session_agent
 
 %post
 /sbin/ldconfig
+systemctl enable ac
+systemctl --global enable amd_session_agent
 systemctl daemon-reload
 if [ $1 == 1 ]; then
-    systemctl restart launchpad-preload@5000.service
     systemctl restart ac.service
 fi
 
@@ -124,12 +121,8 @@ systemctl daemon-reload
 %{_datadir}/aul/service/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
-%{_unitdir}/graphical.target.wants/launchpad-preload@5000.service
-%{_unitdir}/graphical.target.wants/ac.service
-%{_unitdir}/launchpad-preload@.service
 %{_unitdir}/ac.service
 %{_unitdir_user}/amd_session_agent.service
-%{_unitdir_user}/default.target.wants/amd_session_agent.service
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent
