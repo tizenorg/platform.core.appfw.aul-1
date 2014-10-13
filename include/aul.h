@@ -175,6 +175,9 @@ typedef enum _aul_type{
 /** AUL public key - To force launch app selector instead of lauchingn default app */
 #define AUL_K_FORCE_LAUNCH_APP_SELECTOR	"__AUL_FORCE_LAUNCH_APP_SELECTOR__"
 
+/** AUL public key - To support debug argument */
+#define AUL_K_DEBUG	"__AUL_DEBUG__"
+
 /** AUL public key - To support SDK */
 #define AUL_K_SDK	"__AUL_SDK__"
 

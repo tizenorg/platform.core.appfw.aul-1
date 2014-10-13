@@ -34,10 +34,11 @@
 static char **gargv;
 static int gargc;
 bundle *kb = NULL;
+static int debugFlag = 0;
 
 static GMainLoop *mainloop = NULL;
 
-static bundle *create_internal_bundle(int start)
+static bundle *create_internal_bundle()
 {
 	bundle *kb;
 	int i;
@@ -45,48 +46,31 @@ static bundle *create_internal_bundle(int start)
 	char* val_array[128];
 
 	kb = bundle_create();
-	for (i = start; i < gargc - 1; i++) {
-		if ((i + 1) > gargc - 1)
-			bundle_add(kb, gargv[i], " ");
-		else {
-			int j = 1;
-			strncpy(arg, gargv[i + 1], 1023);
-			val_array[0] = strtok(arg,",");
-			while(1)
-			{
-				val_array[j] = strtok(NULL,",");
-				if(val_array[j] == NULL)
-					break;
-				j++;
-			}
-			if(j==1)
-				bundle_add(kb, gargv[i], gargv[i + 1]);
-			else if(j>1)
-				bundle_add_str_array(kb, gargv[i],
-					(const char**)val_array, j);
-		}
-	}
-
+	bundle_add(kb, AUL_K_DEBUG, "1");
 	return kb;
 }
 
-int launch()
+int launch(int debug_option)
 {
 	int pid = -1;
 
-	kb = create_internal_bundle(2);
-	if (NULL == kb) {
-		printf("bundle creation fail\n");
-		return -1;
-	}
 
-	pid = aul_open_app(gargv[1]);
+	if(!debug_option)
+		pid = aul_open_app(gargv[1]);
+	else {
+		kb = create_internal_bundle();
+		if (NULL == kb) {
+			printf("bundle creation fail\n");
+			return -1;
+		}
+		pid = aul_launch_app(gargv[1], kb);
+	}
 	return pid;
 }
 
 void print_usage(char *progname)
 {
-	printf("[usage] %s <appid>\n",
+	printf("[usage] %s <appid> [-d]\n",
 	       progname);
 }
 
@@ -104,24 +88,25 @@ static gboolean run_func(void *data)
 {
 	int pid = -1;
 	char *str = NULL;
-	if ((pid = launch()) > 0) {
+	if ((pid = launch(debugFlag)) > 0) {
 		printf("... successfully launched\n");
 	} else {
 		printf("... launch failed\n");
 	}
-
-	str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
-
-	if( str && strcmp(str, "SYNC") == 0 ) {
-		aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
-	} else {
-		g_main_loop_quit(mainloop);
-	}
-
 	if (kb) {
+		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
+
+		if( str && strcmp(str, "SYNC") == 0 ) {
+			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
+		} else {
+			g_main_loop_quit(mainloop);
+		}
+
 		bundle_free(kb);
 		kb = NULL;
-	}
+	} else 
+		g_main_loop_quit(mainloop);
+
 
 	return TRUE;
 }
@@ -129,14 +114,22 @@ static gboolean run_func(void *data)
 
 int main(int argc, char **argv)
 {
-	if (argc < 2) {
+	if ((argc < 2)||(argc > 3)) {
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	gargc = argc;
 	gargv = argv;
-
+	
+	if(argc == 3) {
+		if( (strcmp(argv[2],"-d")  != 0 ) && (strcmp(argv[1],"-d")  != 0 ) ) {
+			printf("additionnal argument should be -d to enable debugging\n");
+			print_usage(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+		debugFlag = 1;
+	}
 	aul_launch_init(NULL, NULL);
 
 	g_idle_add(run_func, NULL);
