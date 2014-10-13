@@ -210,6 +210,9 @@ _static_ void __real_launch(const char *app_path, bundle * kb)
 	char **app_argv;
 	int i;
 
+	if(bundle_get_val(kb, AUL_K_DEBUG) != NULL)
+		putenv("TIZEN_DEBUGGING_PORT=1");
+
 	app_argv = __create_argc_argv(kb, &app_argc);
 	app_argv[0] = strdup(app_path);
 
