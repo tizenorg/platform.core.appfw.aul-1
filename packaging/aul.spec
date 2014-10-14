@@ -5,7 +5,6 @@ Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
-Source101:  launchpad-preload@.service
 Source102:  ac.service
 Source103:  amd_session_agent.service
 Source1001: %{name}.manifest
@@ -77,9 +76,7 @@ rm -rf %{buildroot}%{_datadir}/aul/mida_db.sql
 
 mkdir -p %{buildroot}%{_unitdir}/graphical.target.wants
 mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
-install -m 0644 %SOURCE101 %{buildroot}%{_unitdir}/launchpad-preload@.service
 install -m 0644 %SOURCE102 %{buildroot}%{_unitdir}/ac.service
-ln -s ../launchpad-preload@.service %{buildroot}%{_unitdir}/graphical.target.wants/launchpad-preload@5000.service
 ln -s ../ac.service %{buildroot}%{_unitdir}/graphical.target.wants/ac.service
 
 install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.service
@@ -124,9 +121,7 @@ systemctl daemon-reload
 %{_datadir}/aul/service/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
-%{_unitdir}/graphical.target.wants/launchpad-preload@5000.service
 %{_unitdir}/graphical.target.wants/ac.service
-%{_unitdir}/launchpad-preload@.service
 %{_unitdir}/ac.service
 %{_unitdir_user}/amd_session_agent.service
 %{_unitdir_user}/default.target.wants/amd_session_agent.service
