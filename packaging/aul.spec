@@ -44,6 +44,14 @@ Requires:   %{name} = %{version}-%{release}
 %description devel
 Application utility library (devel)
 
+%package test
+Summary:    App utility test tools 
+Group:      Development/Libraries
+Requires:   %{name} = %{version}-%{release}
+
+%description test
+Application utility library (test tools)
+
 
 %prep
 %setup -q
@@ -106,16 +114,13 @@ systemctl daemon-reload
 %attr(0644,root,root) %{_libdir}/libaul.so.0
 %attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
 %{_sysconfdir}/init.d/launchpad_run
-%attr(0755,root,root) %{_bindir}/aul_service.sh
-%attr(0755,root,root) %{_bindir}/aul_service_test.sh
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 %config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db
 %config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db-journal
 %attr(0755,root,root) %{_bindir}/aul_mime.sh
 %{_bindir}/aul_test
-%{_bindir}/launch_app
-%{_bindir}/open_app
+%{_bindir}/app_launcher
 %{_bindir}/amd_session_agent
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/service/*
@@ -128,6 +133,13 @@ systemctl daemon-reload
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent
+
+
+%files  test
+%{_bindir}/launch_app
+%{_bindir}/open_app
+%attr(0755,root,root) %{_bindir}/aul_service.sh
+%attr(0755,root,root) %{_bindir}/aul_service_test.sh
 
 %files devel
 %{_includedir}/aul/*.h

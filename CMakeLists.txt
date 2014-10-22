@@ -130,6 +130,14 @@ INSTALL(TARGETS ${LAUNCH_AGENT} DESTINATION bin)
 
 
 
+SET(APP_LAUNCHER "app_launcher")
+add_executable(${APP_LAUNCHER}
+		app_launcher.c
+        )
+SET(APP_LAUNCHER_LIBRARY ${APP_LAUNCHER} aul_mods app-checker-server rua glib-2.0 bundle ail aul)
+target_link_libraries(${APP_LAUNCHER_LIBRARY} ${pkgs_LDFLAGS})
+INSTALL(TARGETS app_launcher DESTINATION bin)
+
 # pkgconfig file
 CONFIGURE_FILE(aul.pc.in aul.pc @ONLY)
 CONFIGURE_FILE(legacy/preload_list.txt.in legacy/preload_list.txt @ONLY)

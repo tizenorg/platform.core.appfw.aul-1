@@ -390,6 +390,8 @@ static gboolean __request_handler(gpointer data)
 			__send_result_to_client(clifd, ret);
 			break;
 		case APP_DEAD_SIGNAL:
+			_E("APP_DEAD_SIGNAL");
+
 			kb = bundle_decode(pkt->data, pkt->len);
 			ret=__handle_dead_signal(kb,clifd,&cr);
 			break;
