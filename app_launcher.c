@@ -250,7 +250,11 @@ int main(int argc, char **argv)
             case 's':
             case 'k':
             case 'r':
-                strncpy(args.applicationId, optarg, strlen(optarg));
+                if(strlen(optarg) > 255) {
+                    print_usage(argv[0]);
+                    return -1;
+                } else
+                    strcpy(args.applicationId, optarg);
                 op = next_opt;
                 break;
 
