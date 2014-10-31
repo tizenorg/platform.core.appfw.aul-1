@@ -271,16 +271,45 @@ int main(int argc, char **argv)
             }
         } while (next_opt != -1);
 
-        if (argc == 1)
-            print_usage(argv[0]);
-
-        if (optind < argc) {
+        if (argc == 1) {
+            char  *progname, *basen;
+            progname = strdup(argv[0]);
+            basen = basename(progname);
+            if (!strcmp(basen, "app_launcher")) {
+                printf("No Args informed, nothing to do.\n");
+                return 0;
+            } else {
+                if(strlen(basen) > 255) {
+                    printf("Bad args .\n");
+                    print_usage("app_launcher");
+                    free(progname);
+                    return -1;
+                } else {
+                    char *prevptr = NULL;
+                    char *ptr = basen;
+                       
+                    while( (ptr = strstr(ptr,".launch")))
+                        prevptr = ptr++;
+                    if(!prevptr) {
+                       printf("Bad symbolic link. it should be <APPID>.launch .\n");
+                       free(progname);
+                       return -1;
+					}
+                    *prevptr = '\0';
+                    printf("app_launcher is called by symbolic link use progname as argument -s %s .\n",basen);
+                    strcpy(args.applicationId, basen);
+                    free(progname);
+                    op = 's';
+                }
+            }
+        } else if (optind < argc) {
             printf("Wrong option: ");
             while (optind < argc)
                printf("%s ", argv[optind++]);
             printf("\n");
             print_usage(argv[0]);
-        }
+            return -1;
+         }
         if ((op == 's') || (op == 'k') || (op == 'r')) {
           if (IsAppInstalled(args.applicationId) <= 0) {
                 printf("The app with ID: %s is not avaible for the user %d \n", args.applicationId, getuid());
