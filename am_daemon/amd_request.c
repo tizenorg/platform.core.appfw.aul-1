@@ -394,6 +394,7 @@ static gboolean __request_handler(gpointer data)
 
 			kb = bundle_decode(pkt->data, pkt->len);
 			ret=__handle_dead_signal(kb,clifd,&cr);
+			close(clifd);
 			break;
 		default:
 			_E("no support packet");
