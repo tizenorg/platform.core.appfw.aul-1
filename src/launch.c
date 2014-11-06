@@ -271,7 +271,7 @@ SLPAPI int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 static void __clear_internal_key(bundle *kb)
 {
 	bundle_del(kb, AUL_K_CALLER_PID);
-	bundle_del(kb, AUL_K_PKG_NAME);
+	bundle_del(kb, AUL_K_APPID);
 	bundle_del(kb, AUL_K_WAIT_RESULT);
 	bundle_del(kb, AUL_K_SEND_RESULT);
 	bundle_del(kb, AUL_K_ARGV0);
@@ -326,19 +326,19 @@ static int __app_resume_local()
  * @brief	start caller with kb
  * @return	callee's pid
  */
-int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb)
+int app_request_to_launchpad(int cmd, const char *appid, bundle *kb)
 {
 	int must_free = 0;
 	int ret = 0;
 
-	SECURE_LOGD("launch request : %s", pkgname);
+	SECURE_LOGD("launch request : %s", appid);
 	if (kb == NULL) {
 		kb = bundle_create();
 		must_free = 1;
 	} else
 		__clear_internal_key(kb);
 
-	bundle_add(kb, AUL_K_PKG_NAME, pkgname);
+	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
 	ret = app_send_cmd(AUL_UTIL_PID, cmd, kb);
 
