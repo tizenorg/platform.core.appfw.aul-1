@@ -141,7 +141,7 @@ static inline void __preexec_init(int argc, char **argv)
 	preexec_initialized = 1;
 }
 
-static inline void __preexec_run(const char *pkg_type, const char *pkg_name,
+static inline void __preexec_run(const char *pkg_type, const char *appid,
 				 const char *app_path)
 {
 	GSList *iter = NULL;
@@ -155,7 +155,7 @@ static inline void __preexec_run(const char *pkg_type, const char *pkg_name,
 		if (type_t) {
 			if (!strcmp(pkg_type, type_t->pkg_type)) {
 				if (type_t->dl_do_pre_exe != NULL) {
-					type_t->dl_do_pre_exe((char *)pkg_name,
+					type_t->dl_do_pre_exe((char *)appid,
 							      (char *)app_path);
 					_D("called dl_do_pre_exe() type: %s",
 					   pkg_type);
@@ -179,7 +179,7 @@ static inline void __preexec_init(int argc, char **argv)
 {
 }
 
-static inline void __preexec_run(const char *pkg_type, const char *pkg_name,
+static inline void __preexec_run(const char *pkg_type, const char *appid,
 				 const char *app_path)
 {
 }
