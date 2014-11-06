@@ -164,7 +164,7 @@ int iterfunc_kill(const aul_app_info *info, void *data)
         return 0;
     if(strcmp(info->appid,data) == 0) {
         aul_kill_pid(info->pid);
-    printf("\t Kill pkg_name: %s (%d)\n", info->appid,info->pid);
+    printf("\tKill appId: %s (%d)\n", info->appid,info->pid);
     }
     return 0;
 }
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
                 if (dispRunList) {
                     break;
                 }
-                printf("\t pkg_name (PID)\n");
+                printf("\t appId (PID)\n");
                 if (aul_app_get_running_app_info(iterfunc_status, NULL)) {
                     printf("Fail to display the list of Running applications");
                     return -1;
