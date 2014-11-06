@@ -22,7 +22,7 @@ BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(ail)
 BuildRequires:  xdgmime-devel, pkgconfig(xdgmime)
-BuildRequires:  pkgconfig(libprivilege-control)
+BuildRequires:  pkgconfig(security-manager)
 BuildRequires:  pkgconfig(app-checker)
 BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
@@ -120,7 +120,7 @@ systemctl daemon-reload
 %attr(0755,root,root) %{_bindir}/aul_mime.sh
 %{_bindir}/aul_test
 %{_bindir}/app_launcher
-%{_bindir}/amd_session_agent
+%caps(cap_mac_admin,cap_mac_override,cap_setgid=ei) %{_bindir}/amd_session_agent
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/service/*
 %{_datadir}/aul/preload_list.txt

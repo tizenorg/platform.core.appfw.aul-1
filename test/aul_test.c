@@ -244,7 +244,7 @@ int is_run_test()
 int iterfunc(const aul_app_info *info, void *data)
 {
 	printf("\t==========================\n");
-	printf("\t pkg_name: %s\n", info->appid);
+	printf("\t appid: %s\n", info->appid);
 	printf("\t app_path: %s\n", info->app_path);
 	printf("\t running pid: %d\n", info->pid);
 	printf("\t==========================\n");
@@ -374,7 +374,7 @@ static void print_menu_db_info(const app_info_from_db *info)
 	}
 
 	printf("\t==========================\n");
-	printf("\t pkg_name: %s\n", info->pkg_name);
+	printf("\t appid: %s\n", info->appid);
 	printf("\t app_path: %s\n", info->app_path);
 	printf("\t is_minst: %d\n", 0);
 	printf("\t==========================\n");

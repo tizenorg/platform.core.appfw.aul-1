@@ -247,7 +247,7 @@ static int __get_pkginfo(const char *dname, const char *cmdline, void *priv,uid_
 	else {
 		strncat(r_info, dname, 8);
 		strncat(r_info, ":", 1);
-		strncat(r_info, _get_pkgname(menu_info), MAX_PACKAGE_STR_SIZE);
+		strncat(r_info, _get_appid(menu_info), MAX_PACKAGE_STR_SIZE);
 		strncat(r_info, ":", 1);
 		strncat(r_info, _get_app_path(menu_info), MAX_PACKAGE_APP_PATH_SIZE);
 		strncat(r_info, ";", 1);
@@ -292,7 +292,7 @@ int _status_send_running_appinfo_v2(int fd)
 	return 0;
 }
 
-static int __get_pkgname_bypid(int pid, char *pkgname, int len)
+static int __get_appid_bypid(int pid, char *appid, int len)
 {
 	char *cmdline;
 	app_info_from_db *menu_info;
@@ -309,7 +309,7 @@ static int __get_pkgname_bypid(int pid, char *pkgname, int len)
 		free(cmdline);
 		return -1;
 	} else {
-		snprintf(pkgname, len, "%s", _get_pkgname(menu_info));
+		snprintf(appid, len, "%s", _get_appid(menu_info));
 	}
 
 	free(cmdline);
@@ -335,7 +335,7 @@ int _status_get_appid_bypid(int fd, int pid)
 
 	pkt->cmd = APP_GET_APPID_BYPID_ERROR;
 
-	if (__get_pkgname_bypid(pid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
+	if (__get_appid_bypid(pid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
 		SECURE_LOGD("appid for %d is %s", pid, pkt->data);
 		pkt->cmd = APP_GET_APPID_BYPID_OK;
 		goto out;
@@ -347,7 +347,7 @@ int _status_get_appid_bypid(int fd, int pid)
 		goto out;
 
 	_D("second change pgid = %d, pid = %d", pgid, pid);
-	if (__get_pkgname_bypid(pgid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0)
+	if (__get_appid_bypid(pgid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0)
 		pkt->cmd = APP_GET_APPID_BYPID_OK;
 
  out:
