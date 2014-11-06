@@ -44,16 +44,16 @@
 #define AUL_RETRIEVE_SERVICE			"x_slp_service like '?'"
 
 typedef struct {
-	char *pkg_name;		/* package */
+	char *appid;		/* application id */
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *pkg_type;		/* x_slp_packagetype */
 	char *hwacc;		/* hwacceleration */
 } app_info_from_db;
 
-static inline char *_get_pkgname(app_info_from_db *menu_info)
+static inline char *_get_appid(app_info_from_db *menu_info)
 {
-	return menu_info ? menu_info->pkg_name : NULL;
+	return menu_info ? menu_info->appid : NULL;
 }
 
 static inline char *_get_app_path(app_info_from_db *menu_info)
@@ -96,8 +96,8 @@ static inline char *_get_original_app_path(app_info_from_db *menu_info)
 static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 {
 	if (menu_info != NULL) {
-		if (menu_info->pkg_name != NULL)
-			free(menu_info->pkg_name);
+		if (menu_info->appid != NULL)
+			free(menu_info->appid);
 		if (menu_info->app_path != NULL)
 			free(menu_info->app_path);
 		if (menu_info->original_app_path != NULL)
@@ -136,7 +136,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	else
 		ret = ail_appinfo_get_str(handle, AIL_PROP_PACKAGE_STR, &str);
 	if (str) {
-		menu_info->pkg_name = strdup(str);
+		menu_info->appid = strdup(str);
 		str = NULL;
 	}
 	//is_admin is global
@@ -193,7 +193,7 @@ static inline ail_cb_ret_e __appinfo_func(const ail_appinfo_h appinfo, void *use
 	else
 		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &package);
 	if (package) {
-		menu_info->pkg_name = strdup(package);
+		menu_info->appid = strdup(package);
 		ret = AIL_CB_RET_CANCEL;
 	}
 
