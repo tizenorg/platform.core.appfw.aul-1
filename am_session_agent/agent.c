@@ -66,7 +66,7 @@ static int initialized = 0;
 
 _static_ void __set_oom();
 _static_ void __set_env(app_info_from_db * menu_info, bundle * kb);
-_static_ int __prepare_exec(const char *pkg_name,
+_static_ int __prepare_exec(const char *appId,
 			    const char *app_path, app_info_from_db * menu_info,
 			    bundle * kb);
 _static_ int __fake_launch_app(int cmd, int pid, bundle * kb);
@@ -106,7 +106,7 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 {
 	const char *str;
 
-	setenv("PKG_NAME", _get_pkgname(menu_info), 1);
+	setenv("PKG_NAME", _get_appid(menu_info), 1);
 
 	str = bundle_get_val(kb, AUL_K_STARTTIME);
 	if (str != NULL)
@@ -116,7 +116,7 @@ _static_ void __set_env(app_info_from_db * menu_info, bundle * kb)
 		setenv("HWACC", menu_info->hwacc, 1);
 }
 
-_static_ int __prepare_exec(const char *pkg_name,
+_static_ int __prepare_exec(const char *appId,
 			    const char *app_path, app_info_from_db * menu_info,
 			    bundle * kb)
 {
@@ -129,15 +129,15 @@ _static_ int __prepare_exec(const char *pkg_name,
 	/* TODO : should be add to check permission in the kernel*/
 	setsid();
 
-	__preexec_run(menu_info->pkg_type, pkg_name, app_path);
+	__preexec_run(menu_info->pkg_type, appId, app_path);
 
 	/* SET OOM*/
 	__set_oom();
 
 	/* SET PRIVILEGES*/
 	if(bundle_get_val(kb, AUL_K_PRIVACY_APPID) == NULL) {
-		 _D("pkg_name : %s / pkg_type : %s / app_path : %s ", pkg_name, menu_info->pkg_type, app_path);
-		if ((ret = __set_access(pkg_name, menu_info->pkg_type, app_path)) < 0) {
+		 _D("appId: %s / pkg_type : %s / app_path : %s ", appId, menu_info->pkg_type, app_path);
+		if ((ret = __set_access(appId, menu_info->pkg_type, app_path)) != 0) {
 			 _D("fail to set privileges - check your package's credential : %d\n", ret);
              return -1;
 		}
@@ -331,7 +331,7 @@ static inline int __parser(const char *arg, char *out, int out_size)
 _static_ void __modify_bundle(bundle * kb, int caller_pid,
 			    app_info_from_db * menu_info, int cmd)
 {
-	bundle_del(kb, AUL_K_PKG_NAME);
+	bundle_del(kb, AUL_K_APPID);
 	bundle_del(kb, AUL_K_EXEC);
 	bundle_del(kb, AUL_K_PACKAGETYPE);
 	bundle_del(kb, AUL_K_HWACC);
@@ -548,8 +548,8 @@ _static_ void __send_result_to_caller(int clifd, int ret)
 	return;
 }
 
-static app_info_from_db *_get_app_info_from_bundle_by_pkgname(
-							const char *pkgname, bundle *kb)
+static app_info_from_db *_get_app_info_from_bundle_by_appid(
+							const char *appid, bundle *kb)
 {
 	app_info_from_db *menu_info;
 
@@ -558,7 +558,7 @@ static app_info_from_db *_get_app_info_from_bundle_by_pkgname(
 		return NULL;
 	}
 
-	menu_info->pkg_name = strdup(pkgname);
+	menu_info->appid = strdup(appid);
 	menu_info->app_path = strdup(bundle_get_val(kb, AUL_K_EXEC));
 	if (menu_info->app_path != NULL)
 		menu_info->original_app_path = strdup(menu_info->app_path);
@@ -579,7 +579,7 @@ _static_ void __agent_main_loop(int main_fd)
 	app_pkt_t *pkt = NULL;
 	app_info_from_db *menu_info = NULL;
 
-	const char *pkg_name = NULL;
+	const char *appId = NULL;
 	const char *app_path = NULL;
 	int pid = -1;
 	int uid = -1;
@@ -606,8 +606,8 @@ _static_ void __agent_main_loop(int main_fd)
 	INIT_PERF(kb);
 	PERF("packet processing start");
 
-	pkg_name = bundle_get_val(kb, AUL_K_PKG_NAME);
-	SECURE_LOGD("pkg name : %s\n", pkg_name);
+	appId = bundle_get_val(kb, AUL_K_APPID);
+	SECURE_LOGD("appId : %s\n", appId);
 
 	/* get caller uid and check if not coming from someone else than AMD */
 	uid = __get_caller_uid(kb);
@@ -621,7 +621,7 @@ _static_ void __agent_main_loop(int main_fd)
 		goto end;
 	}
 
-	menu_info = _get_app_info_from_bundle_by_pkgname(pkg_name, kb);
+	menu_info = _get_app_info_from_bundle_by_appid(appId, kb);
 	if (menu_info == NULL) {
 		_D("package not found");
 		goto end;
@@ -638,9 +638,9 @@ _static_ void __agent_main_loop(int main_fd)
 	}
 
 	__modify_bundle(kb, cr.pid, menu_info, pkt->cmd);
-	pkg_name = _get_pkgname(menu_info);
+	appId = _get_appid(menu_info);
 
-	_D("start %s: type=%s caller_uid=%d path=%s",pkg_name,menu_info->pkg_type,uid,app_path);
+	_D("start %s: type=%s caller_uid=%d path=%s",appId,menu_info->pkg_type,uid,app_path);
 
 	PERF("get package information & modify bundle done");
 	if( !strcmp(menu_info->pkg_type, "wgt") || !strcmp(menu_info->pkg_type, "rpm") || !strcmp(menu_info->pkg_type, "tpk"))
@@ -661,10 +661,10 @@ _static_ void __agent_main_loop(int main_fd)
 			PERF("prepare exec - first done");
 			_D("lock up test log(no error) : prepare exec - first done");
 
-			if (__prepare_exec(pkg_name, app_path,
+			if (__prepare_exec(appId, app_path,
 					   menu_info, kb) < 0) {
 				SECURE_LOGE("preparing work fail to launch - "
-				   "can not launch %s\n", pkg_name);
+				   "can not launch %s\n", appId);
 				exit(-1);
 			}
 
