@@ -282,6 +282,7 @@ static gboolean __request_handler(gpointer data)
 	int ret = -1;
 	int free_pkt = 1;
 	char *appid;
+	int surf = 0;
 	/*char *app_path;
 	char *tmp_pid;*/
 	int pid;
@@ -357,6 +358,11 @@ static gboolean __request_handler(gpointer data)
 			memcpy(&pid, pkt->data, pkt->len);
 			ret = _status_get_appid_bypid(clifd, pid);
 			_D("APP_GET_APPID_BYPID : %d : %d", pid, ret);
+			break;
+		case APP_GET_APPID_BYSURF:
+			memcpy(&surf, pkt->data, pkt->len);
+			ret = _status_get_appid_bysurf(clifd, surf, cr.uid);
+			_D("APP_GET_APPID_BYSURF : %d : %d : %d", clifd, surf, cr.uid, ret);
 			break;
 		case APP_KEY_RESERVE:
 			// support for key events has been removed (sdx-20140813)

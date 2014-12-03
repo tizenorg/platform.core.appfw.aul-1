@@ -318,6 +318,14 @@ static int __get_pkgname_bypid(int pid, char *pkgname, int len)
 	return 0;
 }
 
+static int __get_appname_bysurf(int surface, char *app_name, int len, uid_t uid)
+{
+
+	//TODO IMPLEMENT dlopen(weston plugin)
+	return 0;
+}
+
+
 int _status_get_appid_bypid(int fd, int pid)
 {
 	app_pkt_t *pkt = NULL;
@@ -366,6 +374,48 @@ int _status_get_appid_bypid(int fd, int pid)
 
 	return 0;
 }
+
+int _status_get_appid_bysurf(int fd, int surf, uid_t uid)
+{
+	app_pkt_t *pkt = NULL;
+	int len;
+	int pgid;
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if(!pkt) {
+		_E("malloc fail");
+		close(fd);
+		return 0;
+	}
+
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = APP_GET_APPID_BYSURF_ERROR;
+
+	if (__get_appname_bysurf(surf, (char *)pkt->data, MAX_PACKAGE_STR_SIZE, uid ) == 0) {
+		SECURE_LOGD("appid for surface %d and user %d is %s", surf, uid, pkt->data);
+		pkt->cmd = APP_GET_APPID_BYSURF_OK;
+		goto out;
+	}
+
+
+ out:
+	pkt->len = strlen((char *)pkt->data) + 1;
+
+	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
+		if (errno == EPIPE)
+			_E("send failed due to EPIPE.\n");
+		_E("send fail to client");
+	}
+
+	if(pkt)
+		free(pkt);
+
+	close(fd);
+
+	return 0;
+}
+
 
 
 int _status_init(struct amdmgr* amd)
