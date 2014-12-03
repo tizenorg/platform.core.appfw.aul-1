@@ -812,6 +812,32 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
 */
 int aul_app_get_appid_bypid(int pid, char *appid, int len);
 
+/**
+ * @par Description:
+ *	This API get application appid by surface
+ * @par Purpose:
+ *	If you want to get appid associated to a displayed surface , use this API
+ * @par Typical use case:
+ *	In general, You can use this API when you want to know the applications associated to a surface
+ *  For example when you want to control wich app can display a surface.
+ *
+ * @param[in]	surf		given surface id
+ * @param[out]	appid		application id
+ * @param[in]	len		length of applicationname
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- no such a appid
+ * @pre
+ *	None
+ * @post
+ *	None
+ * @see
+ *	None
+ * @remark
+ *	None
+*/
+int aul_app_get_appid_bysurf(int surf, char *appid, int len);
+
 
 /** @} */
 

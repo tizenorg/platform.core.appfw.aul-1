@@ -32,7 +32,7 @@ int _status_send_running_appinfo(int fd);
 int _status_app_is_running(char *appid,  uid_t uid);
 int _status_send_running_appinfo_v2(int fd); //depcrecated
 int _status_get_appid_bypid(int fd, int pid);
-
+int _status_get_appid_bysurf(int fd, int surf, uid_t uid);
 
 
 

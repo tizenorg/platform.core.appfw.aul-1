@@ -155,3 +155,26 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	free(pkt);
 	return AUL_R_OK;
 }
+
+
+
+
+SLPAPI int aul_app_get_appid_bysurf(int surf, char *appid, int len)
+{
+	app_pkt_t *pkt = NULL;
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GET_APPID_BYSURF, (unsigned char *)&surf, sizeof(surf));
+
+	if(pkt == NULL)
+		return AUL_R_ERROR;
+	if(pkt->cmd == APP_GET_APPID_BYSURF_ERROR) {
+		free(pkt);
+		return AUL_R_ERROR;
+	}
+
+	snprintf(appid, len, "%s", pkt->data);
+	free(pkt);
+	return AUL_R_OK;
+}
