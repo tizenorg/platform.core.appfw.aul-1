@@ -1,3 +1,5 @@
+%bcond_with wayland
+
 Name:       aul
 Summary:    App utility library
 Version:    0.0.300
@@ -32,6 +34,12 @@ BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(privacy-manager-client)
 BuildRequires:  pkgconfig(libtzplatform-config)
+%if %{with wayland}
+BuildRequires:  pkgconfig(wayland-server)
+BuildRequires:  pkgconfig(weston)
+BuildRequires:  pkgconfig(pixman-1)
+BuildRequires:  pkgconfig(xkbcommon)
+%endif
 
 %description
 Application utility library
@@ -63,7 +71,12 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
-%cmake .
+%cmake . \
+%if %{with wayland}
+    -DWAYLAND_SUPPORT=On
+%else
+    -DWAYLAND_SUPPORT=Off
+%endif
 %__make %{?_smp_mflags}
 
 %install
@@ -130,7 +143,9 @@ systemctl daemon-reload
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent
-
+%if %{with wayland}
+%{_libdir}/weston/aul-plugin.so
+%endif
 
 %files  test
 %{_bindir}/launch_app

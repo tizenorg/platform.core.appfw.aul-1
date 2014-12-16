@@ -1,0 +1,41 @@
+<protocol name="aul">
+
+  <interface name="aul" version="1">
+    <description summary="associate surface ids with appids">
+      Aside from their optional shell title, Wayland surfaces do not have
+      a meaningful attribute to track their originating application.
+      AUL needs it, though, to track surfaces which are managed by a
+      different process than the one which implements the Tizen application
+      logic (Crosswalk e.g.).
+    </description>
+
+    <request name="set_surface_appid">
+      <arg name="surface_id" type="int"/>
+      <arg name="appid" type="string"/>
+    </request>
+
+    <request name="unset_surface">
+      <arg name="surface_id" type="int"/>
+    </request>
+
+    <request name="destroy" type="destructor"/>
+
+    <event name="surface_appid_set">
+      <description summary="surface_appid_set">
+        Callback event for set_surface_appid request.
+      </description>
+      <arg name="surface_id" type="int"/>
+      <arg name="success" type="int"/>
+    </event>
+
+    <event name="surface_unset">
+      <description summary="surface_unset">
+        Callback event for unset_surface request.
+      </description>
+      <arg name="surface_id" type="int"/>
+      <arg name="success" type="int"/>
+    </event>
+
+  </interface>
+
+</protocol>
