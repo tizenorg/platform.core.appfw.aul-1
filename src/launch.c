@@ -56,6 +56,7 @@ static int __app_start_internal(gpointer data);
 static int __app_launch_local(bundle *b);
 static int __send_result_to_launchpad(int fd, int res);
 
+static data_control_provider_handler_fn __dc_handler = NULL;
 extern  int aul_launch_fini();
 
 int aul_is_initialized()
@@ -72,8 +73,19 @@ static int __call_aul_handler(aul_type type, bundle *kb)
 
 int app_start(bundle *kb)
 {
+	const char *str = NULL;
+
 	_app_start_res_prepare(kb);
 	__call_aul_handler(AUL_START, kb);
+	// Handle the DataControl callback
+	str = bundle_get_val(kb, AUL_K_DATA_CONTROL_TYPE);
+	if (str != NULL && strcmp(str, "CORE") == 0)
+	{
+		if (__dc_handler != NULL)
+		{
+			__dc_handler(kb, 0, NULL); // bundle, request_id, data
+		}
+	}
 	return 0;
 }
 
@@ -620,6 +632,18 @@ SLPAPI int aul_kill_pid(int pid)
 	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_KILL_BY_PID, pkgname, NULL);
 	return ret;
+}
+
+SLPAPI int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler)
+{
+	__dc_handler = handler;
+	return 0;
+}
+
+SLPAPI int aul_unset_data_control_provider_cb(void)
+{
+	__dc_handler = NULL;
+	return 0;
 }
 
 /* vi: set ts=8 sts=8 sw=8: */
