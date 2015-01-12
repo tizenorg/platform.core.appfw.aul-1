@@ -209,6 +209,8 @@ typedef enum _aul_type{
 #define AUL_K_APPID		"__AUL_APPID__"
 /** AUL internal private key */
 #define AUL_K_PID		"__AUL_PID__"
+/** AUL internal private key - To support data control*/
+#define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
 
 #define PRIVACY_POPUP "tizenprv00.privacy-popup"
 
@@ -1615,6 +1617,9 @@ int aul_set_subapp(subapp_fn cb, void *data);
 int aul_subapp_terminate_request_pid(int pid);
 int aul_is_subapp(void);
 
+typedef int (*data_control_provider_handler_fn) (bundle *b, int request_id, void *data);
+int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler);
+int aul_unset_data_control_provider_cb(void);
 
 /** @} */
 
