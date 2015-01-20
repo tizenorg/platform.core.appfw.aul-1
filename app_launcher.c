@@ -91,7 +91,7 @@ static gboolean run_func(void *data)
     struct launch_arg* launch_arg_data = NULL;
     launch_arg_data = (struct launch_arg*)data;
     if ((pid = launch((char*)launch_arg_data->applicationId,launch_arg_data->flag_debug)) > 0) {
-        printf("... successfully launched\n");
+        printf("... successfully launched whit debug %d\n",launch_arg_data->flag_debug);
     } else {
         printf("... launch failed\n");
     }
@@ -208,6 +208,7 @@ int main(int argc, char **argv)
             { "debug", no_argument, 0, 'd' },
             { 0, 0, 0, 0 }
     };
+    memset(&args,0,sizeof(struct launch_arg));
 
     do {
             next_opt = getopt_long(argc,
