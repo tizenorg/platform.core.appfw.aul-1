@@ -79,18 +79,18 @@ static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 static app_resultcb_info_t *__find_resultcb(int pid)
 {
 	app_resultcb_info_t *tmp;
+	app_resultcb_info_t *ret = NULL;
 
 	pthread_mutex_lock(&result_lock);
 	tmp = rescb_head;
 	while (tmp) {
-		if (tmp->launched_pid == pid) {
-			pthread_mutex_unlock(&result_lock);
-			return tmp;
-		}
+		if (tmp->launched_pid == pid)
+			ret = tmp;
 		tmp = tmp->next;
 	}
 	pthread_mutex_unlock(&result_lock);
-	return NULL;
+
+	return ret;
 }
 
 static void __remove_resultcb(app_resultcb_info_t *info)
