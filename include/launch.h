@@ -44,6 +44,9 @@ int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data);
 
+int app_agent_send_cmd(int uid, int cmd, bundle *kb);
+int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb);
+int app_subapp_terminate_request(void);
 gboolean __aul_glib_handler(gpointer data);
 
 

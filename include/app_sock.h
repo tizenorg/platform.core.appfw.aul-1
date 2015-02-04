@@ -83,10 +83,11 @@ int __create_client_sock(int pid);
 int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen);
 int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int datalen);
 int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen);
+int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen);
+int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, int datalen);
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr);
 app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, int datalen);
 int __create_agent_client_sock(int uid);
-
-
+int __create_server_sock_by_path(char *path);
 #endif
 
