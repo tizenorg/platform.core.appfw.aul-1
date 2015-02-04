@@ -19,6 +19,7 @@
  *
  */
 
+#include "launch.h"
 #include "aul_util.h"
 #include "app_signal.h"
 
