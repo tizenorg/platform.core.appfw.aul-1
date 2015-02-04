@@ -52,6 +52,7 @@
 
 #include <app-checker.h>
 #include <sqlite3.h>
+#include <rua.h>
 
 #define _static_ static inline
 #define POLLFD_MAX 1
@@ -573,6 +574,18 @@ static app_info_from_db *_get_app_info_from_bundle_by_pkgname(
 	return menu_info;
 }
 
+static void __add_history(const char *pkg_name, const char *app_path, unsigned char *arg)
+{
+	struct rua_rec rec;
+
+	rec.pkg_name = pkg_name;
+	rec.app_path = app_path;
+	rec.arg = arg;
+
+	if (rua_add_history(&rec))
+		_E("rua add history error");
+}
+
 _static_ void __agent_main_loop(int main_fd)
 {
 	bundle *kb = NULL;
@@ -687,6 +700,8 @@ _static_ void __agent_main_loop(int main_fd)
 			__signal_block_sigchld();
 			__send_app_launch_signal_dbus(pid);
 			__signal_unblock_sigchld();
+
+			__add_history(pkg_name, app_path, pkt->data);
 		}
 	}
 
@@ -732,6 +747,14 @@ _static_ int __agent_pre_init(int argc, char **argv)
 		_E("server sock error");
 		return -1;
 	}
+
+	if (rua_init()) {
+		_E("rua init failed");
+		return fd;
+	}
+
+	if (rua_clear_history())
+		_E("rua clear history failed");
 
 	return fd;
 }

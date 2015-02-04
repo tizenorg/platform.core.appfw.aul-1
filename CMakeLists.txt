@@ -23,7 +23,7 @@ SET(AUL-1_PKG_CHECK_MODULES dlog libprivilege-control app-checker rua glib-2.0 v
 pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info)
-PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle)
+PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle rua)
 
 FIND_LIBRARY(LIB_DL dl)
 
@@ -112,7 +112,7 @@ add_executable(amd
 		am_daemon/amd_launch.c
 		am_daemon/amd_status.c
                 )
-SET(AUL-1_LINK_LIBRARY amd aul_mods app-checker-server rua glib-2.0 bundle ail aul)
+SET(AUL-1_LINK_LIBRARY amd aul_mods app-checker-server glib-2.0 bundle ail aul)
 target_link_libraries(${AUL-1_LINK_LIBRARY} ${pkgs_LDFLAGS})
 
 SET(REL_AGENT daemon-manager-release-agent)

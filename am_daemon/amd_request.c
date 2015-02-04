@@ -30,7 +30,6 @@
 #include <aul.h>
 #include <glib.h>
 #include <bundle.h>
-#include <rua.h>
 #include <tzplatform_config.h>
 
 #include "amd_config.h"
@@ -160,48 +159,6 @@ static int __app_process_by_pid(int cmd,
 	return ret;
 }
 
-static gboolean __add_history_handler(gpointer user_data)
-{
-	struct rua_rec rec;
-	int ret;
-	bundle *kb = NULL;
-	char *appid = NULL;
-	char *app_path = NULL;
-	struct appinfo *ai;
-	pkt_t *pkt_uid = (pkt_t *)user_data;
-
-	if (!pkt_uid)
-		return FALSE;
-
-	kb = bundle_decode(pkt_uid->pkt->data, pkt_uid->pkt->len);
-	appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
-
-	ai = (struct appinfo *)appinfo_find(pkt_uid->caller_uid, appid);
-	app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
-
-	memset((void *)&rec, 0, sizeof(rec));
-
-	rec.pkg_name = appid;
-	rec.app_path = app_path;
-
-	if(pkt_uid->pkt->len > 0) {
-		rec.arg = (char *)pkt_uid->pkt->data;
-	}
-
-	SECURE_LOGD("add rua history %s %s", rec.pkg_name, rec.app_path);
-
-	ret = rua_add_history(&rec);
-	if (ret == -1)
-		_D("rua add history error");
-
-	if (kb != NULL)
-		bundle_free(kb);
-	free(pkt_uid->pkt);
-	free(pkt_uid);
-
-	return FALSE;
-}
-
 static int __get_pid_cb(void *user_data, const char *group, pid_t pid)
 {
 	int *sz = user_data;
@@ -319,7 +276,6 @@ static gboolean __request_handler(gpointer data)
 				pkt_uid->caller_uid = cr.uid;
 				pkt_uid->pkt = pkt;
 
-				g_timeout_add(1000, __add_history_handler, pkt_uid);
 				g_timeout_add(1200, __add_item_running_list, item);
 			}
 
@@ -472,11 +428,6 @@ int _requset_init(struct amdmgr *amd)
 	}
 
 	_raf = amd->af;
-
-	r = rua_init();
-	r = rua_clear_history();
-
-	_D("rua_clear_history : %d", r);
 
 	return 0;
 }
