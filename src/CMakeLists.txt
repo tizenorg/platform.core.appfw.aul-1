@@ -1,0 +1,55 @@
+ADD_LIBRARY(${AUL_MODS} STATIC
+	app_sock.c
+	simple_util.c)
+
+ADD_LIBRARY(${AUL} SHARED
+	pkginfo.c
+	launch.c
+	launch_glib.c
+	launch_with_result.c
+	service.c
+	mime.c
+	mida.c
+	miregex.c
+	app_signal.c
+	key.c
+	status.c
+	aul_path.c)
+
+pkg_check_modules(AUL_DEPS REQUIRED
+	dlog
+	bundle
+	dbus-glib-1
+	ail
+	xdgmime
+	app-checker
+	libtzplatform-config
+	pkgmgr-info)
+FOREACH(FLAGS ${AUL_DEPS_CFLAGS})
+	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS}")
+ENDFOREACH(FLAGS)
+
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+
+TARGET_LINK_LIBRARIES(${AUL_MODS} ${AUL_DEPS_LDFLAGS})
+TARGET_LINK_LIBRARIES(${AUL} ${AUL_MODS} ${AUL_DEPS_LDFLAGS})
+SET_TARGET_PROPERTIES(${AUL} PROPERTIES SOVERSION ${VERSION_MAJOR})
+SET_TARGET_PROPERTIES(${AUL} PROPERTIES VERSION ${VERSION})
+
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/aul.pc.in ${CMAKE_SOURCE_DIR}/aul.pc @ONLY)
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/legacy/preload_list.txt.in ${CMAKE_SOURCE_DIR}/legacy/preload_list.txt @ONLY)
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/feature/preexec_list.txt.in ${CMAKE_SOURCE_DIR}/feature/preexec_list.txt @ONLY)
+
+INSTALL(TARGETS ${AUL} DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/aul.h DESTINATION include/aul)
+INSTALL(FILES ${CMAKE_BINARY_DIR}/aul.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/aul_service.h DESTINATION include/aul)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/SLP_AUL_PG.h DESTINATION include/aul)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/aul_service.sh DESTINATION bin)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/aul_service_test.sh DESTINATION bin)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/aul_mime.sh DESTINATION bin)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/legacy/preload_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/feature/preexec_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/mida_db.sql DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/data/miregex DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/data/service DESTINATION ${SHARE_INSTALL_PREFIX}/aul )

@@ -1,6 +1,6 @@
 Name:       aul
 Summary:    App utility library
-Version:    0.0.300
+Version:    0.1.0
 Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
@@ -62,8 +62,8 @@ cp %{SOURCE1001} .
 %if 0%{?simulator}
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
-
-%cmake .
+MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
+%cmake . -DFULLVER=%{version} -DMAJORVER=${MAJORVER}
 %__make %{?_smp_mflags}
 
 %install
@@ -110,8 +110,7 @@ systemctl daemon-reload
 %files
 %license LICENSE
 %manifest %{name}.manifest
-%attr(0644,root,root) %{_libdir}/libaul.so.0
-%attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
+%attr(0644,root,root) %{_libdir}/libaul.so.0*
 %{_sysconfdir}/init.d/launchpad_run
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
 %attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
