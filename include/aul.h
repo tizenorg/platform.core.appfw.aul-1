@@ -1630,10 +1630,10 @@ int aul_get_app_shared_data_path_by_appid(const char *app_id, char **path);
 int aul_get_app_shared_resource_path_by_appid(const char *app_id, char **path);
 int aul_get_app_shared_trusted_path_by_appid(const char *app_id, char **path);
 int aul_get_app_external_shared_data_path_by_appid(const char *app_id, char **path);
-int aul_get_app_usr_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
-int aul_get_app_usr_shared_resource_path_by_appid(const char *app_id, char **path, uid_t uid);
-int aul_get_app_usr_shared_trusted_path_by_appid(const char *app_id, char **path, uid_t uid);
-int aul_get_app_usr_external_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
+int aul_get_usr_app_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
+int aul_get_usr_app_shared_resource_path_by_appid(const char *app_id, char **path, uid_t uid);
+int aul_get_usr_app_shared_trusted_path_by_appid(const char *app_id, char **path, uid_t uid);
+int aul_get_usr_app_external_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
 
 
 typedef int (*subapp_fn)(void *data);
