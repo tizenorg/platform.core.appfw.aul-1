@@ -54,7 +54,8 @@ enum app_cmd {
 	APP_TERM_REQ_BY_PID,
 
 	/* reserved for AMD Agent */
-	APP_DEAD_SIGNAL
+	APP_DEAD_SIGNAL,
+	AGENT_DEAD_SIGNAL
 };
 
 #define AUL_SOCK_PREFIX "/tmp/alaunch"
