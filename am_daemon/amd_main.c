@@ -95,13 +95,29 @@ static int __kill_bg_apps(int limit)
 	return 0;
 }
 
+static int __remove_item_running_list_with_uid(uid_t user)
+{
+	r_app_info_t *info_t;
+	GSList *iter;
+	GSList *iter_next;
+
+	GSLIST_FOREACH_SAFE(r_app_info_list, iter, iter_next) {
+		info_t = (r_app_info_t *)iter->data;
+		if (user == info_t->user) {
+			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
+			free(info_t);
+			break;
+		}
+	}
+}
+
 static int __remove_item_running_list(int pid, uid_t user)
 {
-	r_app_info_t *info_t = NULL;
-	GSList *iter = NULL;
+	r_app_info_t *info_t;
+	GSList *iter;
+	GSList *iter_next;
 
-	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	GSLIST_FOREACH_SAFE(r_app_info_list, iter, iter_next) {
 		info_t = (r_app_info_t *)iter->data;
 		if( (pid == info_t->pid) && (user == info_t->user || 0 == info_t->user )) {
 			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
@@ -160,8 +176,7 @@ gboolean __add_item_running_list(gpointer user_data)
 	if (taskmanage == false)
 		goto END;
 
-	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = r_app_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (r_app_info_t *)iter->data;
 		if((pid == info_t->pid) && (user == info_t->user))  {
 			found = 1;
@@ -219,6 +234,12 @@ int __app_dead_handler(int pid, uid_t user)
 	__remove_item_running_list(pid, user);
 	_status_remove_app_info_list(pid, user);
 	return 0;
+}
+
+int __agent_dead_handler(uid_t user)
+{
+	__remove_item_running_list_with_uid(user);
+	_status_remove_app_info_list_with_uid(user);
 }
 
 static void __start_cb(void *user_data,
