@@ -51,6 +51,7 @@ static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
 
 extern int __app_dead_handler(int pid, uid_t user);
+extern int __agent_dead_handler(uid_t user);
 
 static int __send_result_to_client(int fd, int res)
 {
@@ -235,21 +236,22 @@ static int __release_srv(uid_t caller_uid, const char *filename)
 	return 0;
 }
 
-static int __handle_dead_signal(bundle* kb,int clifd, struct ucred * pcr) {
-	int ret=-1;
+static int __handle_dead_signal(bundle *kb, int clifd, struct ucred *pcr)
+{
+	int ret = -1;
 	const char *pid_str;
-	int pid=0;
+	int pid = 0;
 
 	/* check the credentials from the caller: must be the amd agent */
-	// exe of calling process
-	char * caller=__proc_get_exe_bypid(pcr->pid);
+	char *caller = __proc_get_exe_bypid(pcr->pid);
 	if (!caller) {
 		_D("handle_dead_signal: unable to get caller exe");
 		return -1;
 	}
 
-	if (strcmp(caller,"/usr/bin/amd_session_agent")) {
-		_D("handle_dead_signal: caller is not amd session agent, %d : '%s'", pcr->pid,caller);
+	if (strcmp(caller, "/usr/bin/amd_session_agent")) {
+		_D("handle_dead_signal: caller is not amd session agent, %d : '%s'",
+				pcr->pid, caller);
 		free(caller);
 		return -1;
 	}
@@ -257,18 +259,26 @@ static int __handle_dead_signal(bundle* kb,int clifd, struct ucred * pcr) {
 
 	/* get app pid from bundle */
 	pid_str = bundle_get_val(kb, AUL_K_PID);
-	if(!pid_str)
+	if (!pid_str)
 		return -1;
 
-	pid=atoi(pid_str);
-	if (pid<=1)
+	pid = atoi(pid_str);
+	if (pid <= 1)
 		return -1;
 
-	_D("APP_DEAD_SIGNAL : %d",pid);
+	_D("APP_DEAD_SIGNAL : %d", pid);
 
-	ret=__app_dead_handler(pid,pcr->uid);
+	ret = __app_dead_handler(pid, pcr->uid);
 
 	return ret;
+}
+
+static void __handle_agent_dead_signal(struct ucred *pcr)
+{
+	/* TODO: check the credentials from the caller: must be the amd agent */
+
+	_D("AGENT_DEAD_SIGNAL : %d", pcr->uid);
+	__agent_dead_handler(pcr->uid);
 }
 
 static gboolean __request_handler(gpointer data)
@@ -390,10 +400,14 @@ static gboolean __request_handler(gpointer data)
 			__send_result_to_client(clifd, ret);
 			break;
 		case APP_DEAD_SIGNAL:
-			_E("APP_DEAD_SIGNAL");
-
+			_D("APP_DEAD_SIGNAL");
 			kb = bundle_decode(pkt->data, pkt->len);
-			ret=__handle_dead_signal(kb,clifd,&cr);
+			ret = __handle_dead_signal(kb, clifd, &cr);
+			close(clifd);
+			break;
+		case AGENT_DEAD_SIGNAL:
+			_D("AMD_AGENT_DEAD_SIGNAL");
+			__handle_agent_dead_signal(&cr);
 			close(clifd);
 			break;
 		default:

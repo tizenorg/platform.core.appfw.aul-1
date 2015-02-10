@@ -40,10 +40,10 @@ struct appinfomgr *_saf = NULL;
 int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid, uid_t uid)
 {
 	GSList *iter = NULL;
+	GSList *iter_next = NULL;
 	app_status_info_t *info_t = NULL;
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	GSLIST_FOREACH_SAFE(app_status_info_list, iter, iter_next) {
 		info_t = (app_status_info_t *)iter->data;
 		if(pid == info_t->pid) {
 			if(uid == info_t->user)
@@ -51,9 +51,9 @@ int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid,
 			else {
 				//PID is unique so if it is exist but user value is not correct remove it.
 				app_status_info_list = g_slist_remove(app_status_info_list, info_t);
-			    free(info_t);
-			    break;
-		    }
+				free(info_t);
+				break;
+			}
 		}
 	}
 
@@ -100,13 +100,30 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 	return 0;
 }
 
+int _status_remove_app_info_list_with_uid(uid_t uid)
+{
+	GSList *iter = NULL;
+	GSList *iter_next = NULL;
+	app_status_info_t *info_t = NULL;
+
+	GSLIST_FOREACH_SAFE(app_status_info_list, iter, iter_next) {
+		info_t = (app_status_info_t *)iter->data;
+		if (info_t->user == uid) {
+			app_status_info_list =
+				g_slist_remove(app_status_info_list, info_t);
+			free(info_t);
+			break;
+		}
+	}
+}
+
 int _status_remove_app_info_list(int pid, uid_t uid)
 {
 	GSList *iter = NULL;
+	GSList *iter_next = NULL;
 	app_status_info_t *info_t = NULL;
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	GSLIST_FOREACH_SAFE(app_status_info_list, iter, iter_next) {
 		info_t = (app_status_info_t *)iter->data;
 		if((pid == info_t->pid) && ((info_t->user == uid) || (info_t->user == 0))) {
 			app_status_info_list = g_slist_remove(app_status_info_list, info_t);
