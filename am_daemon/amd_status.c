@@ -100,6 +100,23 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 	return 0;
 }
 
+int _status_remove_app_info_list_with_uid(uid_t uid)
+{
+	GSList *iter = NULL;
+	app_status_info_t *info_t = NULL;
+
+	for (iter = app_status_info_list; iter != NULL;
+			iter = g_slist_next(iter)) {
+		info_t = (app_status_info_t *)iter->data;
+		if (info_t->user == uid) {
+			app_status_info_list =
+				g_slist_remove(app_status_info_list, info_t);
+			free(info_t);
+			break;
+		}
+	}
+}
+
 int _status_remove_app_info_list(int pid, uid_t uid)
 {
 	GSList *iter = NULL;

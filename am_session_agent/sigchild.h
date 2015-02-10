@@ -25,6 +25,7 @@
 static struct sigaction old_sigchild;
 static DBusConnection *bus = NULL;
 sigset_t oldmask;
+bool loop_flag = TRUE;
 
 static inline void __socket_garbage_collector()
 {
@@ -181,6 +182,13 @@ static void __agent_sig_child(int signo, siginfo_t *info, void *data)
 	return;
 }
 
+static void __sigterm_handler(int signo)
+{
+	_D("received SIGTERM siganl %d", signo);
+	loop_flag = FALSE;
+}
+
+
 static inline int __signal_init(void)
 {
 	int i;
@@ -194,6 +202,9 @@ static inline int __signal_init(void)
 		case SIGFPE:
 		case SIGSEGV:
 		case SIGPIPE:
+			break;
+		case SIGTERM:
+			signal(SIGTERM, __sigterm_handler);
 			break;
 		default:
 			signal(i, SIG_DFL);
