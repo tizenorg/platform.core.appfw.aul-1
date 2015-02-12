@@ -34,6 +34,13 @@
 #define MAX_PACKAGE_APP_PATH_SIZE 512
 #define MAX_RUNNING_APP_INFO 512
 
+#define GSLIST_FOREACH_SAFE(list, l, l_next)   \
+	for (l = list,                            \
+			l_next = g_slist_next(l);       \
+			l;                              \
+			l = l_next,                     \
+			l_next = g_slist_next(l))
+
 typedef struct _app_status_info_t{
 	char appid[MAX_PACKAGE_STR_SIZE];
 	char app_path[MAX_PACKAGE_APP_PATH_SIZE];

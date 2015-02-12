@@ -63,6 +63,7 @@
 
 static char *agent_cmdline;
 static int initialized = 0;
+static bool loop_flag = TRUE;
 
 
 _static_ void __set_oom();
@@ -87,6 +88,12 @@ _static_ int __agent_pre_init(int argc, char **argv);
 _static_ int __agent_post_init();
 
 
+
+void __sigterm_handler(int signo)
+{
+	_D("received SIGTERM siganl %d", signo);
+	loop_flag = FALSE;
+}
 
 _static_ void __set_oom()
 {
@@ -778,6 +785,15 @@ _static_ int __agent_post_init()
 	return 0;
 }
 
+static void __send_dead_siganl_to_amd(void)
+{
+	bundle *kb;
+
+	kb = bundle_create();
+	app_send_cmd_with_noreply(AUL_UTIL_PID, AGENT_DEAD_SIGNAL, kb);
+	bundle_free(kb);
+}
+
 int main(int argc, char **argv)
 {
 	int main_fd;
@@ -797,7 +813,7 @@ int main(int argc, char **argv)
 	pfds[0].events = POLLIN;
 	pfds[0].revents = 0;
 
-	while (1) {
+	while (loop_flag == TRUE) {
 		if (poll(pfds, POLLFD_MAX, -1) < 0)
 			continue;
 
@@ -814,5 +830,6 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+	__send_dead_siganl_to_amd();
 }
 

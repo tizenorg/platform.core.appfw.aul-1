@@ -27,6 +27,8 @@ static struct sigaction old_sigchild;
 static DBusConnection *bus = NULL;
 sigset_t oldmask;
 
+extern void __sigterm_handler(int signo);
+
 static inline void __socket_garbage_collector()
 {
 	DIR *dp;
@@ -195,6 +197,9 @@ static inline int __signal_init(void)
 		case SIGFPE:
 		case SIGSEGV:
 		case SIGPIPE:
+			break;
+		case SIGTERM:
+			signal(SIGTERM, __sigterm_handler);
 			break;
 		default:
 			signal(i, SIG_DFL);
