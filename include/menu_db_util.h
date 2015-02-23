@@ -3,7 +3,8 @@
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
  *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
+ * Contact: Jayoun Lee <airjany@samsung.com>,
+ * Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +20,15 @@
  *
  */
 
+#ifndef __MENU_DB_UTIL_H_
+#define __MENU_DB_UTIL_H_
 
+#include <pkgmgr-info.h>
 #include <ail.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "simple_util.h"
+
 #define MAX_PATH_LEN	1024
 
 #define AUL_APP_INFO_FLD_PKG_NAME		"package"
@@ -44,16 +48,22 @@
 #define AUL_RETRIEVE_SERVICE			"x_slp_service like '?'"
 
 typedef struct {
-	char *pkg_name;		/* package */
+	char *pkg_name;		/* appid */
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *pkg_type;		/* x_slp_packagetype */
 	char *hwacc;		/* hwacceleration */
+	char *pkg_id;
 } app_info_from_db;
 
 static inline char *_get_pkgname(app_info_from_db *menu_info)
 {
 	return menu_info ? menu_info->pkg_name : NULL;
+}
+
+static inline char *_get_pkgid(app_info_from_db *menu_info)
+{
+	return menu_info ? menu_info->pkg_id : NULL;
 }
 
 static inline char *_get_app_path(app_info_from_db *menu_info)
@@ -78,7 +88,7 @@ static inline char *_get_app_path(app_info_from_db *menu_info)
 		menu_info->app_path = NULL;
 	} else if (path_len > 0) {
 		char *tmp_app_path = malloc(sizeof(char) * (path_len + 1));
-		if(tmp_app_path == NULL)
+		if (tmp_app_path == NULL)
 			return NULL;
 		snprintf(tmp_app_path, path_len + 1, "%s", menu_info->app_path);
 		free(menu_info->app_path);
@@ -102,70 +112,66 @@ static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 			free(menu_info->app_path);
 		if (menu_info->original_app_path != NULL)
 			free(menu_info->original_app_path);
+		if (menu_info->pkg_type != NULL)
+			free(menu_info->pkg_type);
 		if (menu_info->hwacc != NULL)
 			free(menu_info->hwacc);
+		if (menu_info->pkg_id != NULL)
+			free(menu_info->pkg_id);
 		free(menu_info);
 	}
 }
 
 static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
-							const char *pkgname)
+							const char *appid)
 {
-	app_info_from_db *menu_info;
-	ail_appinfo_h handle;
-	ail_error_e ret;
-	char *str = NULL;
+	app_info_from_db *menu_info = NULL;
+	pkgmgrinfo_appinfo_h handle = NULL;
+	int ret = PMINFO_R_OK;
+	char *exec = NULL;
+	char *apptype = NULL;
 
 	menu_info = calloc(1, sizeof(app_info_from_db));
-	if (menu_info == NULL) {
+	if (menu_info == NULL)
 		return NULL;
-	}
-	//is_admin is global
-	if (getuid() != GLOBAL_USER)
-		ret = ail_get_usr_appinfo(pkgname, getuid(), &handle);
-	else
-		ret = ail_get_appinfo(pkgname, &handle);
-    
-	if (ret != AIL_ERROR_OK) {
+
+	if (appid == NULL) {
 		_free_app_info_from_db(menu_info);
 		return NULL;
 	}
-//is admin is global
+
 	if (getuid() != GLOBAL_USER)
-		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_PACKAGE_STR, getuid(), &str);
+		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, getuid(), &handle);
 	else
-		ret = ail_appinfo_get_str(handle, AIL_PROP_PACKAGE_STR, &str);
-	if (str) {
-		menu_info->pkg_name = strdup(str);
-		str = NULL;
+		ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
+
+	if (ret != PMINFO_R_OK) {
+		_free_app_info_from_db(menu_info);
+		return NULL;
 	}
-	//is_admin is global
-	if (getuid() != GLOBAL_USER)
-		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_EXEC_STR, getuid(), &str);
-	else
-		ret = ail_appinfo_get_str(handle, AIL_PROP_EXEC_STR, &str);
-	if (str) {
-		menu_info->app_path = strdup(str);
-		str = NULL;
-	}
+
+	menu_info->pkg_name = strdup(appid);
+
+	ret = pkgmgrinfo_appinfo_get_exec(handle, &exec);
+	if (ret != PMINFO_R_OK)
+		_E("fail to get exec from appinfo handle");
+
+	if (exec)
+		menu_info->app_path = strdup(exec);
 
 	if (menu_info->app_path != NULL)
 		menu_info->original_app_path = strdup(menu_info->app_path);
-	//is_admin is gobal
-	if (getuid() != GLOBAL_USER)
-  	ret = ail_appinfo_get_usr_str(handle, AIL_PROP_X_SLP_PACKAGETYPE_STR, getuid(), &str);
-  else
-		ret = ail_appinfo_get_str(handle, AIL_PROP_X_SLP_PACKAGETYPE_STR, &str);
-	
-	if (str) {
-		menu_info->pkg_type = strdup(str);
-		str = NULL;
-	}
 
-	ret = ail_destroy_appinfo(handle);
-	if (ret != AIL_ERROR_OK) {
-		_E("ail_destroy_appinfo failed");
-	}
+	ret = pkgmgrinfo_appinfo_get_apptype(handle, &apptype);
+	if (ret != PMINFO_R_OK)
+		_E("fail to get apptype from appinfo handle");
+
+	if (apptype)
+		menu_info->pkg_type = strdup(apptype);
+
+	ret = pkgmgrinfo_appinfo_destroy_appinfo(handle);
+	if (ret != PMINFO_R_OK)
+		_E("pkgmgrinfo_appinfo_destroy_appinfo failed");
 
 	if (!_get_app_path(menu_info)) {
 		_free_app_info_from_db(menu_info);
@@ -175,43 +181,43 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	return menu_info;
 }
 
-static inline ail_cb_ret_e __appinfo_func(const ail_appinfo_h appinfo, void *user_data, uid_t uid)
+static inline int __appinfo_func(const pkgmgrinfo_appinfo_h appinfo,
+		void *user_data)
 {
 	app_info_from_db *menu_info = (app_info_from_db *)user_data;
-	char *package;
-	ail_cb_ret_e ret = AIL_CB_RET_CONTINUE;
+	char *appid;
+	char *pkgid;
+	int ret = PMINFO_R_OK;
 
-	if(uid == 0) {
-		_E("Root user request to start app assumming this is done by system deamon... Please fix it...switch to DEFAULT_USER");
-		uid = DEFAULT_USER;
-	}
 	if (!menu_info)
 		return ret;
-	//is_admin is global
-	if (uid != GLOBAL_USER)
-		ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, uid, &package);
-	else
-		ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &package);
-	if (package) {
-		menu_info->pkg_name = strdup(package);
-		ret = AIL_CB_RET_CANCEL;
+
+	ret = pkgmgrinfo_appinfo_get_appid(appinfo, &appid);
+	if (ret == PMINFO_R_OK && appid) {
+		menu_info->pkg_name = strdup(appid);
+		ret = PMINFO_R_ERROR;
 	}
+
+	ret = pkgmgrinfo_appinfo_get_pkgid(appinfo, &pkgid);
+	if (ret == PMINFO_R_OK && pkgid)
+		menu_info->pkg_id = strdup(pkgid);
 
 	return ret;
 }
 
-
 static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
-							const char *apppath, uid_t uid)
+		const char *apppath, uid_t uid)
 {
-	app_info_from_db *menu_info = NULL;
-	ail_filter_h filter;
-	ail_error_e ret;
-	int count;
-	if(uid == 0) {
-		_E("Root user request to start app assumming this is done by system deamon... Please fix it...switch to DEFAULT_USER");
+	app_info_from_db *menu_info;
+	pkgmgrinfo_appinfo_filter_h filter;
+	int ret = PMINFO_R_OK;
+
+	if (uid == 0) {
+		_E("Root user request to start app assumming this is done by \
+				system deamon... Please fix it...switch to DEFAULT_USER");
 		uid = DEFAULT_USER;
 	}
+
 	if (apppath == NULL)
 		return NULL;
 
@@ -219,40 +225,34 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 	if (menu_info == NULL)
 		return NULL;
 
-	ret = ail_filter_new(&filter);
-	if (ret != AIL_ERROR_OK) {
+	ret = pkgmgrinfo_appinfo_filter_create(&filter);
+	if (ret != PMINFO_R_OK) {
 		_free_app_info_from_db(menu_info);
 		return NULL;
 	}
 
-	ret = ail_filter_add_str(filter, AIL_PROP_X_SLP_EXE_PATH, apppath);
-	if (ret != AIL_ERROR_OK) {
-		ail_filter_destroy(filter);
+	ret = pkgmgrinfo_appinfo_filter_add_string(filter,
+			PMINFO_APPINFO_PROP_APP_EXEC, apppath);
+	if (ret != PMINFO_R_OK) {
+		pkgmgrinfo_appinfo_filter_destroy(filter);
 		_free_app_info_from_db(menu_info);
 		return NULL;
 	}
 
 	if (uid != GLOBAL_USER)
-		ret = ail_filter_count_usr_appinfo(filter, &count, uid);
+		ret = pkgmgrinfo_appinfo_usr_filter_foreach_appinfo(filter,
+				__appinfo_func, (void *)menu_info, getuid());
 	else
-		ret = ail_filter_count_appinfo(filter, &count);
-	if (ret != AIL_ERROR_OK) {
-		ail_filter_destroy(filter);
-		_free_app_info_from_db(menu_info);
-		return NULL;
-	}
-	if (count < 1) {
-		ail_filter_destroy(filter);
-		_free_app_info_from_db(menu_info);
-		return NULL;
-	}
-//is_admin is global
-	if (uid != GLOBAL_USER)
-		ail_filter_list_usr_appinfo_foreach(filter, __appinfo_func, (void *)menu_info, uid);
-	else
-		ail_filter_list_appinfo_foreach(filter, __appinfo_func, (void *)menu_info);
+		ret = pkgmgrinfo_appinfo_filter_foreach_appinfo(filter,
+				__appinfo_func, (void *)menu_info);
 
-	ail_filter_destroy(filter);
+	if ((ret != PMINFO_R_OK) || (menu_info->pkg_name  == NULL)) {
+		pkgmgrinfo_appinfo_filter_destroy(filter);
+		_free_app_info_from_db(menu_info);
+		return NULL;
+	}
+
+	pkgmgrinfo_appinfo_filter_destroy(filter);
 
 	menu_info->app_path = strdup(apppath);
 	menu_info->original_app_path = strdup(apppath);
@@ -261,11 +261,10 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 
 }
 
-
 static inline app_info_from_db *_get_app_info_from_db_by_apppath(
 							const char *apppath)
 {
-	return _get_app_info_from_db_by_apppath_user(apppath,GLOBAL_USER);
-
+	return _get_app_info_from_db_by_apppath_user(apppath, GLOBAL_USER);
 }
 
+#endif
