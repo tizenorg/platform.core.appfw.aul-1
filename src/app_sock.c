@@ -28,6 +28,7 @@
 #include <sys/xattr.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <systemd/sd-daemon.h>
 
 #include "app_sock.h"
 #include "simple_util.h"
@@ -187,10 +188,23 @@ int __create_server_sock_by_path(char *path)
 	return fd;
 }
 
+int __create_sock_activation(void)
+{
+	int fd = -1;
+	int listen_fds;
 
-
-
-
+	listen_fds = sd_listen_fds(0);
+	if (listen_fds == 1) {
+		fd = SD_LISTEN_FDS_START + 0;
+		return fd;
+	} else if (listen_fds > 1) {
+		_E("Too many file descriptors received.\n");
+		return -1;
+	} else {
+		_D("There is no socket stream");
+		return -1;
+	}
+}
 
 int __create_agent_client_sock(int uid)
 {
