@@ -22,7 +22,7 @@ INCLUDE(FindPkgConfig)
 SET(AUL-1_PKG_CHECK_MODULES dlog libprivilege-control app-checker rua glib-2.0 vconf pkgmgr-info privacy-manager-client)
 pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 
-pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info)
+pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info libsystemd-daemon)
 PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle rua)
 
 FIND_LIBRARY(LIB_DL dl)

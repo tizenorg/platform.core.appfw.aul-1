@@ -5,8 +5,10 @@ Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
-Source102:  ac.service
+Source101:  ac.service
+Source102:  ac.socket
 Source103:  amd_session_agent.service
+Source104:  amd_session_agent.socket
 Source1001: %{name}.manifest
 
 Requires(post):   /sbin/ldconfig
@@ -32,6 +34,7 @@ BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(privacy-manager-client)
 BuildRequires:  pkgconfig(libtzplatform-config)
+BuildRequires:  pkgconfig(libsystemd-daemon)
 
 %description
 Application utility library
@@ -82,10 +85,18 @@ mkdir -p %{buildroot}%{TZ_SYS_DB}
 sqlite3 %{buildroot}%{TZ_SYS_DB}/.mida.db < %{buildroot}%{_datadir}/aul/mida_db.sql
 rm -rf %{buildroot}%{_datadir}/aul/mida_db.sql
 
-mkdir -p %{buildroot}%{_unitdir}
-mkdir -p %{buildroot}%{_unitdir_user}
-install -m 0644 %SOURCE102 %{buildroot}%{_unitdir}/ac.service
+mkdir -p %{buildroot}%{_unitdir}/default.target.wants
+mkdir -p %{buildroot}%{_unitdir}/sockets.target.wants
+mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
+mkdir -p %{buildroot}%{_unitdir_user}/sockets.target.wants
+install -m 0644 %SOURCE101 %{buildroot}%{_unitdir}/ac.service
+install -m 0644 %SOURCE102 %{buildroot}%{_unitdir}/ac.socket
 install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.service
+install -m 0644 %SOURCE104 %{buildroot}%{_unitdir_user}/amd_session_agent.socket
+ln -sf ../ac.service %{buildroot}%{_unitdir}/default.target.wants/ac.service
+ln -sf ../ac.socket %{buildroot}%{_unitdir}/sockets.target.wants/ac.socket
+ln -sf ../amd_session_agent.service %{buildroot}%{_unitdir_user}/default.target.wants/amd_session_agent.service
+ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 
 %preun
 if [ $1 == 0 ]; then
@@ -96,8 +107,6 @@ fi
 
 %post
 /sbin/ldconfig
-systemctl enable ac
-systemctl --global enable amd_session_agent
 systemctl daemon-reload
 if [ $1 == 1 ]; then
     systemctl restart ac.service
@@ -126,7 +135,13 @@ systemctl daemon-reload
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
 %{_unitdir}/ac.service
+%{_unitdir}/default.target.wants/ac.service
+%{_unitdir}/ac.socket
+%{_unitdir}/sockets.target.wants/ac.socket
 %{_unitdir_user}/amd_session_agent.service
+%{_unitdir_user}/default.target.wants/amd_session_agent.service
+%{_unitdir_user}/amd_session_agent.socket
+%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent

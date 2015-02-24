@@ -422,7 +422,12 @@ int _requset_init(struct amdmgr *amd)
 	GPollFD *gpollfd;
 	GSource *src;
 
-	fd = __create_server_sock(AUL_UTIL_PID);
+	fd = __create_sock_activation();
+	if (fd == -1) {
+		_D("Create server socket without socket activation");
+		fd = __create_server_sock(AUL_UTIL_PID);
+	}
+
 	src = g_source_new(&funcs, sizeof(GSource));
 
 	gpollfd = (GPollFD *) g_malloc(sizeof(GPollFD));
