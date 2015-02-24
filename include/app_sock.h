@@ -90,5 +90,6 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr);
 app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, int datalen);
 int __create_agent_client_sock(int uid);
 int __create_server_sock_by_path(char *path);
+int __create_sock_activation(void);
 #endif
 

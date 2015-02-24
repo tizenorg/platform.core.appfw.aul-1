@@ -731,25 +731,27 @@ _static_ void __agent_main_loop(int main_fd)
 _static_ int __agent_pre_init(int argc, char **argv)
 {
 	int fd;
-	char *socket_path = NULL;
+	char socket_path[PATH_MAX];
 	/* signal init*/
 	__signal_init();
 
-    /* get my(agent) command line*/
-    agent_cmdline = __proc_get_cmdline_bypid(getpid());
-    if (agent_cmdline == NULL) {
-        _E("agent cmdline fail to get");
-        return -1;
-    }
-    _D("agent cmdline = %s", agent_cmdline);
+	/* get my(agent) command line*/
+	agent_cmdline = __proc_get_cmdline_bypid(getpid());
+	if (agent_cmdline == NULL) {
+		_E("agent cmdline fail to get");
+		return -1;
+	}
+	_D("agent cmdline = %s", agent_cmdline);
 
 	/* create agent socket */
-    asprintf(&socket_path,"/run/user/%d/amd_agent",getuid());
-	if(socket_path)
+
+	fd = __create_sock_activation();
+	if (fd == -1) {
+		_D("Create server socket without socket activation");
+		snprintf(socket_path, sizeof(socket_path),
+				"/run/user/%d/amd_agent", getuid());
 		fd = __create_server_sock_by_path(socket_path);
-	else
-		return -1;
-	free(socket_path);
+	}
 	if (fd < 0) {
 		_E("server sock error");
 		return -1;
