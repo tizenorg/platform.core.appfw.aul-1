@@ -1,0 +1,5 @@
+[Socket]
+ListenStream=/run/user/%U/amd_agent
+
+[Install]
+WantedBy=sockets.target
