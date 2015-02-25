@@ -152,6 +152,8 @@ gboolean __add_item_running_list(gpointer user_data)
 	user = item->uid;
 	if (vconf_get_int(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS, &limit) != 0)
 		_E("Unable to get VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
+	else
+		limit = 0;
 
 	if (pkgname == NULL)
 		return false;
