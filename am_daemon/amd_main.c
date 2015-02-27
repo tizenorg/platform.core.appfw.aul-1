@@ -108,9 +108,9 @@ static int __remove_item_running_list_with_uid(uid_t user)
 		if (user == info_t->user) {
 			r_app_info_list = g_slist_remove(r_app_info_list, info_t);
 			free(info_t);
-			break;
 		}
 	}
+	return 0;
 }
 
 static int __remove_item_running_list(int pid, uid_t user)
