@@ -31,7 +31,6 @@
 #include "simple_util.h"
 #include "aul.h"
 
-#define _GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define _EXTERNAL_APP_SPECIFIC_PATH \
 	tzplatform_mkpath(TZ_SYS_STORAGE, "sdcard/apps/")
 #define _APP_SPECIFIC_PATH tzplatform_getenv(TZ_USER_APP)
@@ -260,47 +259,63 @@ SLPAPI const char *aul_get_app_external_specific_path(void)
 
 SLPAPI int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
 {
-	return __get_path(path, appid, _SHARED_DATA_DIR, _GLOBAL_USER);
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
+	return __get_path(path, appid, _SHARED_DATA_DIR, getuid());
 }
 
 SLPAPI int aul_get_app_shared_resource_path_by_appid(const char *appid,
 		char **path)
 {
-	return __get_path(path, appid, _SHARED_RESOURCE_DIR, _GLOBAL_USER);
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
+	return __get_path(path, appid, _SHARED_RESOURCE_DIR, getuid());
 }
 
 SLPAPI int aul_get_app_shared_trusted_path_by_appid(const char *appid,
 		char **path)
 {
-	return __get_path(path, appid, _SHARED_TRUSTED_DIR, _GLOBAL_USER);
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
+	return __get_path(path, appid, _SHARED_TRUSTED_DIR, getuid());
 }
 
 SLPAPI int aul_get_app_external_shared_data_path_by_appid(const char *appid,
 		char **path)
 {
-	return __get_external_path(path, appid, _SHARED_DATA_DIR, _GLOBAL_USER);
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
+	return __get_external_path(path, appid, _SHARED_DATA_DIR, getuid());
 }
 
 SLPAPI int aul_get_usr_app_shared_data_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
 	return __get_path(path, appid, _SHARED_DATA_DIR, uid);
 }
 
 SLPAPI int aul_get_usr_app_shared_resource_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
 	return __get_path(path, appid, _SHARED_RESOURCE_DIR, uid);
 }
 
 SLPAPI int aul_get_usr_app_shared_trusted_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
 	return __get_path(path, appid, _SHARED_TRUSTED_DIR, uid);
 }
 
 SLPAPI int aul_get_usr_app_external_shared_data_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
+	if (appid == NULL || path == NULL)
+		return AUL_R_EINVAL;
 	return __get_external_path(path, appid, _SHARED_DATA_DIR, uid);
 }
