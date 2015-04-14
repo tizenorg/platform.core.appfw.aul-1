@@ -236,7 +236,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 
 	if (uid != GLOBAL_USER)
 		ret = pkgmgrinfo_appinfo_usr_filter_foreach_appinfo(filter,
-				__appinfo_func, (void *)menu_info, getuid());
+				__appinfo_func, (void *)menu_info, uid);
 	else
 		ret = pkgmgrinfo_appinfo_filter_foreach_appinfo(filter,
 				__appinfo_func, (void *)menu_info);
