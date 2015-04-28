@@ -1,5 +1,7 @@
 [Socket]
 ListenStream=/run/user/%U/amd_agent
 
+Service=amd_session_agent.service
+
 [Install]
 WantedBy=sockets.target
