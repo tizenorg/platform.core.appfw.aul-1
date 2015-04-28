@@ -95,7 +95,6 @@ install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.servic
 install -m 0644 %SOURCE104 %{buildroot}%{_unitdir_user}/amd_session_agent.socket
 ln -sf ../ac.service %{buildroot}%{_unitdir}/default.target.wants/ac.service
 ln -sf ../ac.socket %{buildroot}%{_unitdir}/sockets.target.wants/ac.socket
-ln -sf ../amd_session_agent.service %{buildroot}%{_unitdir_user}/default.target.wants/amd_session_agent.service
 ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 
 %preun
@@ -139,7 +138,6 @@ systemctl daemon-reload
 %{_unitdir}/ac.socket
 %{_unitdir}/sockets.target.wants/ac.socket
 %{_unitdir_user}/amd_session_agent.service
-%{_unitdir_user}/default.target.wants/amd_session_agent.service
 %{_unitdir_user}/amd_session_agent.socket
 %{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 %{_bindir}/amd
