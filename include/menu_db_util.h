@@ -48,7 +48,7 @@
 #define AUL_RETRIEVE_SERVICE			"x_slp_service like '?'"
 
 typedef struct {
-	char *pkg_name;		/* appid */
+	char *appid;		/* appid */
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *pkg_type;		/* x_slp_packagetype */
@@ -56,9 +56,9 @@ typedef struct {
 	char *pkg_id;
 } app_info_from_db;
 
-static inline char *_get_pkgname(app_info_from_db *menu_info)
+static inline char *_get_appid(app_info_from_db *menu_info)
 {
-	return menu_info ? menu_info->pkg_name : NULL;
+	return menu_info ? menu_info->appid : NULL;
 }
 
 static inline char *_get_app_path(app_info_from_db *menu_info)
@@ -101,8 +101,8 @@ static inline char *_get_original_app_path(app_info_from_db *menu_info)
 static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 {
 	if (menu_info != NULL) {
-		if (menu_info->pkg_name != NULL)
-			free(menu_info->pkg_name);
+		if (menu_info->appid != NULL)
+			free(menu_info->appid);
 		if (menu_info->app_path != NULL)
 			free(menu_info->app_path);
 		if (menu_info->original_app_path != NULL)
@@ -135,6 +135,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		return NULL;
 	}
 
+
 	if (getuid() != GLOBAL_USER)
 		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, getuid(), &handle);
 	else
@@ -145,7 +146,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		return NULL;
 	}
 
-	menu_info->pkg_name = strdup(appid);
+	menu_info->appid = strdup(appid);
 
 	ret = pkgmgrinfo_appinfo_get_exec(handle, &exec);
 	if (ret != PMINFO_R_OK)
@@ -189,7 +190,7 @@ static inline int __appinfo_func(const pkgmgrinfo_appinfo_h appinfo,
 
 	ret = pkgmgrinfo_appinfo_get_appid(appinfo, &appid);
 	if (ret == PMINFO_R_OK && appid) {
-		menu_info->pkg_name = strdup(appid);
+		menu_info->appid = strdup(appid);
 		ret = PMINFO_R_ERROR;
 	}
 
@@ -241,7 +242,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 		ret = pkgmgrinfo_appinfo_filter_foreach_appinfo(filter,
 				__appinfo_func, (void *)menu_info);
 
-	if ((ret != PMINFO_R_OK) || (menu_info->pkg_name  == NULL)) {
+	if ((ret != PMINFO_R_OK) || (menu_info->appid == NULL)) {
 		pkgmgrinfo_appinfo_filter_destroy(filter);
 		_free_app_info_from_db(menu_info);
 		return NULL;

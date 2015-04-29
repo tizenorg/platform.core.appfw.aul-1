@@ -36,7 +36,7 @@ typedef struct _internal_param_t {
 	void *user_param;
 } internal_param_t;
 
-static int __get_pkgname_bypid(int pid, char *pkgname, int len);
+static int __get_appid_bypid(int pid, char *appid, int len);
 
 SLPAPI int aul_app_is_running(const char *appid)
 {
@@ -89,7 +89,7 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	return AUL_R_OK;
 }
 
-static int __get_pkgname_bypid(int pid, char *pkgname, int len)
+static int __get_appid_bypid(int pid, char *appid, int len)
 {
 	char *cmdline;
 	app_info_from_db *menu_info;
@@ -103,7 +103,7 @@ static int __get_pkgname_bypid(int pid, char *pkgname, int len)
 		free(cmdline);
 		return -1;
 	} else
-		snprintf(pkgname, len, "%s", _get_pkgname(menu_info));
+		snprintf(appid, len, "%s", _get_appid(menu_info));
 
 	free(cmdline);
 	_free_app_info_from_db(menu_info);
@@ -122,7 +122,7 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	int pgid;
 
 	if(pid == getpid() || getuid()==0 || geteuid()==0) {
-		if (__get_pkgname_bypid(pid, appid, len) == 0) {
+		if (__get_appid_bypid(pid, appid, len) == 0) {
 			SECURE_LOGD("appid for %d is %s", pid, appid);
 			return AUL_R_OK;
 		}
@@ -133,7 +133,7 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 			return AUL_R_ERROR;
 
 		_D("second change pgid = %d, pid = %d", pgid, pid);
-		if (__get_pkgname_bypid(pgid, appid, len) == 0)
+		if (__get_appid_bypid(pgid, appid, len) == 0)
 			return AUL_R_OK;
 
 		return AUL_R_ERROR;

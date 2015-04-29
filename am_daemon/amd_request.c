@@ -267,7 +267,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_START:
 		case APP_START_RES:
 			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 			if (cr.uid == 0) {
 				_E("Root user request to start app assumming this is done by system deamon... Please fix it...switch to DEFAULT_USER");
 				ret = _start_app(appid, kb, pkt->cmd, cr.pid, DEFAULT_USER, clifd);
@@ -304,7 +304,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_KILL_BY_PID:
 		case APP_TERM_REQ_BY_PID:
 			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr);
 			__real_send(clifd, ret);
 			break;
