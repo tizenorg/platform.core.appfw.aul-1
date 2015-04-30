@@ -6,6 +6,5 @@
 Description=Start the USER Access Control Agent
 
 [Service]
-Type=notify
 ExecStart=/bin/sh -l -c "/usr/bin/amd_session_agent"
 Sockets=amd_session_agent.socket
