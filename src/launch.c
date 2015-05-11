@@ -140,6 +140,9 @@ SLPAPI int app_agent_send_cmd(int uid, int cmd, bundle *kb)
 		case -ENOLAUNCHPAD:
 			res = AUL_R_ENOLAUNCHPAD;
 			break;
+		case -EREJECTED:
+			res = AUL_R_EREJECTED;
+			break;
 		default:
 			res = AUL_R_ERROR;
 		}
@@ -411,7 +414,7 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL) {
+	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC) {
 		ret = __send_result_to_launchpad(clifd, 0);
 		if (ret < 0) {
 			free(pkt);
@@ -438,6 +441,7 @@ int aul_sock_handler(int fd)
 		break;
 
 	case APP_TERM_BY_PID:	/* run in callee */
+	case APP_TERM_BY_PID_ASYNC:
 		app_terminate();
 		break;
 
@@ -618,6 +622,19 @@ SLPAPI int aul_terminate_pid(int pid)
 
 	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_TERM_BY_PID, pkgname, NULL);
+	return ret;
+}
+
+SLPAPI int aul_terminate_pid_async(int pid)
+{
+	char pkgname[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad(APP_TERM_BY_PID_ASYNC, pkgname, NULL);
 	return ret;
 }
 

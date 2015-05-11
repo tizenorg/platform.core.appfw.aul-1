@@ -155,6 +155,13 @@ static int __app_process_by_pid(int cmd,
 		if ((ret = __app_send_raw(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
 			_D("terminate req packet send error");
 		}
+		break;
+	case APP_TERM_BY_PID_ASYNC:
+		if ((ret = __app_send_raw_with_noreply(pid, cmd, (unsigned char *)&dummy, sizeof(int))) < 0) {
+			_D("terminate req packet send error");
+		}
+		__real_send(clifd, ret);
+		break;
 	}
 
 	return ret;
@@ -303,6 +310,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_RESUME_BY_PID:
 		case APP_KILL_BY_PID:
 		case APP_TERM_REQ_BY_PID:
+		case APP_TERM_BY_PID_ASYNC:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);

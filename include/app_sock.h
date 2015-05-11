@@ -52,6 +52,7 @@ enum app_cmd {
 	APP_RELEASED,
 	APP_RUNNING_LIST_UPDATE,
 	APP_TERM_REQ_BY_PID,
+	APP_TERM_BY_PID_ASYNC,
 
 	/* reserved for AMD Agent */
 	APP_DEAD_SIGNAL,
@@ -67,6 +68,7 @@ enum app_cmd {
 #define EILLEGALACCESS 127
 #define ETERMINATING 126
 #define ENOLAUNCHPAD 125
+#define EREJECTED 123
 
 typedef struct _app_pkt_t {
 	int cmd;

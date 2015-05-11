@@ -71,7 +71,9 @@ extern "C" {
  * @brief Return values in AUL.
  */
 typedef enum _aul_return_val {
-	AUL_R_ENOAPP = -11,		/**< Failed to find app ID or pkg ID */
+	AUL_R_EREJECTED = -14,		/**< App disable for mode */
+	AUL_R_ENOAPP = -13,		/**< Failed to find app ID or pkg ID */
+	AUL_R_EHIDDENFORGUEST = -11,	/**< App hidden for guest mode */
 	AUL_R_ENOLAUNCHPAD = -10,	/**< no launchpad */
 	AUL_R_ETERMINATING = -9,	/**< application terminating */
 	AUL_R_EILLACC = -8,		/**< Illegal Access */
@@ -620,6 +622,7 @@ int aul_resume_pid(int pid);
  *	If you have not the permission, this API return AUL_R_ERROR. \n
 */
 int aul_terminate_pid(int pid);
+int aul_terminate_pid_async(int pid);
 
 /** @} */
 
