@@ -77,6 +77,8 @@ struct ktimer {
 	guint tid; /* timer ID */
 };
 
+static void __set_reply_handler(int fd, int pid, int clifd, int cmd);
+static void __real_send(int clifd, int ret);
 
 static void _set_sdk_env(const char* appid, char* str) {
 	char buf[MAX_LOCAL_BUFSZ];
@@ -400,7 +402,8 @@ int _send_to_sigkill(int pid)
 
 	return 0;
 }
-int _resume_app(int pid)
+
+int _resume_app(int pid, int clifd)
 {
 	int dummy;
 	int ret;
@@ -415,8 +418,13 @@ int _resume_app(int pid)
 			_send_to_sigkill(pid);
 			ret = -1;
 		}
+		__real_send(clifd, ret);
 	}
 	_D("resume done\n");
+
+	if (ret > 0)
+		__set_reply_handler(ret, pid, clifd, APP_RESUME_BY_PID);
+
 	return ret;
 }
 
@@ -435,16 +443,22 @@ int _term_app(int pid)
 	return 0;
 }
 
-int _fake_launch_app(int cmd, int pid, bundle * kb)
+int _fake_launch_app(int cmd, int pid, bundle *kb, int clifd)
 {
 	int datalen;
 	int ret;
 	bundle_raw *kb_data;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((ret = __app_send_raw_with_delay_reply(pid, cmd, kb_data, datalen)) < 0)
+	if ((ret = __app_send_raw_with_delay_reply(pid, cmd, kb_data, datalen)) < 0) {
 		_E("error request fake launch - error code = %d", ret);
+		__real_send(clifd, ret);
+	}
 	free(kb_data);
+
+	if (ret > 0)
+		__set_reply_handler(ret, pid, clifd, cmd);
+
 	return ret;
 }
 
@@ -501,6 +515,7 @@ struct reply_info {
 	guint timer_id;
 	int clifd;
 	int pid;
+	int cmd;
 };
 
 static gboolean __reply_handler(gpointer data)
@@ -559,6 +574,43 @@ static gboolean __recv_timeout_handler(gpointer data)
 	return FALSE;
 }
 
+static void __set_reply_handler(int fd, int pid, int clifd, int cmd)
+{
+	GPollFD *gpollfd;
+	GSource *src;
+	struct reply_info *r_info;
+
+	src = g_source_new(&funcs, sizeof(GSource));
+
+	gpollfd = (GPollFD *) g_malloc(sizeof(GPollFD));
+	gpollfd->events = POLLIN;
+	gpollfd->fd = fd;
+
+	r_info = malloc(sizeof(*r_info));
+	if (r_info == NULL) {
+		_E("out of memory");
+		g_free(gpollfd);
+		g_source_unref(src);
+		return;
+	}
+
+	r_info->clifd = clifd;
+	r_info->pid = pid;
+	r_info->src = src;
+	r_info->gpollfd = gpollfd;
+	r_info->cmd = cmd;
+
+
+	r_info->timer_id = g_timeout_add(5000, __recv_timeout_handler, (gpointer) r_info);
+	g_source_add_poll(src, gpollfd);
+	g_source_set_callback(src, (GSourceFunc) __reply_handler,
+			(gpointer) r_info, NULL);
+	g_source_set_priority(src, G_PRIORITY_DEFAULT);
+	g_source_attach(src, NULL);
+
+	_D("listen fd : %d, send fd : %d", fd, clifd);
+}
+
 static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 {
 	int ret = -1;
@@ -572,7 +624,7 @@ static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 	case APP_OPEN:
 	case APP_RESUME:
 		_D("resume app's pid : %d\n", pid);
-		if ((ret = _resume_app(pid)) < 0)
+		if ((ret = _resume_app(pid, clifd)) < 0)
 			_E("__resume_app failed. error code = %d", ret);
 		_D("resume app done");
 		break;
@@ -580,33 +632,10 @@ static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 	case APP_START:
 	case APP_START_RES:
 		_D("fake launch pid : %d\n", pid);
-		if ((ret = _fake_launch_app(cmd, pid, kb)) < 0)
+		if ((ret = _fake_launch_app(cmd, pid, kb, clifd)) < 0)
 			_E("fake_launch failed. error code = %d", ret);
 		_D("fake launch done");
 		break;
-	}
-
-	if(ret > 0) {
-		src = g_source_new(&funcs, sizeof(GSource));
-
-		gpollfd = (GPollFD *) g_malloc(sizeof(GPollFD));
-		gpollfd->events = POLLIN;
-		gpollfd->fd = ret;
-
-		r_info = malloc(sizeof(*r_info));
-		r_info->clifd = clifd;
-		r_info->pid = pid;
-		r_info->src = src;
-		r_info->gpollfd = gpollfd;
-
-		_D("listen fd : %d, send fd : %d", ret, clifd);
-
-		r_info->timer_id = g_timeout_add(5200, __recv_timeout_handler, (gpointer) r_info);
-		g_source_add_poll(src, gpollfd);
-		g_source_set_callback(src, (GSourceFunc) __reply_handler,
-				(gpointer) r_info, NULL);
-		g_source_set_priority(src, G_PRIORITY_DEFAULT);
-		r = g_source_attach(src, NULL);
 	}
 
 	return ret;
