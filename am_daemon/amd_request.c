@@ -125,7 +125,7 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 }
 
 static int __app_process_by_pid(int cmd,
-	const char *pkg_name, struct ucred *cr)
+	const char *pkg_name, struct ucred *cr, int clifd)
 {
 	int pid;
 	int ret = -1;
@@ -142,7 +142,7 @@ static int __app_process_by_pid(int cmd,
 
 	switch (cmd) {
 	case APP_RESUME_BY_PID:
-		ret = _resume_app(pid);
+		ret = _resume_app(pid, clifd);
 		break;
 	case APP_TERM_BY_PID:
 		ret = _term_app(pid);
@@ -305,8 +305,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_TERM_REQ_BY_PID:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			ret = __app_process_by_pid(pkt->cmd, appid, &cr);
-			__real_send(clifd, ret);
+			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
 			break;
 		case APP_RUNNING_INFO:
 			_status_send_running_appinfo(clifd);
