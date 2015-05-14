@@ -15,9 +15,7 @@
 
 #define SERVICE_GROUP "Service"
 
-struct appinfomgr {
-	GHashTable *tbl; /* key is filename, value is struct appinfo */
-};
+static GHashTable *appinfo_tbl; /* key is filename, value is struct appinfo */
 
 enum _appinfo_idx {
 	_AI_FILE = 0, /* service filename */
@@ -75,19 +73,11 @@ static void _free_appinfo(gpointer data)
 	free(c);
 }
 
-static void _fini(struct appinfomgr *cf)
-{
-	assert(cf);
-
-	g_hash_table_destroy(cf->tbl);
-	free(cf);
-}
-
 static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
 {
 	struct appinfo *c;
 	gboolean r;
-	struct appinfomgr *cf = (struct appinfomgr *)data;
+	GHashTable *tbl = (GHashTable *)data;
 	char *exec;
 	char *type;
 	char *appid;
@@ -111,7 +101,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 		return -1;
 	}
 
-	g_hash_table_remove(cf->tbl, appid);
+	g_hash_table_remove(tbl, appid);
 
 	c = calloc(1, sizeof(*c));
 	if (!c) {
@@ -199,47 +189,19 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 
 	SECURE_LOGD("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
 
-	g_hash_table_insert(cf->tbl, c->val[_AI_FILE], c);
+	g_hash_table_insert(tbl, c->val[_AI_FILE], c);
 
 	return 0;
 }
 
-static int __app_info_delete_handler (const pkgmgrinfo_appinfo_h handle, void *data)
-{
-	struct appinfomgr *cf = (struct appinfomgr *)data;
-	char *appid;
-
-	pkgmgrinfo_appinfo_get_appid(handle, &appid);
-
-	g_hash_table_remove(cf->tbl, appid);
-
-	return 0;
-}
-
-static int _read_pkg_info(struct appinfomgr *cf, uid_t uid)
+static int _read_pkg_info(GHashTable *tbl, uid_t uid)
 {
 	int r;
 	if(uid != GLOBAL_USER)
-		r = pkgmgrinfo_appinfo_get_usr_install_list(__app_info_insert_handler, uid, cf);
+		r = pkgmgrinfo_appinfo_get_usr_install_list(__app_info_insert_handler, uid, tbl);
 	else
-		r = pkgmgrinfo_appinfo_get_install_list(__app_info_insert_handler, cf);
+		r = pkgmgrinfo_appinfo_get_install_list(__app_info_insert_handler, tbl);
 	return r;
-}
-
-static struct appinfomgr *_init()
-{
-	struct appinfomgr *cf;
-
-	cf = calloc(1, sizeof(*cf));
-	if (!cf) {
-		_E("appinfo init: %s", strerror(errno));
-		return NULL;
-	}
-
-	cf->tbl = g_hash_table_new_full(g_str_hash, g_str_equal,
-			NULL, _free_appinfo);
-
-	return cf;
 }
 
 static void __vconf_cb(keynode_t *key, void *data)
@@ -251,7 +213,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 	uid_t uid;
 	char *saveptr;
 	pkgmgrinfo_appinfo_h handle;
-	struct appinfomgr *cf = (struct appinfomgr *)data;
+	GHashTable *tbl = (GHashTable *)data;
 	int ret;
 
 	noti_string = vconf_keynode_get_str(key);
@@ -284,10 +246,10 @@ static void __vconf_cb(keynode_t *key, void *data)
 
 		pkgmgrinfo_appinfo_destroy_appinfo(handle);
 	} else if ( strncmp(type_string, "delete", 6) == 0) {
-		g_hash_table_remove(cf->tbl, appid);
+		g_hash_table_remove(tbl, appid);
 	} else if (strncmp(type_string, "update", 6) == 0){
 		/*REMOVE EXISTING ENTRY & CREATE AGAIN*/
-		if (g_hash_table_remove(cf->tbl, appid)){
+		if (g_hash_table_remove(tbl, appid)){
 			if (pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &handle) == PMINFO_R_OK){
 				__app_info_insert_handler(handle, data);
 				pkgmgrinfo_appinfo_destroy_appinfo(handle);
@@ -299,11 +261,11 @@ static void __vconf_cb(keynode_t *key, void *data)
 int app_func(pkgmgrinfo_appinfo_h handle, void *user_data)
 {
 	char *appid = NULL;
-	struct appinfomgr *cf = (struct appinfomgr *)user_data;
+	GHashTable *tbl = (GHashTable *)user_data;
 	int r;
 
 	pkgmgrinfo_appinfo_get_appid(handle, &appid);
-	r = g_hash_table_remove(cf->tbl, appid);
+	r = g_hash_table_remove(tbl, appid);
 	SECURE_LOGD("upgrading... (%s)", appid);
 
 	return 0;
@@ -342,19 +304,12 @@ static int __cb(int req_id, const char *pkg_type,
 	return ret;
 }
 
-int appinfo_init(struct appinfomgr **cf)
+int appinfo_init(void)
 {
-	struct appinfomgr *_cf;
 	int r;
 	FILE *fp = NULL;
 	char buf[4096] = {0,};
 	char *tmp = NULL;
-
-	if (!cf) {
-		errno = EINVAL;
-		_E("appinfo init: %s", strerror(errno));
-		return -1;
-	}
 
 	fp = fopen("/proc/cmdline", "r");
 	if (fp == NULL){
@@ -368,17 +323,16 @@ int appinfo_init(struct appinfomgr **cf)
 	}
 	fclose(fp);
 
-	_cf = _init();
-	if (!_cf)
-		return -1;
+	appinfo_tbl = g_hash_table_new_full(g_str_hash, g_str_equal,
+			NULL, _free_appinfo);
 
-	r = _read_pkg_info(_cf, GLOBAL_USER);
+	r = _read_pkg_info(appinfo_tbl, GLOBAL_USER);
 	if (r != PMINFO_R_OK) {
-		_fini(_cf);
+		appinfo_fini();
 		return -1;
 	}
 
-	r = vconf_notify_key_changed(VCONFKEY_MENUSCREEN_DESKTOP, __vconf_cb, _cf);
+	r = vconf_notify_key_changed(VCONFKEY_MENUSCREEN_DESKTOP, __vconf_cb, appinfo_tbl);
 	if (r < 0)
 		_E("Unable to register vconf notification callback for VCONFKEY_MENUSCREEN_DESKTOP\n");
 
@@ -386,41 +340,15 @@ int appinfo_init(struct appinfomgr **cf)
 	pkgmgrinfo_client *pc = NULL;
 	pc = pkgmgrinfo_client_new(PMINFO_REQUEST);
 	pkgmgrinfo_client_set_status_type(pc, event_type);
-	pkgmgrinfo_client_listen_status(pc, __cb , _cf);
-
-	*cf = _cf;
+	pkgmgrinfo_client_listen_status(pc, __cb , appinfo_tbl);
 
 	return 0;
 }
 
-void appinfo_fini(struct appinfomgr **cf)
+void appinfo_fini(void)
 {
-	if (!cf || !*cf)
-		return;
-
-	_fini(*cf);
-	*cf = NULL;
-}
-
-const struct appinfo *appinfo_insert(struct appinfomgr *cf, const char *pkg_name)
-{
-	pkgmgrinfo_pkginfo_h handle;
-	if (pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle) == PMINFO_R_OK){
-		pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_insert_handler, cf);
-		pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_insert_handler, cf);
-		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
-	}
-	return cf;
-}
-
-void appinfo_delete(struct appinfomgr *cf, const char *pkg_name)
-{
-	pkgmgrinfo_pkginfo_h handle;
-	if (pkgmgrinfo_pkginfo_get_pkginfo(pkg_name, &handle) != PMINFO_R_OK)
-		return;
-	pkgmgrinfo_appinfo_get_list(handle, PMINFO_SVC_APP, __app_info_delete_handler, cf);
-	pkgmgrinfo_appinfo_get_list(handle, PMINFO_UI_APP, __app_info_delete_handler, cf);
-	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	g_hash_table_destroy(appinfo_tbl);
+	appinfo_tbl = NULL;
 }
 
 const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
@@ -584,11 +512,11 @@ static void _iter_cb(gpointer key, gpointer value, gpointer user_data)
 	cbi->cb(cbi->cb_data, key, value);
 }
 
-void appinfo_foreach(struct appinfomgr *cf, appinfo_iter_callback cb, void *user_data)
+void appinfo_foreach(appinfo_iter_callback cb, void *user_data)
 {
 	struct _cbinfo cbi;
 
-	if (!cf || !cb) {
+	if (!cb) {
 		errno = EINVAL;
 		_E("appinfo foreach: %s", strerror(errno));
 		return;
@@ -597,7 +525,7 @@ void appinfo_foreach(struct appinfomgr *cf, appinfo_iter_callback cb, void *user
 	cbi.cb = cb;
 	cbi.cb_data = user_data;
 
-	g_hash_table_foreach(cf->tbl, _iter_cb, &cbi);
+	g_hash_table_foreach(appinfo_tbl, _iter_cb, &cbi);
 }
 
 int appinfo_get_boolean(const struct appinfo *c, enum appinfo_type type)

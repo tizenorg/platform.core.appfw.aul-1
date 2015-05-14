@@ -18,8 +18,8 @@ enum appinfo_type {
 	AIT_PRELOAD,
 };
 
-int appinfo_init(struct appinfomgr **cf);
-void appinfo_fini(struct appinfomgr **cf);
+int appinfo_init(void);
+void appinfo_fini(void);
 
 const struct appinfo *appinfo_insert(struct appinfomgr *cf, const char *filename);
 void appinfo_delete(struct appinfomgr *cf, const char *filename);
@@ -31,6 +31,6 @@ int appinfo_get_boolean(const struct appinfo *c, enum appinfo_type type);
 
 typedef void (*appinfo_iter_callback)(void *user_data,
 		const char *filename, const struct appinfo *c);
-void appinfo_foreach(struct appinfomgr *cf, appinfo_iter_callback cb, void *user_data);
+void appinfo_foreach(appinfo_iter_callback cb, void *user_data);
 
 #endif /* __AUL_AMD_APPINFO_H_ */

@@ -34,6 +34,4 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 void service_release(const char *group);
 int _start_srv(const struct appinfo *ai, bundle *kb);
 
-int _launch_init(struct amdmgr* amd);
-
 #endif /* __AUL_AMD_LAUNCH_H_ */

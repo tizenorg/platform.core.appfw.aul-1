@@ -50,11 +50,6 @@ typedef struct _app_status_info_t{
 	uid_t user;
 } app_status_info_t;
 
-
-struct amdmgr {
-	struct appinfomgr *af;  /* appinfo manager */
-};
-
 int _add_app_status_info_list(char *appid, int pid, uid_t uid);
 int _update_app_status_info_list(int pid, int status, uid_t uid);
 int _remove_app_status_info_list(int pid, uid_t uid);

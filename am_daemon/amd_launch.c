@@ -59,8 +59,6 @@
 #define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
-struct appinfomgr *_laf;
-
 typedef struct {
 	char *pkg_name;		/* package */
 	char *app_path;		/* exec */
@@ -783,13 +781,3 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	return pid;
 }
-
-
-int _launch_init(struct amdmgr* amd)
-{
-	_laf = amd->af;
-	return 0;
-}
-
-
-

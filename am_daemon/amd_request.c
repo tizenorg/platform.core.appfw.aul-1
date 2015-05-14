@@ -44,8 +44,6 @@
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 
-struct appinfomgr *_raf;
-
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
 
@@ -422,7 +420,7 @@ static GSourceFuncs funcs = {
 	.finalize = NULL
 };
 
-int _requset_init(struct amdmgr *amd)
+int _requset_init(void)
 {
 	int fd;
 	int r;
@@ -452,8 +450,6 @@ int _requset_init(struct amdmgr *amd)
 		/* TODO: error handle*/
 		return -1;
 	}
-
-	_raf = amd->af;
 
 	return 0;
 }

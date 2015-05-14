@@ -35,8 +35,6 @@
 
 GSList *app_status_info_list = NULL;
 
-struct appinfomgr *_saf = NULL;
-
 int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid, uid_t uid)
 {
 	GSList *iter;
@@ -383,12 +381,3 @@ int _status_get_appid_bypid(int fd, int pid)
 
 	return 0;
 }
-
-
-int _status_init(struct amdmgr* amd)
-{
-	_saf = amd->af;
-
-	return 0;
-}
-

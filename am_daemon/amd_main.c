@@ -55,8 +55,6 @@ GSList *r_app_info_list;
 static void __vconf_cb(keynode_t *key, void *data);
 static int __init();
 
-extern int _status_init(struct amdmgr *amd);
-
 static int __send_to_sigkill(int pid)
 {
 	int pgid;
@@ -264,27 +262,21 @@ static void __start_cb(void *user_data,
 		_start_srv(ai, NULL);
 }
 
-static void _start_services(struct amdmgr *amd)
+static void _start_services()
 {
-	appinfo_foreach(amd->af, __start_cb, amd);
+	appinfo_foreach(__start_cb, NULL);
 }
 
 static int __init()
 {
-	struct amdmgr amd = {
-		.af = NULL,
-	};
-
-	appinfo_init(&amd.af);
-	_requset_init(&amd);
-	_launch_init(&amd);
-	_status_init(&amd);
+	appinfo_init();
+	_requset_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
 				__vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
 
-	_start_services(&amd);
+	_start_services();
 
 	return 0;
 }
