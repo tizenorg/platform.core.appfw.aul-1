@@ -264,7 +264,7 @@ static void __start_cb(void *user_data,
 
 static void _start_services()
 {
-	appinfo_foreach(__start_cb, NULL);
+	appinfo_foreach(GLOBAL_USER, __start_cb, NULL);
 }
 
 static int __init()
