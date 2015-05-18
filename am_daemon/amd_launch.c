@@ -644,6 +644,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 {
 	const struct appinfo *ai;
 	int ret = -1;
+	const char *status;
 	const char *componet = NULL;
 	const char *multiple = NULL;
 	const char *app_path = NULL;
@@ -678,9 +679,19 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	ai = appinfo_find(caller_uid, appid);
 
-	if(ai == NULL) {
+	if (ai == NULL) {
 		__real_send(fd, -1);
 		return -1;
+	}
+
+	status = appinfo_get_value(ai, AIT_STATUS);
+	if (status == NULL)
+		return -1;
+
+	if (!strcmp(status, "blocking")) {
+		_D("blocking");
+		__real_send(fd, -EREJECTED);
+		return -EREJECTED;
 	}
 
 	pkgid = appinfo_get_value(ai, AIT_PKGID);

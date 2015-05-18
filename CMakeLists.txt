@@ -19,7 +19,7 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_PKG_CHECK_MODULES dlog app-checker rua glib-2.0 vconf pkgmgr-info privacy-manager-client)
+SET(AUL-1_PKG_CHECK_MODULES dlog app-checker rua glib-2.0 vconf pkgmgr-info privacy-manager-client pkgmgr)
 pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info libsystemd-daemon security-manager)
