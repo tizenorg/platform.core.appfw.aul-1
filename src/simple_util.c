@@ -45,8 +45,8 @@
 #define MAX_CMD_BUFSZ 1024
 
 static inline int __read_proc(const char *path, char *buf, int size);
-static inline int __find_pid_by_cmdline(const char *dname,
-				      const char *cmdline, void *priv);
+static inline int __find_pid_by_cmdline(const char *dname, const char *cmdline,
+		void *priv, uid_t uid);
 static inline int __get_pgid_from_stat(int pid);
 
 
@@ -74,8 +74,8 @@ static inline int __read_proc(const char *path, char *buf, int size)
 	return ret;
 }
 
-static inline int __find_pid_by_cmdline(const char *dname,
-				      const char *cmdline, void *priv)
+static inline int __find_pid_by_cmdline(const char *dname, const char *cmdline,
+		void *priv, uid_t uid)
 {
 	char *apppath;
 	int pid = 0;
@@ -102,7 +102,6 @@ int __proc_iter_cmdline(
 	char *cmdline;
 	uid_t uid;
 	dp = opendir("/proc");
-	struct stat DirStat;
 
 	if (dp == NULL) {
 		return -1;
@@ -115,19 +114,12 @@ int __proc_iter_cmdline(
 		if (!isdigit(dentry->d_name[0]))
 			continue;
 
+		uid = __proc_get_usr_bypid(atoi(dentry->d_name));
+
 		snprintf(buf, sizeof(buf), "/proc/%s/cmdline", dentry->d_name);
 		ret = __read_proc(buf, buf, sizeof(buf));
 		if (ret <= 0)
 			continue;
-
-       snprintf(buf, sizeof(buf), "/proc/%s", dentry->d_name);
-       ret = stat(buf, &DirStat);
-       if (ret < 0)
-        uid = (uid_t)-1;
-       else
-		uid = DirStat.st_uid;
-
-
 
 		/* support app launched by shell script*/
 		cmdline = buf;
