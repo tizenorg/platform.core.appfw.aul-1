@@ -11,7 +11,7 @@
 #include "amd_config.h"
 #include "simple_util.h"
 #include "amd_appinfo.h"
-
+#include "amd_launch.h"
 
 #define SERVICE_GROUP "Service"
 
@@ -89,10 +89,23 @@ static void _free_user_appinfo(gpointer data)
 	free(info);
 }
 
+static char *__convert_apptype(const char *type)
+{
+	if (strncmp(type, "capp", 4) == 0) {
+		return strdup("rpm");
+	} else if (strncmp(type, "c++app", 6) == 0 ||
+			strncmp(type, "ospapp", 6) == 0) {
+		return strdup("tpk");
+	} else if (strncmp(type, "webapp", 6) == 0) {
+		return strdup("wgt");
+	}
+
+	return NULL;
+}
+
 static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
 {
 	struct appinfo *c;
-	gboolean r;
 	struct user_appinfo *info = (struct user_appinfo *)data;
 	char *exec;
 	char *type;
@@ -101,108 +114,115 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	bool multiple;
 	bool onboot;
 	bool restart;
+	bool preload;
 	pkgmgrinfo_app_hwacceleration hwacc;
 	pkgmgrinfo_app_component component;
 	pkgmgrinfo_permission_type permission;
-	int ret = -1;
-	bool preload;
 
 	if (!handle) {
 		_E("null app handle");
 		return -1;
 	}
-	ret = pkgmgrinfo_appinfo_get_appid(handle, &appid);
-	if (ret < 0) {
+	if (pkgmgrinfo_appinfo_get_appid(handle, &appid)) {
 		_E("fail to get appinfo");
 		return -1;
 	}
 
 	g_hash_table_remove(info->tbl, appid);
 
-	c = calloc(1, sizeof(*c));
+	c = calloc(1, sizeof(struct appinfo));
 	if (!c) {
 		_E("create appinfo: %s", strerror(errno));
 		return -1;
 	}
 
-	memset(c, 0, sizeof(struct appinfo));
-
 	c->val[_AI_FILE] = strdup(appid);
-	if (!c->val[_AI_FILE]) {
-		_E("create appinfo: %s", strerror(errno));
+	c->val[_AI_NAME] = strdup(appid); //TODO :
+
+	if (pkgmgrinfo_appinfo_get_component(handle, &component)) {
+		_E("failed to get component");
 		_free_appinfo(c);
 		return -1;
 	}
 
-	c->val[_AI_NAME] = strdup(appid); //TODO :
-
-	pkgmgrinfo_appinfo_get_component(handle, &component);
-	if(component == PMINFO_UI_APP) {
+	if (component == PMINFO_UI_APP) {
 		c->val[_AI_COMP] = strdup("ui"); //TODO :
-
-		r = pkgmgrinfo_appinfo_is_multiple(handle, &multiple);
-		if(multiple == true)
-			c->val[_AI_MULTI] = strdup("true");
-		else c->val[_AI_MULTI] = strdup("false");
-
-		r = pkgmgrinfo_appinfo_is_preload(handle, &preload);
-		if (preload == false) {
-			c->val[_AI_PRELOAD] = strdup("false");
-		} else {
-			c->val[_AI_PRELOAD] = strdup("true");
+		if (pkgmgrinfo_appinfo_is_multiple(handle, &multiple)) {
+			_E("failed to get multiple");
+			_free_appinfo(c);
+			return -1;
 		}
-
-		if(gles == 0) {
-			c->val[_AI_HWACC] = strdup("NOT_USE");
-		} else {
-
-			r = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
-			if (hwacc == PMINFO_HWACCELERATION_USE_GL) {
-				c->val[_AI_HWACC] = strdup("USE");
-			} else if (hwacc == PMINFO_HWACCELERATION_USE_SYSTEM_SETTING) {
-				c->val[_AI_HWACC] = strdup("SYS");
-			} else {
-				c->val[_AI_HWACC] = strdup("NOT_USE");
-			}
+		c->val[_AI_MULTI] = strdup(multiple ? "true" : "false");
+		if (pkgmgrinfo_appinfo_is_preload(handle, &preload)) {
+			_E("failed to get preload");
+			_free_appinfo(c);
+			return -1;
 		}
+		c->val[_AI_PRELOAD] = strdup(preload ? "true" : "false");
+		if (pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc)) {
+			_E("failed to get hwacc");
+			_free_appinfo(c);
+			return -1;
+		}
+		c->val[_AI_HWACC] = strdup(
+				(gles == 0 ||
+				 hwacc == PMINFO_HWACCELERATION_NOT_USE_GL) ?
+				"NOT_USE" :
+				(hwacc == PMINFO_HWACCELERATION_USE_GL) ?
+				"USE" :
+				"SYS");
+		c->val[_AI_ONBOOT] = strdup("false");
+		c->val[_AI_RESTART] = strdup("false");
 	} else {
 		c->val[_AI_COMP] = strdup("svc");
-
-		r = pkgmgrinfo_appinfo_is_onboot(handle, &onboot);
-		if(onboot == true)
-			c->val[_AI_ONBOOT] = strdup("true");
-		else c->val[_AI_ONBOOT] = strdup("false");
-
-		r = pkgmgrinfo_appinfo_is_autorestart(handle, &restart);
-		if(restart == true)
-			c->val[_AI_RESTART] = strdup("true");
-		else c->val[_AI_RESTART] = strdup("false");
+		c->val[_AI_MULTI] = strdup("false");
+		c->val[_AI_PRELOAD] = strdup("false");
+		c->val[_AI_HWACC] = strdup("NOT_USE");
+		if (pkgmgrinfo_appinfo_is_onboot(handle, &onboot)) {
+			_E("failed to get onboot");
+			_free_appinfo(c);
+			return -1;
+		}
+		c->val[_AI_ONBOOT] = strdup(onboot ? "true" : "false");
+		if (pkgmgrinfo_appinfo_is_autorestart(handle, &restart)) {
+			_E("failed to get restart");
+			_free_appinfo(c);
+			return -1;
+		}
+		c->val[_AI_RESTART] = strdup(restart ? "true" : "false");
 	}
 
-	r = pkgmgrinfo_appinfo_get_exec(handle, &exec);
+	if (pkgmgrinfo_appinfo_get_exec(handle, &exec)) {
+		_E("failed to get exec");
+		_free_appinfo(c);
+		return -1;
+	}
 	c->val[_AI_EXEC] = strdup(exec);
 
-	r = pkgmgrinfo_appinfo_get_apptype(handle, &type);
-	if(strncmp(type, "capp", 4) == 0 ) {
-		c->val[_AI_TYPE] = strdup("rpm");
-	} else if (strncmp(type, "c++app", 6) == 0 || strncmp(type, "ospapp", 6) == 0) {
-		c->val[_AI_TYPE] = strdup("tpk");
-	} else if (strncmp(type, "webapp", 6) == 0) {
-		c->val[_AI_TYPE] = strdup("wgt");
+	if (pkgmgrinfo_appinfo_get_apptype(handle, &type)) {
+		_E("failed to get apptype");
+		_free_appinfo(c);
+		return -1;
 	}
+	c->val[_AI_TYPE] = __convert_apptype(type);
 
-	r = pkgmgrinfo_appinfo_get_permission_type(handle, &permission);
-	if (permission == PMINFO_PERMISSION_SIGNATURE) {
-		c->val[_AI_PERM] = strdup("signature");
-	} else if (permission == PMINFO_PERMISSION_PRIVILEGE) {
-		c->val[_AI_PERM] = strdup("privilege");
-	} else {
-		c->val[_AI_PERM] = strdup("normal");
+	if (pkgmgrinfo_appinfo_get_permission_type(handle, &permission)) {
+		_E("failed to get permission type");
+		_free_appinfo(c);
+		return -1;
 	}
-
-	r = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
+	c->val[_AI_PERM] = strdup(
+			(permission == PMINFO_PERMISSION_SIGNATURE) ?
+			"signature" :
+			(permission == PMINFO_PERMISSION_PRIVILEGE) ?
+			"privilege" :
+			"normal");
+	if (pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid)) {
+		_E("failed to get pkgid");
+		_free_appinfo(c);
+		return -1;
+	}
 	c->val[_AI_PKGID] = strdup(pkgid);
-
 	c->val[_AI_STATUS] = strdup("installed");
 
 	SECURE_LOGD("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
@@ -239,6 +259,19 @@ static void _remove_user_appinfo(uid_t uid)
 	g_hash_table_remove(user_tbl, GINT_TO_POINTER(uid));
 }
 
+static void __handle_onboot(void *user_data, const char *appid,
+		struct appinfo *info)
+{
+	uid_t uid = (uid_t)user_data;
+
+	if (!strcmp(info->val[_AI_ONBOOT], "true")) {
+		if (_status_app_is_running(appid, uid) > 0)
+			return;
+		_D("start app %s from user %d by onboot", appid, uid);
+		_start_app_local(uid, info->val[_AI_NAME]);
+	}
+}
+
 static struct user_appinfo *_add_user_appinfo(uid_t uid)
 {
 	int r;
@@ -260,6 +293,11 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 	if (r != PMINFO_R_OK) {
 		_remove_user_appinfo(uid);
 		return NULL;
+	}
+
+	if (uid != GLOBAL_USER) {
+		appinfo_foreach(uid, __handle_onboot, uid);
+		appinfo_foreach(GLOBAL_USER, __handle_onboot, uid);
 	}
 
 	_D("loaded appinfo table for uid %d", uid);
@@ -328,6 +366,7 @@ static void _appinfo_delete_on_event(uid_t uid, const char *pkgid)
 static void _appinfo_insert_on_event(uid_t uid, const char *pkgid)
 {
 	appinfo_insert(uid, pkgid);
+	appinfo_foreach(uid, __handle_onboot, uid);
 }
 
 static int __package_event_cb(uid_t target_uid, int req_id,
