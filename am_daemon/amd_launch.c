@@ -77,6 +77,7 @@ struct ktimer {
 
 static void __set_reply_handler(int fd, int pid, int clifd, int cmd);
 static void __real_send(int clifd, int ret);
+static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd);
 
 static void _set_sdk_env(const char* appid, char* str) {
 	char buf[MAX_LOCAL_BUFSZ];
@@ -196,85 +197,66 @@ static char **__create_argc_argv(bundle * kb, int *margc)
 	*margc = argc;
 	return argv;
 }
-static void _do_exec(const char *cmd, const char *group, bundle *kb)
+
+static void __set_stime(bundle *kb)
 {
-	gchar **argv;
-	gint argc;
-	char **b_argv;
-	int b_argc;
-	gboolean b;
-	int r;
+	struct timeval tv;
+	char tmp[MAX_LOCAL_BUFSZ];
 
-	b = g_shell_parse_argv(cmd, &argc, &argv, NULL);
-
-	if (kb) {
-		b_argv = __create_argc_argv(kb, &b_argc);
-		b_argv[0] = strdup(argv[0]);
-		_prepare_exec(group, kb);
-		execv(b_argv[0], b_argv);
-	}
-
-	if (b) {
-		_prepare_exec(group, kb);
-		execv(argv[0], argv);
-	}
-
-	_E("exec error: %s", strerror(errno));
-	g_strfreev(argv);
+	gettimeofday(&tv, NULL);
+	snprintf(tmp, MAX_LOCAL_BUFSZ, "%ld/%ld", tv.tv_sec, tv.tv_usec);
+	bundle_add(kb, AUL_K_STARTTIME, tmp);
 }
 
-int service_start(const char *group, const char *cmd, bundle *kb)
+int _start_app_local(uid_t uid, char *appid)
 {
-	int r;
-	pid_t p;
+	int ret;
+	int pid;
+	struct appinfo* ai;
+	bundle *kb;
+	const char *app_path;
+	const char *pkg_type;
+	const char *hwacc;
+	char tmpbuf[MAX_PID_STR_BUFSZ];
 
-	if (!group || !*group || !cmd || !*cmd) {
-		errno = EINVAL;
-		_E("service start: %s", strerror(errno));
+	kb = bundle_create();
+	snprintf(tmpbuf, sizeof(tmpbuf), "%d", getpid());
+	bundle_add_str(kb, AUL_K_CALLER_PID, tmpbuf);
+	snprintf(tmpbuf, sizeof(tmpbuf), "%d", uid);
+	bundle_add_str(kb, AUL_K_CALLER_UID, tmpbuf);
+	bundle_add_str(kb, AUL_K_APPID, appid);
+
+	pid = _status_app_is_running(appid, uid);
+	if (pid > 0) {
+		ret = __nofork_processing(APP_START, pid, kb, -1);
+		bundle_free(kb);
+		return ret;
+	}
+
+	ai = appinfo_find(uid, appid);
+	if (ai == NULL) {
+		_E("cannot find appinfo of %s", appid);
 		return -1;
 	}
 
-	p = fork();
-	switch (p) {
-	case 0: /* child process */
-		_do_exec(cmd, group, kb);
-		/* exec error */
-		exit(0);
-		break;
-	case -1:
-		_E("service start: fork: %s", strerror(errno));
-		r = -1;
-		break;
-	default: /* parent process */
-		_D("child process: %d", p);
-		r = p;
-		break;
-	}
+	hwacc = appinfo_get_value(ai, AIT_HWACC);
+	app_path = appinfo_get_value(ai, AIT_EXEC);
+	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 
-	return r;
-}
+	__set_stime(kb);
+	bundle_add_str(kb, AUL_K_HWACC, hwacc);
+	bundle_add_str(kb, AUL_K_EXEC, app_path);
+	bundle_add_str(kb, AUL_K_PACKAGETYPE, pkg_type);
 
-int _start_srv(const struct appinfo *ai, bundle *kb)
-{
-	int r;
-	const char *group;
-	const char *cmd;
+	pid = app_agent_send_cmd(uid, APP_START, kb);
 
-	group = appinfo_get_filename(ai);
+	bundle_free(kb);
 
-	cmd = appinfo_get_value(ai, AIT_EXEC);
-	if (!cmd) {
-		_E("start service: '%s' has no exec", group);
-		return -1;
-	}
+	if (pid > 0)
+		_status_add_app_info_list(
+				appid, app_path, pid, LAUNCHPAD_PID, uid);
 
-	r = service_start( group, cmd, kb);
-	if (r == -1) {
-		_E("start service: '%s': failed", group);
-		return -1;
-	}
-
-	return 0;
+	return pid;
 }
 
 static void _free_kt(struct ktimer *kt)
@@ -678,8 +660,8 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	}
 
 	ai = appinfo_find(caller_uid, appid);
-
 	if (ai == NULL) {
+		_D("cannot find appinfo of %s", appid);
 		__real_send(fd, -1);
 		return -1;
 	}
@@ -741,44 +723,32 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	pkgmgrinfo_client_request_enable_external_pkg(pkgid);
 
-	if (componet && strncmp(componet, "ui", 2) == 0) {
-		multiple = appinfo_get_value(ai, AIT_MULTI);
-		if (!multiple || strncmp(multiple, "false", 5) == 0) {
-			pid = _status_app_is_running(appid, caller_uid);
-		}
+	multiple = appinfo_get_value(ai, AIT_MULTI);
+	if (!multiple || strncmp(multiple, "false", 5) == 0) {
+		pid = _status_app_is_running(appid, caller_uid);
+	}
 
-		if (pid > 0) {
-			if (_status_get_app_info_status(pid) == STATUS_DYING) {
-				pid = -ETERMINATING;
-			} else if (caller_pid == pid) {
-				SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);
-				pid = -ELOCALLAUNCH_ID;
-			} else {
-				if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
-					pid = ret;
-				} else {
-					delay_reply = 1;
-				}
-			}
-		} else if (cmd != APP_RESUME) {
-			hwacc = appinfo_get_value(ai, AIT_HWACC);
-			bundle_add(kb, AUL_K_HWACC, hwacc);
-			bundle_add(kb, AUL_K_EXEC, app_path);
-			bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
-			pid = app_agent_send_cmd(caller_uid, cmd, kb);
-
-		}
-	} else if (componet && strncmp(componet, "svc", 3) == 0) {
-		pid = _status_app_is_running_v2(caller_uid,appid);
-		if (pid > 0) {
+	if (pid > 0) {
+		if (_status_get_app_info_status(pid) == STATUS_DYING) {
+			pid = -ETERMINATING;
+		} else if (caller_pid == pid) {
+			SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);
+			pid = -ELOCALLAUNCH_ID;
+		} else {
 			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
 				pid = ret;
+			} else {
+				delay_reply = 1;
 			}
-		} else if (cmd != APP_RESUME) {
-			pid = service_start(appid, app_path, kb);
 		}
+	} else if (cmd == APP_RESUME) {
+		_E("%s is not running", appid);
 	} else {
-		_E("unkown application");
+		hwacc = appinfo_get_value(ai, AIT_HWACC);
+		bundle_add(kb, AUL_K_HWACC, hwacc);
+		bundle_add(kb, AUL_K_EXEC, app_path);
+		bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
+		pid = app_agent_send_cmd(caller_uid, cmd, kb);
 	}
 
 	if(!delay_reply)

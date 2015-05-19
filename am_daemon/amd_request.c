@@ -190,7 +190,7 @@ static int __release_srv(uid_t caller_uid, const char *filename)
 	if (r == 1) {
 		/* Auto restart */
 		SECURE_LOGD("Auto restart set: '%s'", filename);
-		return _start_srv(ai, NULL);
+		return _start_app_local(ai, NULL);
 	}
 
 	service_release(filename);

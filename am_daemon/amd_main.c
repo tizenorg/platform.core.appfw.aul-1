@@ -248,25 +248,6 @@ int __agent_dead_handler(uid_t user)
 	_status_remove_app_info_list_with_uid(user);
 }
 
-static void __start_cb(void *user_data,
-		const char *filename, const struct appinfo *ai)
-{
-	/*struct amdmgr *amd = user_data;*/
-	const char *componet;
-	int r;
-
-	componet = appinfo_get_value(ai, AIT_COMP);
-
-	r = appinfo_get_boolean(ai, AIT_ONBOOT);
-	if (r == 1 && strncmp(componet, "svc", 3) == 0)
-		_start_srv(ai, NULL);
-}
-
-static void _start_services()
-{
-	appinfo_foreach(GLOBAL_USER, __start_cb, NULL);
-}
-
 static int __init()
 {
 	appinfo_init();
@@ -275,8 +256,6 @@ static int __init()
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
 				__vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
-
-	_start_services();
 
 	return 0;
 }
