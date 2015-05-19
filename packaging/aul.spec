@@ -31,6 +31,7 @@ BuildRequires:  pkgconfig(rua)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr-info)
+BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(privacy-manager-client)
 BuildRequires:  pkgconfig(libtzplatform-config)
