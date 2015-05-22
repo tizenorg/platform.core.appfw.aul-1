@@ -250,7 +250,11 @@ int __agent_dead_handler(uid_t user)
 
 static int __init()
 {
-	appinfo_init();
+	if (appinfo_init()) {
+		_E("appinfo_init failed\n");
+		return -1;
+	}
+
 	_requset_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
