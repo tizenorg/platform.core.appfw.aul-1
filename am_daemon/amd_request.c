@@ -371,6 +371,11 @@ static gboolean __request_handler(gpointer data)
 			__handle_agent_dead_signal(&cr);
 			close(clifd);
 			break;
+		case AMD_RELOAD_APPINFO:
+			_D("AMD_RELOAD_APPINFO");
+			appinfo_reload();
+			__send_result_to_client(clifd, 0);
+			break;
 		default:
 			_E("no support packet");
 			close(clifd);

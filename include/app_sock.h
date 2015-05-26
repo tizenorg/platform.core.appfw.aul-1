@@ -54,6 +54,8 @@ enum app_cmd {
 	APP_TERM_REQ_BY_PID,
 	APP_TERM_BY_PID_ASYNC,
 
+	/* for special purpose */
+	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */
 	APP_DEAD_SIGNAL,
 	AGENT_DEAD_SIGNAL

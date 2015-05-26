@@ -1648,6 +1648,7 @@ int aul_is_subapp(void);
 typedef int (*data_control_provider_handler_fn) (bundle *b, int request_id, void *data);
 int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler);
 int aul_unset_data_control_provider_cb(void);
+int aul_reload_appinfo(void);
 
 /** @} */
 

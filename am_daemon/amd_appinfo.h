@@ -34,5 +34,6 @@ int appinfo_get_boolean(const struct appinfo *c, enum appinfo_type type);
 typedef void (*appinfo_iter_callback)(void *user_data,
 		const char *filename, struct appinfo *c);
 void appinfo_foreach(uid_t uid, appinfo_iter_callback cb, void *user_data);
+void appinfo_reload(void);
 
 #endif /* __AUL_AMD_APPINFO_H_ */

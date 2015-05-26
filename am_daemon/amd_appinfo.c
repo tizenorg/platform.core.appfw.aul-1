@@ -536,6 +536,27 @@ int appinfo_insert(uid_t uid, const char *pkgid)
 	return 0;
 }
 
+static void _reload_appinfo(gpointer key, gpointer value, gpointer user_data)
+{
+	int r;
+	struct user_appinfo *info = (struct user_appinfo *)value;
+
+	g_hash_table_remove_all(info->tbl);
+
+	r = pkgmgrinfo_pkginfo_get_usr_list(__pkg_list_cb, info, info->uid);
+	if (r != PMINFO_R_OK) {
+		_remove_user_appinfo(info->uid);
+		return NULL;
+	}
+
+	_D("reloaded appinfo table for uid %d", info->uid);
+}
+
+void appinfo_reload(void)
+{
+	g_hash_table_foreach(user_tbl, _reload_appinfo, NULL);
+}
+
 const char *appinfo_get_value(const struct appinfo *c, enum appinfo_type type)
 {
 	enum _appinfo_idx i;

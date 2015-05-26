@@ -663,5 +663,14 @@ SLPAPI int aul_unset_data_control_provider_cb(void)
 	return 0;
 }
 
+SLPAPI int aul_reload_appinfo(void)
+{
+	char pkgname[MAX_PID_STR_BUFSZ];
+
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", getpid());
+
+	return app_request_to_launchpad(AMD_RELOAD_APPINFO, pkgname, NULL);
+}
+
 /* vi: set ts=8 sts=8 sw=8: */
 

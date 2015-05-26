@@ -569,6 +569,11 @@ int set_defapp_svc_test()
 	return ret;
 }
 
+int reload_appinfo(void)
+{
+	return aul_reload_appinfo();
+}
+
 static test_func_t test_func[] = {
 	{"launch",launch_test,"aul_launch_app test",
 		"[usage] launch <pkgname> <key1> <val1> <key2> <val2> ..."},
@@ -630,6 +635,8 @@ static test_func_t test_func[] = {
 	      	"[usage] getpkg <pkgname>"},
 	{"update_list", update_running_list, "update running list",
 	      	"[usage] update_list <appid> <app_path> <pid>"},
+	{"reload", reload_appinfo, "reload appinfo table",
+		"[usage] reload"},
 /*
 	{"setpkg", set_pkg_func, "set package",
 	      	"[usage] setpkg <pkgname> <apppath>"},
@@ -680,7 +687,7 @@ void print_usage(char *progname)
 		printf("\t\t%s\n", tmp->usage);
 	}
 
-	printf("[note] getpkg/setpkg/delpkg/init_defapp_mime "
+	printf("[note] getpkg/setpkg/delpkg/init_defapp_mime/reload "
 		"cmd is internal purpose\n");
 }
 
@@ -700,7 +707,7 @@ static gboolean run_func(void *data)
 
 int main(int argc, char **argv)
 {
-	if (argc < 3) {
+	if (argc < 2) {
 		print_usage(argv[0]);
 		exit(0);
 	}
@@ -708,7 +715,8 @@ int main(int argc, char **argv)
 	cmd = argv[1];
 	gargc = argc;
 	gargv = argv;
-	apn_pid = atoi(argv[2]);
+	if (argv[2])
+		apn_pid = atoi(argv[2]);
 
 	aul_launch_init(NULL, NULL);
 
