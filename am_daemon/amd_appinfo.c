@@ -242,13 +242,15 @@ static int __pkg_list_cb(pkgmgrinfo_pkginfo_h handle, void *user_data)
 		return -1;
 	}
 
-	if (info->uid == GLOBAL_USER || !is_global) {
-		if (pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
-				__app_info_insert_handler, user_data,
-				info->uid)) {
-			_E("get appinfo failed");
-			return -1;
-		}
+	/* do not load appinfo for attached global apps */
+	if (info->uid != GLOBAL_USER && is_global)
+		return -1;
+
+	if (pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
+			__app_info_insert_handler, user_data,
+			info->uid)) {
+		_E("get appinfo failed");
+		return -1;
 	}
 
 	return 0;
