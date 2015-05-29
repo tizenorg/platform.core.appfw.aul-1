@@ -726,7 +726,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
 	if (!multiple || strncmp(multiple, "false", 5) == 0) {
-		pid = _status_app_is_running(appid, caller_uid);
+		pid = _status_app_is_running_v2(appid, caller_uid);
 	}
 
 	if (pid > 0) {

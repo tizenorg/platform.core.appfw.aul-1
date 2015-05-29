@@ -217,7 +217,7 @@ int _status_send_running_appinfo(int fd)
 	return 0;
 }
 
-int _status_app_is_running_v2(uid_t caller_uid, char *appid)
+int _status_app_is_running_v2(char *appid, uid_t caller_uid)
 {
 	char *apppath = NULL;
 	int ret = 0;
