@@ -409,19 +409,114 @@ int _resume_app(int pid, int clifd)
 	return ret;
 }
 
-int _term_app(int pid)
+int _pause_app(int pid, int clifd)
 {
 	int dummy;
-	if (__app_send_raw
-	    (pid, APP_TERM_BY_PID, (unsigned char *)&dummy, sizeof(int)) < 0) {
+	int ret;
+	if ((ret =
+	    __app_send_raw_with_delay_reply(pid, APP_PAUSE_BY_PID, (unsigned char *)&dummy,
+			    sizeof(int))) < 0) {
+		if (ret == -EAGAIN)
+			_E("pause packet timeout error");
+		else {
+			_E("iconify failed - %d pause fail", pid);
+			_E("we will term the app - %d", pid);
+			_send_to_sigkill(pid);
+			ret = -1;
+		}
+	}
+	_D("pause done");
+
+	if (ret > 0)
+		__set_reply_handler(ret, pid, clifd, APP_PAUSE_BY_PID);
+
+	return ret;
+}
+
+int _term_app(int pid, int clifd)
+{
+	int dummy;
+	int ret;
+
+	if ((ret = __app_send_raw_with_delay_reply(pid, APP_TERM_BY_PID,
+					(unsigned char *)&dummy,
+					sizeof(int))) < 0) {
 		_D("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
-			_E("fail to killing - %d\n", pid);
+			_E("fail to killing - %d", pid);
 			return -1;
 		}
 	}
-	_D("term done\n");
+	_D("term done");
+
+	if (ret > 0)
+		__set_reply_handler(ret, pid, clifd, APP_TERM_BY_PID);
+
 	return 0;
+}
+
+int _term_req_app(int pid, int clifd)
+{
+	int dummy;
+	int ret;
+
+	if ( (ret = __app_send_raw_with_delay_reply
+		(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
+		_D("terminate req send error");
+		__real_send(clifd, ret);
+	}
+
+	if (ret > 0)
+		__set_reply_handler(ret, pid, clifd, APP_TERM_REQ_BY_PID);
+
+	return 0;
+}
+
+int _term_bgapp(int pid, int clifd)
+{
+	return _term_app(pid, clifd);
+	/* FIXME: app group feature should be merged */
+#if 0
+	int dummy;
+	int fd;
+	int cnt;
+	int *pids = NULL;
+	int i;
+	int status = -1;
+
+	if (app_group_is_leader_pid(pid)) {
+		app_group_get_group_pids(pid, &cnt, &pids);
+		if (cnt > 0) {
+			status = _status_get_app_info_status(pids[cnt-1]);
+			if(status == STATUS_BG) {
+				for (i = cnt-1 ; i>=0; i--) {
+					if (i != 0)
+						_term_sub_app(pids[i]);
+					app_group_remove(pids[i]);
+				}
+			}
+		}
+		free(pids);
+	}
+
+	if ((fd = __app_send_raw_with_delay_reply(
+					pid, APP_TERM_BGAPP_BY_PID,
+					(unsigned char *)&dummy,
+					sizeof(int))) < 0) {
+		_D("terminate packet send error - use SIGKILL");
+		if (_send_to_sigkill(pid) < 0) {
+			_E("fail to killing - %d", pid);
+			__real_send(clifd, -1);
+			return -1;
+		}
+		__real_send(clifd, 0);
+	}
+	_D("term_bgapp done");
+	if (fd > 0)
+		__set_reply_handler(fd, pid, clifd, APP_TERM_BGAPP_BY_PID);
+
+	return 0;
+#endif
 }
 
 int _fake_launch_app(int cmd, int pid, bundle *kb, int clifd)

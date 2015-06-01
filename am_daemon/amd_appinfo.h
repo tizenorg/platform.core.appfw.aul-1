@@ -28,6 +28,7 @@ int appinfo_insert(uid_t uid, const char *pkgid);
 
 const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid);
 const char *appinfo_get_value(const struct appinfo *c, enum appinfo_type type);
+int appinfo_set_value(struct appinfo *c, enum appinfo_type, const char *val);
 const char *appinfo_get_filename(const struct appinfo *c);
 int appinfo_get_boolean(const struct appinfo *c, enum appinfo_type type);
 

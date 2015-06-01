@@ -166,6 +166,36 @@ int term_req_pid_test()
 	return aul_subapp_terminate_request_pid(apn_pid);
 }
 
+int term_pid_without_restart_test(void)
+{
+	static int num = 0;
+	printf("[aul_term_pid_without_restart %d test] %d \n", num++, apn_pid);
+	return aul_terminate_pid_without_restart(apn_pid);
+}
+
+int term_bgapp_pid_test(void)
+{
+	static int num = 0;
+	printf("[aul_term_pid_without_restart %d test] %d \n", num++, apn_pid);
+	return aul_terminate_bgapp_pid(apn_pid);
+}
+
+int pause_test(void)
+{
+	static int num = 0;
+
+	printf("[aul_pause_app %d test] %s \n", num++, gargv[2]);
+	return aul_pause_app(gargv[2]);
+}
+
+int pause_pid_test(void)
+{
+	static int num = 0;
+
+	printf("[aul_pause_pid %d test] %d \n", num++, apn_pid);
+	return aul_pause_pid(apn_pid);
+}
+
 static test_func_t scn_func[] = {
 	{"n", launch_test, "launch_test", ""},
 	{"n", launch_test, "launch_test", ""},
@@ -587,6 +617,10 @@ static test_func_t test_func[] = {
 		"[usage] term_pid <pid>" },
 	{"term_req_pid", term_req_pid_test,"aul_subapp_terminate_request_pid test",
 		"[usage] term_req_pid <pid>" },
+	{"term_pid_without_restart", term_pid_without_restart_test, "aul_terminate_pid_without_restart test",
+		"[usage] term_pid_without_restart <pid>" },
+	{"term_bgapp", term_bgapp_pid_test, "aul_terminate_bgapp_pid test",
+		"[usage] term_bgapp <pid>" },
 	{"dbuslaunch", dbus_launch_test,"launch by dbus auto activation",
 		"[usage] term_pid <pid>" },
 	{"all",all_test,"test based on predefine scenario",
@@ -633,6 +667,10 @@ static test_func_t test_func[] = {
 
 	{"getpkg", get_pkg_func, "get package",
 	      	"[usage] getpkg <pkgname>"},
+	{"pause", pause_test,"aul_pause_app test",
+		"[usage] pause <pkgname>" },
+	{"pause_pid", pause_pid_test,"aul_pause_pid test",
+		"[usage] pause_pid <pid>" },
 	{"update_list", update_running_list, "update running list",
 	      	"[usage] update_list <appid> <app_path> <pid>"},
 	{"reload", reload_appinfo, "reload appinfo table",

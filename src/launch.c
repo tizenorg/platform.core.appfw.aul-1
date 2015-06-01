@@ -101,7 +101,17 @@ static int app_terminate()
 	return 0;
 }
 
+static int bgapp_terminate(void)
+{
+	__call_aul_handler(AUL_TERMINATE_BGAPP, NULL);
+	return 0;
+}
 
+static int app_pause(void)
+{
+	__call_aul_handler(AUL_PAUSE, NULL);
+	return 0;
+}
 
 
 /**
@@ -445,6 +455,10 @@ int aul_sock_handler(int fd)
 		app_terminate();
 		break;
 
+	case APP_TERM_BGAPP_BY_PID:
+		bgapp_terminate();
+		break;
+
 	case APP_TERM_REQ_BY_PID:	/* run in callee */
 		app_subapp_terminate_request();
 		break;
@@ -468,6 +482,10 @@ int aul_sock_handler(int fd)
 			goto err;
 		app_key_event(kbundle);
 		bundle_free(kbundle);
+		break;
+
+	case APP_PAUSE_BY_PID:
+		app_pause();
 		break;
 
 	default:
@@ -625,6 +643,32 @@ SLPAPI int aul_terminate_pid(int pid)
 	return ret;
 }
 
+SLPAPI int aul_terminate_bgapp_pid(int pid)
+{
+        char pkgname[MAX_PID_STR_BUFSZ];
+        int ret;
+
+        if (pid <= 0)
+                return AUL_R_EINVAL;
+
+        snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+        ret = app_request_to_launchpad(APP_TERM_BGAPP_BY_PID, pkgname, NULL);
+        return ret;
+}
+
+SLPAPI int aul_terminate_pid_without_restart(int pid)
+{
+	char pkgname[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad(APP_TERM_BY_PID_WITHOUT_RESTART, pkgname, NULL);
+	return ret;
+}
+
 SLPAPI int aul_terminate_pid_async(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
@@ -661,6 +705,30 @@ SLPAPI int aul_unset_data_control_provider_cb(void)
 {
 	__dc_handler = NULL;
 	return 0;
+}
+
+SLPAPI int aul_pause_app(const char *appid)
+{
+	int ret;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad(APP_PAUSE, appid, NULL);
+	return ret;
+}
+
+SLPAPI int aul_pause_pid(int pid)
+{
+	char app_pid[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(app_pid, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad(APP_PAUSE_BY_PID, app_pid, NULL);
+	return ret;
 }
 
 SLPAPI int aul_reload_appinfo(void)

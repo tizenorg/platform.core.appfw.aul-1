@@ -125,7 +125,9 @@ enum app_status {
 typedef enum _aul_type{
 	AUL_START,
 	AUL_RESUME,
-	AUL_TERMINATE
+	AUL_TERMINATE,
+	AUL_TERMINATE_BGAPP,
+	AUL_PAUSE,
 }aul_type;
 
 /** AUL internal private key */
@@ -622,6 +624,8 @@ int aul_resume_pid(int pid);
  *	If you have not the permission, this API return AUL_R_ERROR. \n
 */
 int aul_terminate_pid(int pid);
+int aul_terminate_bgapp_pid(int pid);
+int aul_terminate_pid_without_restart(int pid);
 int aul_terminate_pid_async(int pid);
 
 /** @} */
@@ -1648,6 +1652,8 @@ int aul_is_subapp(void);
 typedef int (*data_control_provider_handler_fn) (bundle *b, int request_id, void *data);
 int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler);
 int aul_unset_data_control_provider_cb(void);
+int aul_pause_app(const char *appid);
+int aul_pause_pid(int pid);
 int aul_reload_appinfo(void);
 
 /** @} */

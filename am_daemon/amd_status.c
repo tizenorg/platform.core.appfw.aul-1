@@ -172,6 +172,21 @@ int _status_app_is_running(char *appid, uid_t uid)
 	return -1;
 }
 
+char* _status_app_get_appid_bypid(int pid)
+{
+	GSList *iter = NULL;
+	app_status_info_t *info_t = NULL;
+
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
+	{
+		info_t = (app_status_info_t *)iter->data;
+		if( pid == info_t->pid ) {
+			return info_t->appid;
+		}
+	}
+	return NULL;
+}
+
 int _status_send_running_appinfo(int fd)
 {
 	GSList *iter = NULL;
