@@ -143,7 +143,11 @@ static int __app_process_by_pid(int cmd,
 		ret = _resume_app(pid, clifd);
 		break;
 	case APP_TERM_BY_PID:
-		ret = _term_app(pid);
+	case APP_TERM_BY_PID_WITHOUT_RESTART:
+		ret = _term_app(pid, clifd);
+		break;
+	case APP_TERM_BGAPP_BY_PID:
+		ret = _term_bgapp(pid, clifd);
 		break;
 	case APP_KILL_BY_PID:
 		if ((ret = _send_to_sigkill(pid)) < 0)
@@ -159,6 +163,9 @@ static int __app_process_by_pid(int cmd,
 			_D("terminate req packet send error");
 		}
 		__real_send(clifd, ret);
+		break;
+	case APP_PAUSE_BY_PID:
+		ret = _pause_app(pid, clifd);
 		break;
 	}
 
@@ -254,12 +261,12 @@ static gboolean __request_handler(gpointer data)
 	int ret = -1;
 	int free_pkt = 1;
 	char *appid;
-	/*char *app_path;
-	char *tmp_pid;*/
+	char *term_pid;
 	int pid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
 	pkt_t *pkt_uid;
+	const struct appinfo *ai;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -304,11 +311,48 @@ static gboolean __request_handler(gpointer data)
 			//__real_send(clifd, ret);
 			close(clifd);
 			break;
-		case APP_TERM_BY_PID:
+		case APP_PAUSE:
+			kb = bundle_decode(pkt->data, pkt->len);
+			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+			ret = _status_app_is_running_v2(appid, cr.uid);
+			if (ret > 0) {
+				ret = _pause_app(ret, clifd);
+			} else {
+				_E("%s is not running", appid);
+				close(clifd);
+			}
+			break;
 		case APP_RESUME_BY_PID:
-		case APP_KILL_BY_PID:
+		case APP_PAUSE_BY_PID:
 		case APP_TERM_REQ_BY_PID:
+			kb = bundle_decode(pkt->data, pkt->len);
+			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
+			break;
+		case APP_TERM_BY_PID_WITHOUT_RESTART:
 		case APP_TERM_BY_PID_ASYNC:
+			/* TODO: check caller's privilege */
+			kb = bundle_decode(pkt->data, pkt->len);
+			term_pid = (char *)bundle_get_val(kb, AUL_K_APPID);
+			appid = _status_app_get_appid_bypid(atoi(term_pid));
+			ai = appinfo_find(cr.uid, appid);
+			if (ai) {
+				appinfo_set_value(ai, AIT_STATUS, "norestart");
+				ret = __app_process_by_pid(pkt->cmd, term_pid, &cr, clifd);
+			} else {
+				ret = -1;
+				close(clifd);
+			}
+			break;
+		case APP_TERM_BY_PID:
+		case APP_KILL_BY_PID:
+			/* TODO: check caller's privilege */
+			kb = bundle_decode(pkt->data, pkt->len);
+			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
+			break;
+		case APP_TERM_BGAPP_BY_PID:
+			/* TODO: check caller's privilege */
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);

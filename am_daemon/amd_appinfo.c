@@ -580,6 +580,26 @@ const char *appinfo_get_value(const struct appinfo *c, enum appinfo_type type)
 	return NULL;
 }
 
+int appinfo_set_value(struct appinfo *c, enum appinfo_type type, const char *val)
+{
+	int i;
+
+	if (!c || !val) {
+		errno = EINVAL;
+		_E("appinfo is NULL, type: %d, val %s", type, val);
+		return -1;
+	}
+
+	for (i = _AI_START; i < sizeof(_appinfos)/sizeof(_appinfos[0]); i++) {
+		if (type == _appinfos[i].type)
+			_D("%s : %s : %s", c->val[_AI_FILE], c->val[i], val);
+		free(c->val[i]);
+		c->val[i] = strdup(val);
+	}
+
+	return 0;
+}
+
 const char *appinfo_get_filename(const struct appinfo *c)
 {
 	if (!c) {

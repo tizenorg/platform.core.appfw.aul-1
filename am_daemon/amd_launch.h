@@ -28,7 +28,10 @@
 
 int _send_to_sigkill(int pid);
 int _resume_app(int pid, int clifd);
-int _term_app(int pid);
+int _pause_app(int pid, int clifd);
+int _term_app(int pid, int clifd);
+int _term_req_app(int pid, int clifd);
+int _term_bgapp(int pid, int clifd);
 int _fake_launch_app(int cmd, int pid, bundle * kb, int clifd);
 int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd);
 int _start_app_local(uid_t uid, char *appid);
