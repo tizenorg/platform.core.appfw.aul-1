@@ -44,12 +44,17 @@ Application utility library
 Summary:    App utility library (devel)
 Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
+Requires:  pkgconfig(sqlite3)
+Requires:  pkgconfig(bundle)
+Requires:  pkgconfig(ail)
+Requires:  pkgconfig(glib-2.0)
+Requires:  pkgconfig(xdgmime)
 
 %description devel
 Application utility library (devel)
 
 %package test
-Summary:    App utility test tools 
+Summary:    App utility test tools
 Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
