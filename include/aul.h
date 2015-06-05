@@ -1656,6 +1656,9 @@ int aul_pause_app(const char *appid);
 int aul_pause_pid(int pid);
 int aul_reload_appinfo(void);
 
+int aul_status_update(int status);
+int aul_running_list_update(char *appid, char *app_path, char *pid);
+
 /** @} */
 
 
