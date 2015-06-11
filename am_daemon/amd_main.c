@@ -40,6 +40,7 @@
 #include "amd_status.h"
 #include "amd_launch.h"
 #include "amd_request.h"
+#include "amd_app_group.h"
 
 
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
@@ -237,6 +238,19 @@ int __app_dead_handler(int pid, uid_t user)
 	 * listen any more on DBUS system to catch those events.
 	 * AMD Agents must connect to AMD Daemon to signal a dead process
 	 */
+	if(pid <= 0)
+		return 0;
+
+	if (app_group_is_leader_pid(pid)) {
+		app_group_clear_top(pid);
+		app_group_set_dead_pid(pid);
+		app_group_remove(pid);
+	} else if (app_group_is_sub_app(pid)) {
+		app_group_reroute(pid);
+		app_group_set_dead_pid(pid);
+		app_group_remove(pid);
+	}
+
 	__remove_item_running_list(pid, user);
 	_status_remove_app_info_list(pid, user);
 	return 0;
@@ -256,6 +270,7 @@ static int __init()
 	}
 
 	_requset_init();
+	app_group_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
 				__vconf_cb, NULL) != 0)

@@ -32,6 +32,7 @@
 #include "simple_util.h"
 #include "app_sock.h"
 #include "menu_db_util.h"
+#include "amd_app_group.h"
 
 GSList *app_status_info_list = NULL;
 
@@ -78,12 +79,14 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
+	bool is_sub_app = true;
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
 		if((pid == info_t->pid) && ((info_t->user == uid) || (info_t->user == 0))) {
 			info_t->status = status;
+			is_sub_app = false;
 			break;
 		}
 	}
@@ -93,6 +96,10 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 		info_t = (app_status_info_t *)iter->data;
 
 		//SECURE_LOGD("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
+	}
+
+	if (is_sub_app) {
+		app_group_set_status(pid, status);
 	}
 
 	return 0;
@@ -206,6 +213,9 @@ int _status_send_running_appinfo(int fd)
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
+		if (app_group_is_sub_app(info_t->pid))
+			continue;
+
 		snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", info_t->pid);
 		strncat((char *)pkt->data, tmp_pid, MAX_PID_STR_BUFSZ);
 		strncat((char *)pkt->data, ":", 1);
