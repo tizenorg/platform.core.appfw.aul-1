@@ -215,6 +215,10 @@ typedef enum _aul_type{
 #define AUL_K_APPID		"__AUL_APPID__"
 /** AUL internal private key */
 #define AUL_K_PID		"__AUL_PID__"
+/** AUL internal private key */
+#define AUL_K_WID		"__AUL_WID__"
+/** AUL internal private key */
+#define AUL_K_LEADER_PID	"__AUL_LEADER_PID__"
 /** AUL internal private key - To support data control*/
 #define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
 
@@ -1657,6 +1661,18 @@ int aul_pause_pid(int pid);
 int aul_reload_appinfo(void);
 int aul_status_update(int status);
 int aul_running_list_update(char *appid, char *app_path, char *pid);
+
+void aul_app_group_add(int leader_pid, int pid, int wid);
+void aul_app_group_remove(int pid);
+void aul_app_group_attach_window(int parent_wid, int child_wid);
+void aul_app_group_detach_window(int child_wid);
+int aul_app_group_get_window(int pid);
+void aul_app_group_get_leader_pids(int *cnt, int **pids);
+void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids);
+int aul_app_group_get_leader_pid(int pid);
+int aul_app_group_clear_top(void);
+int aul_app_group_is_top(void);
+
 
 /** @} */
 

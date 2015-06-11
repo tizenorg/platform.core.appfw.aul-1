@@ -1,3 +1,6 @@
+%bcond_with x
+%bcond_with wayland
+
 Name:       aul
 Summary:    App utility library
 Version:    0.0.300
@@ -36,6 +39,9 @@ BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(privacy-manager-client)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libsystemd-daemon)
+%if %{with wayland}
+BuildRequires:  pkgconfig(wayland-client)
+%endif
 
 %description
 Application utility library
@@ -49,7 +55,7 @@ Requires:   %{name} = %{version}-%{release}
 Application utility library (devel)
 
 %package test
-Summary:    App utility test tools 
+Summary:    App utility test tools
 Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
@@ -67,7 +73,14 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
-%cmake .
+%cmake . \
+%if %{with wayland}
+-Dwith_wayland=TRUE\
+%endif
+%if %{with x}
+-Dwith_x11=TRUE\
+%endif
+
 %__make %{?_smp_mflags}
 
 %install

@@ -47,6 +47,64 @@
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
 
+static int __send_result_data(int fd, int cmd, unsigned char *kb_data, int datalen)
+{
+	int len;
+	int ret;
+	int res = 0;
+	app_pkt_t *pkt = NULL;
+
+	if (datalen > AUL_SOCK_MAXBUFF - 8) {
+		_E("datalen > AUL_SOCK_MAXBUFF\n");
+		return -EINVAL;
+	}
+
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	if (NULL == pkt) {
+		_E("Malloc Failed!");
+		return -ENOMEM;
+	}
+	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+	memcpy(pkt->data, kb_data, datalen);
+
+	if ((len = send(fd, pkt, datalen + 8, MSG_NOSIGNAL)) != datalen + 8) {
+		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
+		if(len > 0) {
+			while (len != datalen + 8) {
+				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, MSG_NOSIGNAL);
+				if (ret < 0) {
+					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
+					close(fd);
+					if (pkt) {
+						free(pkt);
+						pkt = NULL;
+					}
+					return -ECOMM;
+				}
+				len += ret;
+				_D("sendto() len - %d %d", len, datalen + 8);
+			}
+		} else {
+			close(fd);
+			if (pkt) {
+				free(pkt);
+				pkt = NULL;
+			}
+			return -ECOMM;
+		}
+	}
+	if (pkt) {
+		free(pkt);
+		pkt = NULL;
+	}
+
+	close(fd);
+	return res;
+}
+
 extern int __app_dead_handler(int pid, uid_t user);
 extern int __agent_dead_handler(uid_t user);
 
@@ -250,6 +308,120 @@ static void __handle_agent_dead_signal(struct ucred *pcr)
 	__agent_dead_handler(pcr->uid);
 }
 
+static void __dispatch_app_group_add(int clifd, const app_pkt_t *pkt)
+{
+	bundle *b;
+	char *buf;
+	int pid, wid, leader_pid;
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_PID, &buf);
+	pid = atoi(buf);
+	bundle_get_str(b, AUL_K_WID, &buf);
+	wid = atoi(buf);
+	bundle_get_str(b, AUL_K_LEADER_PID, &buf);
+	leader_pid = atoi(buf);
+	bundle_free(b);
+	app_group_add(leader_pid, pid, wid);
+	__real_send(clifd, 0);
+}
+
+static void __dispatch_app_group_remove(int clifd, const app_pkt_t *pkt)
+{
+	bundle *b;
+	char *buf;
+	int pid;
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_PID, &buf);
+	pid = atoi(buf);
+	bundle_free(b);
+	app_group_remove(pid);
+	__real_send(clifd, 0);
+}
+
+static void __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt)
+{
+	bundle *b;
+	char *buf;
+	int pid;
+	int wid;
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_PID, &buf);
+	pid = atoi(buf);
+	bundle_free(b);
+	wid = app_group_get_window(pid);
+	__real_send(clifd, wid);
+}
+
+static void __dispatch_app_group_resume(int clifd, int pid)
+{
+	app_group_resume(pid);
+	__real_send(clifd, 0);
+}
+
+static void __dispatch_app_group_get_leader_pid(int clifd,
+		const app_pkt_t *pkt)
+{
+	bundle *b;
+	char *buf;
+	int pid;
+	int lpid;
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_PID, &buf);
+	pid = atoi(buf);
+	bundle_free(b);
+	lpid = app_group_get_leader_pid(pid);
+	__real_send(clifd, lpid);
+}
+
+static void __dispatch_app_group_get_leader_pids(int clifd,
+		const app_pkt_t *pkt)
+{
+	char *buf;
+	int cnt;
+	int *pids;
+	int empty[1] = { 0 };
+
+	app_group_get_leader_pids(&cnt, &pids);
+
+	if (pids == NULL || cnt == 0) {
+		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS, empty, 0);
+	} else {
+		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS, pids,
+				cnt * sizeof(int));
+	}
+	if (pids != NULL)
+		free(pids);
+}
+
+static void __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt)
+{
+	bundle *b;
+	char *buf;
+	int leader_pid;
+	int cnt;
+	int *pids;
+	int empty[1] = { 0 };
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_LEADER_PID, &buf);
+	leader_pid = atoi(buf);
+	bundle_free(b);
+
+	app_group_get_group_pids(leader_pid, &cnt, &pids);
+	if (pids == NULL || cnt == 0) {
+		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS, empty, 0);
+	} else {
+		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS, pids,
+				cnt * sizeof(int));
+	}
+	if (pids != NULL)
+		free(pids);
+}
+
 static gboolean __request_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
@@ -419,6 +591,34 @@ static gboolean __request_handler(gpointer data)
 			_D("AMD_RELOAD_APPINFO");
 			appinfo_reload();
 			__send_result_to_client(clifd, 0);
+			break;
+
+		case APP_GROUP_ADD:
+			__dispatch_app_group_add(clifd, pkt);
+			break;
+
+		case APP_GROUP_REMOVE:
+			__dispatch_app_group_remove(clifd, pkt);
+			break;
+
+		case APP_GROUP_GET_WINDOW:
+			__dispatch_app_group_get_window(clifd, pkt);
+			break;
+
+		case APP_GROUP_GET_LEADER_PIDS:
+			__dispatch_app_group_get_leader_pids(clifd, pkt);
+			break;
+
+		case APP_GROUP_GET_GROUP_PIDS:
+			__dispatch_app_group_get_group_pids(clifd, pkt);
+			break;
+
+		case APP_GROUP_RESUME:
+			__dispatch_app_group_resume(clifd, cr.pid);
+			break;
+
+		case APP_GROUP_GET_LEADER_PID:
+			__dispatch_app_group_get_leader_pid(clifd, pkt);
 			break;
 		default:
 			_E("no support packet");
