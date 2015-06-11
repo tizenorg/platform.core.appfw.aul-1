@@ -16,13 +16,26 @@ IF("${CMAKE_BUILD_TYPE}" STREQUAL "")
 ENDIF()
 MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 
+IF (with_wayland)
+       ADD_DEFINITIONS("-DWAYLAND")
+ENDIF (with_wayland)
+IF (with_x11)
+       ADD_DEFINITIONS("-DX11")
+ENDIF (with_x11)
 
 # Set required packages
 INCLUDE(FindPkgConfig)
 SET(AUL-1_PKG_CHECK_MODULES dlog app-checker rua glib-2.0 vconf pkgmgr-info privacy-manager-client pkgmgr)
 pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 
-pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info libsystemd-daemon security-manager)
+SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info libsystemd-daemon security-manager)
+IF (with_wayland)
+	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client)
+ENDIF (with_wayland)
+IF (with_x11)
+	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES})
+ENDIF (with_x11)
+
 PKG_CHECK_MODULES(PKGS REQUIRED glib-2.0 gio-2.0 dlog bundle rua)
 
 FIND_LIBRARY(LIB_DL dl)
@@ -68,9 +81,12 @@ SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 ### Build ###
 
 # aul_mods : modules (static library)
+SET(SRCS_aul_mods src/app_sock.c src/simple_util.c)
+IF (with_wayland)
+	SET(SRCS_aul_mods ${SRCS_aul_mods} src/tizen-transient-for-protocol.c)
+ENDIF (with_wayland)
 add_library(aul_mods STATIC
-		src/app_sock.c
-		src/simple_util.c
+		${SRCS_aul_mods}
 		)
 
 # aul
@@ -87,6 +103,7 @@ add_library(aul SHARED
 		src/key.c
 		src/status.c
 		src/aul_path.c
+		src/app_group.c
 		)
 target_link_libraries(aul aul_mods ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${VERSION_MAJOR})
@@ -111,6 +128,7 @@ add_executable(amd
 		am_daemon/amd_appinfo.c
 		am_daemon/amd_launch.c
 		am_daemon/amd_status.c
+		am_daemon/amd_app_group.c
                 )
 SET(AUL-1_LINK_LIBRARY amd aul_mods app-checker-server glib-2.0 bundle ail aul)
 target_link_libraries(${AUL-1_LINK_LIBRARY} ${pkgs_LDFLAGS})

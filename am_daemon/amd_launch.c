@@ -433,22 +433,54 @@ int _pause_app(int pid, int clifd)
 	return ret;
 }
 
+void _term_sub_app(int pid)
+{
+	int dummy;
+	int ret;
+
+	if ( (ret = __app_send_raw_with_noreply(pid, APP_TERM_BY_PID_ASYNC,
+					(unsigned char *)&dummy, sizeof(int))) < 0) {
+		_E("terminate packet send error - use SIGKILL");
+		if (_send_to_sigkill(pid) < 0) {
+			_E("fail to killing - %d\n", pid);
+			return;
+		}
+	}
+}
+
 int _term_app(int pid, int clifd)
 {
 	int dummy;
 	int ret;
 
-	if ((ret = __app_send_raw_with_delay_reply(pid, APP_TERM_BY_PID,
-					(unsigned char *)&dummy,
-					sizeof(int))) < 0) {
-		_D("terminate packet send error - use SIGKILL");
-		if (_send_to_sigkill(pid) < 0) {
-			_E("fail to killing - %d", pid);
-			return -1;
+	if (app_group_is_leader_pid(pid)) {
+		int cnt;
+		int *pids = NULL;
+		int i;
+
+		app_group_get_group_pids(pid, &cnt, &pids);
+		if (cnt > 0) {
+			for (i = cnt-1 ; i>=0; i--) {
+				if (i != 0)
+					_term_sub_app(pids[i]);
+				app_group_remove(pids[i]);
+
+			}
+			free(pids);
 		}
 	}
-	_D("term done");
 
+	if ( (ret = __app_send_raw_with_delay_reply
+	    (pid, APP_TERM_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
+		_D("terminate packet send error - use SIGKILL");
+		if (_send_to_sigkill(pid) < 0) {
+			_E("fail to killing - %d\n", pid);
+			__real_send(clifd, -1);
+			return -1;
+		}
+		__real_send(clifd, 0);
+	}
+	_D("term done\n");
 	if (ret > 0)
 		__set_reply_handler(ret, pid, clifd, APP_TERM_BY_PID);
 
@@ -738,6 +770,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	int delay_reply = 0;
 	int pad_pid = LAUNCHPAD_PID;
 	bool consented = true;
+	gboolean is_group_app = FALSE;
 
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
@@ -824,6 +857,11 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		pid = _status_app_is_running_v2(appid, caller_uid);
 	}
 
+	if (app_group_is_group_app(kb, caller_uid)) {
+		pid = -1;
+		is_group_app = TRUE;
+	}
+
 	if (pid > 0) {
 		if (_status_get_app_info_status(pid) == STATUS_DYING) {
 			pid = -ETERMINATING;
@@ -851,7 +889,8 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		__real_send(fd, pid);
 
 	if(pid > 0) {
-		_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
+		if (!is_group_app)
+			_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
 		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
 		return ret != AC_R_ERROR ? pid : -1;
 	}

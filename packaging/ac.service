@@ -6,7 +6,7 @@
 Description=Start the Access Control server
 
 [Service]
-EnvironmentFile=-/etc/sysconfig/prelaunch
+EnvironmentFile=-/run/tizen-system-env
 ExecStartPre=/usr/bin/mkdir -p -m 1777 /tmp/alaunch
 ExecStartPre=/usr/bin/chsmack -a * /tmp/alaunch
 ExecStart=/usr/bin/amd
