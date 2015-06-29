@@ -26,53 +26,47 @@
 #include <sys/types.h>
 #include <string.h>
 #include <glib.h>
-#include <ail.h>
+
+#include <pkgmgr-info.h>
+
 #include "aul.h"
 
-static char **gargv;
-static int gargc;
 static bundle *kb = NULL;
 
 static GMainLoop *mainloop = NULL;
 
 struct launch_arg {
 	char appid[256];
+	char **argv;
+	int argc;
 	int flag_debug;
+	int sync;
 } launch_arg;
 
-static bundle *_create_internal_bundle(void)
+static bundle *_create_internal_bundle(struct launch_arg *args)
 {
 	bundle *kb;
 	int i;
-	char arg[1024] = {0, };
-	char *val_array[128];
 
-	kb = bundle_create();
-	bundle_add(kb, AUL_K_DEBUG, "1");
-	return kb;
-}
+	if (!args->flag_debug && args->argc < 2)
+		return NULL;
 
-static int launch(char *appid, int debug_option)
-{
-	int pid = -1;
+	if (args->flag_debug)
+		bundle_add(kb, AUL_K_DEBUG, "1");
 
-	if (!debug_option)
-		pid = aul_open_app(appid);
-	else {
-		kb = _create_internal_bundle();
-		if (NULL == kb) {
-			printf("bundle creation fail\n");
-			return -1;
-		}
-		pid = aul_launch_app(appid, kb);
+	for (i = 0; i + 1 < args->argc; i += 2) {
+		bundle_add(kb, args->argv[i], args->argv[i + 1]);
+		if (!strcmp(args->argv[i], "__LAUNCH_APP_MODE__") &&
+				!strcmp(args->argv[i + 1], "SYNC"))
+			args->sync = 1;
 	}
 
-	return pid;
+	return kb;
 }
 
 static int __launch_app_dead_handler(int pid, void *data)
 {
-	int listen_pid = (int) data;
+	int listen_pid = (int)data;
 
 	if (listen_pid == pid)
 		g_main_loop_quit(mainloop);
@@ -82,29 +76,37 @@ static int __launch_app_dead_handler(int pid, void *data)
 
 static gboolean run_func(void *data)
 {
-	int pid = -1;
-	char *str = NULL;
-	struct launch_arg *launch_arg_data = NULL;
-	launch_arg_data = (struct launch_arg *)data;
-	if ((pid = launch((char *)launch_arg_data->appid,
-					launch_arg_data->flag_debug)) > 0) {
-		printf("... successfully launched with debug %d\n",
-				launch_arg_data->flag_debug);
-	} else {
-		printf("... launch failed\n");
-	}
-	g_main_loop_quit(mainloop);
+	int pid;
+	bundle *kb;
+	struct launch_arg *launch_arg_data = (struct launch_arg *)data;
+
+	kb = _create_internal_bundle(launch_arg_data);
+	pid = aul_launch_app((char *)launch_arg_data->appid, kb);
+
 	if (kb) {
 		bundle_free(kb);
 		kb = NULL;
 	}
 
-	return TRUE;
+	if (pid > 0) {
+		printf("... successfully launched pid = %d with debug %d\n",
+				pid, launch_arg_data->flag_debug);
+		if (launch_arg_data->sync) {
+			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
+			return FALSE;
+		}
+	} else {
+		printf("... launch failed\n");
+	}
+
+	g_main_loop_quit(mainloop);
+
+	return FALSE;
 }
 
 static void print_usage(char *program)
 {
-	printf("Usage : %s [ ... ]\n", program);
+	printf("Usage : %s [ OPTIONS... ] [ ARGS... ]\n", program);
 	printf(
 			"   -h                        --help              Display this usage information.\n"
 			"   -l                        --list              Display installed apps list\n"
@@ -117,27 +119,36 @@ static void print_usage(char *program)
 	      );
 }
 
-ail_cb_ret_e appinfo_list_appid_namefunc(const ail_appinfo_h appinfo,  void *user_data)
+static int __appinfo_list_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 {
-	char *package_str_name = NULL;
-	char *package_str_appid = NULL;
-	char *package_str_x_package_type = NULL;
-	ail_appinfo_get_str(appinfo, AIL_PROP_X_SLP_APPID_STR, &package_str_appid);
-	ail_appinfo_get_str(appinfo, AIL_PROP_NAME_STR, &package_str_name);
-	ail_appinfo_get_str(appinfo, AIL_PROP_X_SLP_PACKAGETYPE_STR, &package_str_x_package_type);
+	char *label;
+	char *appid;
 
-	printf("\t'%s'\t '%s'\t %s\n", package_str_name, package_str_appid, package_str_x_package_type);
-	return AIL_CB_RET_CONTINUE;
+	if (pkgmgrinfo_appinfo_get_label(handle, &label)) {
+		printf("Failed to get pkgid\n");
+		return -1;
+	}
+
+	if (pkgmgrinfo_appinfo_get_appid(handle, &appid)) {
+		printf("Failed to get appid\n");
+		return -1;
+	}
+
+	printf("\t'%s'\t '%s'\n", label, appid);
+
+	return 0;
 }
 
 static int list_app(void)
 {
 	int ret = 0;
+
 	printf("\tApplication List for user %lu\n", (long)getuid());
 	printf("\tUser's Application \n");
-	printf("\t Name \t AppID  \t Type \n");
+	printf("\t Name \t AppID \n");
 	printf("\t=================================================\n");
-	if (ail_filter_list_usr_appinfo_foreach(NULL, appinfo_list_appid_namefunc, NULL, getuid()) != AIL_ERROR_OK)
+	if (pkgmgrinfo_appinfo_get_usr_installed_list(__appinfo_list_cb,
+				getuid(), NULL) != PMINFO_R_OK)
 		ret = -1;
 	printf("\t=================================================\n");
 	return ret;
@@ -162,21 +173,31 @@ static int __iterfunc_kill(const aul_app_info *info, void *data)
 
 static int is_app_installed(char *appid)
 {
-	ail_filter_h f;
-	int res = 0;
-	if (!appid)
-		return 0;
-	if (ail_filter_new(&f) != AIL_ERROR_OK)
-		return -1;
-	if (ail_filter_add_str(f, AIL_PROP_X_SLP_APPID_STR, appid) != AIL_ERROR_OK) {
-		ail_filter_destroy(f);
+	int is_installed = 0;
+	pkgmgrinfo_appinfo_filter_h filter;
+
+	if (pkgmgrinfo_appinfo_filter_create(&filter)) {
+		printf("Failed to create filter\n");
 		return -1;
 	}
-	if (ail_filter_count_usr_appinfo(f, &res, getuid()) != AIL_ERROR_OK) {
-		ail_filter_destroy(f);
+
+	if (pkgmgrinfo_appinfo_filter_add_string(filter,
+				PMINFO_APPINFO_PROP_APP_ID, appid)) {
+		printf("Failed to add filter string\n");
+		pkgmgrinfo_appinfo_filter_destroy(filter);
 		return -1;
 	}
-	return res;
+
+	if (pkgmgrinfo_appinfo_usr_filter_count(filter, &is_installed,
+				getuid())) {
+		printf("Failed to get filter count\n");
+		pkgmgrinfo_appinfo_filter_destroy(filter);
+		return -1;
+	}
+
+	pkgmgrinfo_appinfo_filter_destroy(filter);
+
+	return is_installed;
 }
 
 int main(int argc, char **argv)
@@ -184,15 +205,17 @@ int main(int argc, char **argv)
 	bool disp_help = false;
 	bool disp_list = false;
 	bool disp_run_list = false;
-	int next_opt, opt_idx = 0;
+	bool is_running;
+	int next_opt;
+	int opt_idx = 0;
 	char op = '\0';
-	int ret = 0;
-	struct launch_arg  args;
+	struct launch_arg args;
 	static struct option long_options[] = {
 		{ "help", no_argument, 0, 'h' },
 		{ "list", no_argument, 0, 'l' },
 		{ "status", no_argument, 0, 'S' },
 		{ "start", required_argument, 0, 's' },
+		{ "args", required_argument, 0, 'a' },
 		{ "kill", required_argument, 0, 'k' },
 		{ "is-running", required_argument, 0, 'r' },
 		{ "debug", no_argument, 0, 'd' },
@@ -250,6 +273,8 @@ int main(int argc, char **argv)
 		case 'd':
 			args.flag_debug = 1;
 			break;
+		case '?':
+			break;
 		case -1:
 			break;
 		default:
@@ -262,11 +287,8 @@ int main(int argc, char **argv)
 		print_usage(argv[0]);
 
 	if (optind < argc) {
-		printf("Wrong option: ");
-		while (optind < argc)
-			printf("%s ", argv[optind++]);
-		printf("\n");
-		print_usage(argv[0]);
+		args.argc = argc - optind;
+		args.argv = &argv[optind];
 	}
 	if ((op == 's') || (op == 'k') || (op == 'r')) {
 		if (is_app_installed(args.appid) <= 0) {
@@ -292,23 +314,22 @@ int main(int argc, char **argv)
 		g_main_loop_run(mainloop);
 		return 0;
 	} else if (op == 'k') {
-		bool is_running = false;
 		is_running = aul_app_is_running(args.appid);
 		if (true == is_running) {
 			aul_app_get_running_app_info(__iterfunc_kill,
 					args.appid);
 		} else {
 			printf("result: %s\n", "App isn't running");
-			return 0;
+			return 1;
 		}
 	} else if (op == 'r') {
-		bool is_running = aul_app_is_running(args.appid);
+		is_running = aul_app_is_running(args.appid);
 		if (true == is_running) {
 			printf("result: %s\n", "running");
 			return 0;
 		} else {
 			printf("result: %s\n", "not running");
-			return -1;
+			return 1;
 		}
 	}
 
