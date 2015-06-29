@@ -210,6 +210,7 @@ static int __app_process_by_pid(int cmd,
 	case APP_KILL_BY_PID:
 		if ((ret = _send_to_sigkill(pid)) < 0)
 			_E("fail to killing - %d\n", pid);
+		__real_send(clifd, ret);
 		break;
 	case APP_TERM_REQ_BY_PID:
 		if ((ret = __app_send_raw(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
