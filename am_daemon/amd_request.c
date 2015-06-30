@@ -539,7 +539,7 @@ static gboolean __request_handler(gpointer data)
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
 			break;
 		case APP_RUNNING_INFO:
-			_status_send_running_appinfo(clifd);
+			_status_send_running_appinfo(clifd, cr.uid);
 			break;
 		case APP_IS_RUNNING:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);

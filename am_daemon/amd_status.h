@@ -27,8 +27,8 @@
 int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid, uid_t uid);
 int _status_update_app_info_list(int pid, int status,  uid_t uid);
 int _status_remove_app_info_list(int pid, uid_t uid);
-int _status_get_app_info_status(int pid);
-int _status_send_running_appinfo(int fd);
+int _status_get_app_info_status(int pid, uid_t uid);
+int _status_send_running_appinfo(int fd, uid_t uid);
 int _status_app_is_running(char *appid,  uid_t uid);
 int _status_app_is_running_v2(char *appid, uid_t caller_uid);
 char *_status_app_get_appid_bypid(int pid);

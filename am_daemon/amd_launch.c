@@ -749,7 +749,6 @@ static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 	return ret;
 }
 
-
 int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
 {
 	const struct appinfo *ai;
@@ -854,7 +853,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
 	if (!multiple || strncmp(multiple, "false", 5) == 0) {
-		pid = _status_app_is_running_v2(appid, caller_uid);
+		pid = _status_app_is_running(appid, caller_uid);
 	}
 
 	if (app_group_is_group_app(kb, caller_uid)) {
@@ -863,7 +862,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	}
 
 	if (pid > 0) {
-		if (_status_get_app_info_status(pid) == STATUS_DYING) {
+		if (_status_get_app_info_status(pid, caller_uid) == STATUS_DYING) {
 			pid = -ETERMINATING;
 		} else if (caller_pid == pid) {
 			SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);

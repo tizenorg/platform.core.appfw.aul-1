@@ -47,7 +47,7 @@ typedef struct _app_status_info_t{
 	int status;
 	int pid;
 	int pad_pid;
-	uid_t user;
+	uid_t uid;
 } app_status_info_t;
 
 int _add_app_status_info_list(char *appid, int pid, uid_t uid);
