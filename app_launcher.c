@@ -31,8 +31,6 @@
 
 #include "aul.h"
 
-static bundle *kb = NULL;
-
 static GMainLoop *mainloop = NULL;
 
 struct launch_arg {
@@ -45,23 +43,24 @@ struct launch_arg {
 
 static bundle *_create_internal_bundle(struct launch_arg *args)
 {
-	bundle *kb;
+	bundle *b;
 	int i;
 
 	if (!args->flag_debug && args->argc < 2)
 		return NULL;
 
+	b = bundle_create();
 	if (args->flag_debug)
-		bundle_add(kb, AUL_K_DEBUG, "1");
+		bundle_add(b, AUL_K_DEBUG, "1");
 
 	for (i = 0; i + 1 < args->argc; i += 2) {
-		bundle_add(kb, args->argv[i], args->argv[i + 1]);
+		bundle_add(b, args->argv[i], args->argv[i + 1]);
 		if (!strcmp(args->argv[i], "__LAUNCH_APP_MODE__") &&
 				!strcmp(args->argv[i + 1], "SYNC"))
 			args->sync = 1;
 	}
 
-	return kb;
+	return b;
 }
 
 static int __launch_app_dead_handler(int pid, void *data)
