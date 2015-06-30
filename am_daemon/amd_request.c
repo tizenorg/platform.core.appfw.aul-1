@@ -184,8 +184,9 @@ static int __app_process_by_pid(int cmd,
 	const char *pkg_name, struct ucred *cr, int clifd)
 {
 	int pid;
-	int ret = -1;
+	int ret;
 	int dummy;
+	char *appid;
 
 	if (pkg_name == NULL)
 		return -1;
@@ -193,6 +194,13 @@ static int __app_process_by_pid(int cmd,
 	pid = atoi(pkg_name);
 	if (pid <= 1) {
 		_E("invalid pid");
+		return -1;
+	}
+
+	appid = _status_app_get_appid_bypid(pid);
+	if (appid == NULL) {
+		_E("pid %d is not an app", pid);
+		__real_send(clifd, -1);
 		return -1;
 	}
 
@@ -531,7 +539,7 @@ static gboolean __request_handler(gpointer data)
 			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
 			break;
 		case APP_RUNNING_INFO:
-			_status_send_running_appinfo(clifd);
+			_status_send_running_appinfo(clifd, cr.uid);
 			break;
 		case APP_IS_RUNNING:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
