@@ -8,6 +8,7 @@ Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
+Source100:  ac.conf
 Source101:  ac.service
 Source102:  ac.socket
 Source103:  amd_session_agent.service
@@ -87,21 +88,15 @@ CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 rm -rf %{buildroot}
 %make_install
 
-mkdir -p %{buildroot}%{_sysconfdir}/init.d
-install -m 755 launchpad_run %{buildroot}%{_sysconfdir}/init.d
-
-mkdir -p %{buildroot}%{_sysconfdir}/rc.d/rc3.d
-mkdir -p %{buildroot}%{_sysconfdir}/rc.d/rc4.d
-ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
-ln -sf ../../init.d/launchpad_run %{buildroot}/%{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
-
 mkdir -p %{buildroot}%{TZ_SYS_DB}
 sqlite3 %{buildroot}%{TZ_SYS_DB}/.mida.db < %{buildroot}%{_datadir}/aul/mida_db.sql
 rm -rf %{buildroot}%{_datadir}/aul/mida_db.sql
 
+mkdir -p %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_unitdir}/default.target.wants
 mkdir -p %{buildroot}%{_unitdir}/sockets.target.wants
 mkdir -p %{buildroot}%{_unitdir_user}/sockets.target.wants
+install -m 0644 %SOURCE100 %{buildroot}%{_tmpfilesdir}/ac.conf
 install -m 0644 %SOURCE101 %{buildroot}%{_unitdir}/ac.service
 install -m 0644 %SOURCE102 %{buildroot}%{_unitdir}/ac.socket
 install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.service
@@ -133,9 +128,6 @@ systemctl daemon-reload
 %manifest %{name}.manifest
 %attr(0644,root,root) %{_libdir}/libaul.so.0
 %attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
-%{_sysconfdir}/init.d/launchpad_run
-%attr(0755,root,root) %{_sysconfdir}/rc.d/rc3.d/S34launchpad_run
-%attr(0755,root,root) %{_sysconfdir}/rc.d/rc4.d/S80launchpad_run
 %config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db
 %config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db-journal
 %attr(0755,root,root) %{_bindir}/aul_mime.sh
@@ -146,6 +138,7 @@ systemctl daemon-reload
 %{_datadir}/aul/service/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
+%{_tmpfilesdir}/ac.conf
 %{_unitdir}/ac.service
 %{_unitdir}/default.target.wants/ac.service
 %{_unitdir}/ac.socket
