@@ -7,8 +7,6 @@ Description=Start the Access Control server
 
 [Service]
 EnvironmentFile=-/run/tizen-system-env
-ExecStartPre=/usr/bin/mkdir -p -m 1777 /tmp/alaunch
-ExecStartPre=/usr/bin/chsmack -a * /tmp/alaunch
 ExecStart=/usr/bin/amd
 
 OOMScoreAdjust=-100
