@@ -453,6 +453,8 @@ int appinfo_init(void)
 
 	user_tbl = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
 			_free_user_appinfo);
+	if (user_tbl == NULL)
+		return -1;
 
 	pkg_pending = g_hash_table_new_full(g_str_hash, g_str_equal,
 			free, free);
@@ -503,6 +505,10 @@ const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 
 	/* search again from global table */
 	info = _find_user_appinfo(GLOBAL_USER);
+	if (info == NULL) {
+		_E("cannot find global appinfo table!");
+		return NULL;
+	}
 
 	return g_hash_table_lookup(info->tbl, appid);
 }
