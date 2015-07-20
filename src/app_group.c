@@ -13,17 +13,17 @@
 
 #ifdef WAYLAND
 #include <wayland-client.h>
-#include "tizen-transient-for-client-protocol.h"
-static struct tizen_transient_for *tz_transient_for = NULL;
+#include <tizen-extension-client-protocol.h>
+static struct tizen_policy *tz_policy = NULL;
 
 static void
 _reg_handle_global(void *data, struct wl_registry *reg, uint32_t id, const char *interface, uint32_t ver)
 {
-   if (!strcmp(interface, "tizen_transient_for"))
+   if (!strcmp(interface, "tizen_policy"))
      {
-        tz_transient_for = wl_registry_bind(reg,
+        tz_policy = wl_registry_bind(reg,
                                        id,
-                                       &tizen_transient_for_interface,
+                                       &tizen_policy_interface,
                                        1);
      }
 }
@@ -87,18 +87,18 @@ SLPAPI void aul_app_group_attach_window(int parent_wid, int child_wid)
 	wl_registry_add_listener(reg, &reg_listener, NULL);
 	wl_display_roundtrip(dpy);
 
-	if (!tz_transient_for)
+	if (!tz_policy)
 	{
-		_E("ERR: no tizen_surface_extension global interface");
+		_E("ERR: no tizen_policy global interface");
 		wl_registry_destroy(reg);
 		wl_display_disconnect(dpy);
 		return;
 	}
 
-	tizen_transient_for_set(tz_transient_for, child_wid, parent_wid);
+	tizen_policy_set_transient_for(tz_policy, child_wid, parent_wid);
 	wl_display_roundtrip(dpy);
 
-	tizen_transient_for_destroy(tz_transient_for);
+	tizen_policy_destroy(tz_policy);
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
@@ -117,18 +117,18 @@ SLPAPI void aul_app_group_detach_window(int child_wid)
 	wl_registry_add_listener(reg, &reg_listener, NULL);
 	wl_display_roundtrip(dpy);
 
-	if (!tz_transient_for)
+	if (!tz_policy)
 	{
-		_E("ERR: no tizen_surface_extension global interface");
+		_E("ERR: no tz_policy global interface");
 		wl_registry_destroy(reg);
 		wl_display_disconnect(dpy);
 		return;
 	}
 
-	tizen_transient_for_unset(tz_transient_for, child_wid);
+	tizen_policy_unset_transient_for(tz_policy, child_wid);
 	wl_display_roundtrip(dpy);
 
-	tizen_transient_for_destroy(tz_transient_for);
+	tizen_policy_destroy(tz_policy);
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else

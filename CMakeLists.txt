@@ -30,7 +30,7 @@ pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 
 SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 ail xdgmime app-checker libtzplatform-config pkgmgr-info libsystemd-daemon security-manager)
 IF (with_wayland)
-	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client)
+	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client)
 ENDIF (with_wayland)
 IF (with_x11)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES})
@@ -82,9 +82,6 @@ SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 
 # aul_mods : modules (static library)
 SET(SRCS_aul_mods src/app_sock.c src/simple_util.c)
-IF (with_wayland)
-	SET(SRCS_aul_mods ${SRCS_aul_mods} src/tizen-transient-for-protocol.c)
-ENDIF (with_wayland)
 add_library(aul_mods STATIC
 		${SRCS_aul_mods}
 		)

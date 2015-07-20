@@ -42,6 +42,7 @@ BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libsystemd-daemon)
 %if %{with wayland}
 BuildRequires:  pkgconfig(wayland-client)
+BuildRequires:  pkgconfig(tizen-extension-client)
 %endif
 
 %description
