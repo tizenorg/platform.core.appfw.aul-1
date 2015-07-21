@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=org.tizen.camera
-Exec=/usr/bin/aul_test dbuslaunch deb.org.tizen.camera

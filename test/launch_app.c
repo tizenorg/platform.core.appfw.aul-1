@@ -69,7 +69,7 @@ static bundle *create_internal_bundle(int start)
 	return kb;
 }
 
-int launch()
+int launch(void)
 {
 	int pid = -1;
 
@@ -100,18 +100,17 @@ static int __launch_app_dead_handler(int pid, void *data)
 
 static gboolean run_func(void *data)
 {
-	int pid = -1;
-	char *str = NULL;
+	int pid;
+	const char *str;
 
 	if ((pid = launch()) > 0) {
 		printf("... successfully launched\n");
-		str	 = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
+		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
 
-		if( str && strcmp(str, "SYNC") == 0 ) {
-			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
-		} else {
+		if (str && strcmp(str, "SYNC") == 0 )
+			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)pid);
+		else
 			g_main_loop_quit(mainloop);
-        }
 	} else {
 		printf("... launch failed\n");
 		g_main_loop_quit(mainloop);

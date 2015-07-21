@@ -36,7 +36,7 @@
 
 GSList *app_status_info_list = NULL;
 
-int _status_add_app_info_list(char *appid, char *app_path, int pid, int pad_pid, uid_t uid)
+int _status_add_app_info_list(const char *appid, const char *app_path, int pid, int pad_pid, uid_t uid)
 {
 	GSList *iter;
 	GSList *iter_next;
@@ -163,7 +163,7 @@ int _status_get_app_info_status(int pid, uid_t uid)
 	return -1;
 }
 
-int _status_app_is_running(char *appid, uid_t uid)
+int _status_app_is_running(const char *appid, uid_t uid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
@@ -241,14 +241,14 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 	return 0;
 }
 
-int _status_app_is_running_v2(char *appid, uid_t caller_uid)
+int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 {
-	char *apppath = NULL;
-	int ret = 0;
+	char *apppath;
+	int ret;
 	int i = 0;
-	const struct appinfo *ai;
+	struct appinfo *ai;
 
-	if(appid == NULL)
+	if (appid == NULL)
 		return -1;
 
 	ai = appinfo_find(caller_uid, appid);
