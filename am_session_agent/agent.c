@@ -583,9 +583,9 @@ static void __add_history(const char *pkg_name, const char *app_path, unsigned c
 {
 	struct rua_rec rec;
 
-	rec.pkg_name = pkg_name;
-	rec.app_path = app_path;
-	rec.arg = arg;
+	rec.pkg_name = (char *)pkg_name;
+	rec.app_path = (char *)app_path;
+	rec.arg = (char *)arg;
 
 	if (rua_add_history(&rec))
 		_E("rua add history error");
@@ -828,5 +828,7 @@ int main(int argc, char **argv)
 		}
 	}
 	__send_dead_siganl_to_amd();
+
+	return 0;
 }
 

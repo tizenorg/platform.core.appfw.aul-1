@@ -27,8 +27,10 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <poll.h>
-#include <aul.h>
+
 #include <glib.h>
+
+#include <aul.h>
 #include <bundle.h>
 #include <tzplatform_config.h>
 
@@ -40,7 +42,7 @@
 #include "amd_launch.h"
 #include "amd_appinfo.h"
 #include "amd_status.h"
-
+#include "amd_app_group.h"
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 
@@ -234,40 +236,31 @@ static int __app_process_by_pid(int cmd,
 	case APP_PAUSE_BY_PID:
 		ret = _pause_app(pid, clifd);
 		break;
+	default:
+		_E("unknown command: %d", cmd);
+		ret = -1;
 	}
 
 	return ret;
 }
 
-static int __get_pid_cb(void *user_data, const char *group, pid_t pid)
-{
-	int *sz = user_data;
-
-	_D("%s: %d : %d", *sz, pid);
-	*sz = 1; /* 1 is enough */
-
-	return -1; /* stop the iteration */
-}
-
-static int __release_srv(uid_t caller_uid, const char *filename)
+static int __release_srv(uid_t caller_uid, const char *appid)
 {
 	int r;
 	const struct appinfo *ai;
 
-	ai = (struct appinfo *)appinfo_find(caller_uid, filename);
+	ai = (struct appinfo *)appinfo_find(caller_uid, appid);
 	if (!ai) {
-		SECURE_LOGE("release service: '%s' not found", filename);
+		SECURE_LOGE("release service: '%s' not found", appid);
 		return -1;
 	}
 
 	r = appinfo_get_boolean(ai, AIT_RESTART);
 	if (r == 1) {
 		/* Auto restart */
-		SECURE_LOGD("Auto restart set: '%s'", filename);
-		return _start_app_local(ai, NULL);
+		SECURE_LOGD("Auto restart set: '%s'", appid);
+		return _start_app_local(caller_uid, appid);
 	}
-
-	service_release(filename);
 
 	return 0;
 }
@@ -389,7 +382,6 @@ static void __dispatch_app_group_get_leader_pid(int clifd,
 static void __dispatch_app_group_get_leader_pids(int clifd,
 		const app_pkt_t *pkt)
 {
-	char *buf;
 	int cnt;
 	int *pids;
 	int empty[1] = { 0 };
@@ -397,10 +389,11 @@ static void __dispatch_app_group_get_leader_pids(int clifd,
 	app_group_get_leader_pids(&cnt, &pids);
 
 	if (pids == NULL || cnt == 0) {
-		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS, empty, 0);
+		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS,
+				(unsigned char *)empty, 0);
 	} else {
-		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS, pids,
-				cnt * sizeof(int));
+		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS,
+				(unsigned char *)pids, cnt * sizeof(int));
 	}
 	if (pids != NULL)
 		free(pids);
@@ -422,10 +415,11 @@ static void __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt)
 
 	app_group_get_group_pids(leader_pid, &cnt, &pids);
 	if (pids == NULL || cnt == 0) {
-		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS, empty, 0);
+		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS,
+				(unsigned char *)empty, 0);
 	} else {
-		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS, pids,
-				cnt * sizeof(int));
+		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS,
+				(unsigned char *)pids, cnt * sizeof(int));
 	}
 	if (pids != NULL)
 		free(pids);
@@ -447,7 +441,7 @@ static gboolean __request_handler(gpointer data)
 	bundle *kb = NULL;
 	item_pkt_t *item;
 	pkt_t *pkt_uid;
-	const struct appinfo *ai;
+	struct appinfo *ai;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
@@ -571,7 +565,7 @@ static gboolean __request_handler(gpointer data)
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-			ret = __release_srv(cr.uid,appid);
+			ret = __release_srv(cr.uid, appid);
 			__send_result_to_client(clifd, ret);
 			free(appid);
 			break;

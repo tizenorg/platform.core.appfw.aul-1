@@ -91,7 +91,7 @@ static gboolean run_func(void *data)
 		printf("... successfully launched pid = %d with debug %d\n",
 				pid, launch_arg_data->flag_debug);
 		if (launch_arg_data->sync) {
-			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
+			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)pid);
 			return FALSE;
 		}
 	} else {
@@ -124,7 +124,7 @@ static int __appinfo_list_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 	char *appid;
 
 	if (pkgmgrinfo_appinfo_get_label(handle, &label)) {
-		printf("Failed to get pkgid\n");
+		printf("Failed to get app label\n");
 		return -1;
 	}
 

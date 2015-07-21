@@ -38,6 +38,7 @@
 #include "amd_launch.h"
 #include "amd_appinfo.h"
 #include "amd_status.h"
+#include "amd_app_group.h"
 #include "app_sock.h"
 #include "simple_util.h"
 #include "launch.h"
@@ -68,136 +69,9 @@ typedef struct {
 	char *pkg_type;
 } app_info_from_pkgmgr;
 
-static GList *_kill_list;
-
-struct ktimer {
-	pid_t pid;
-	char *group;
-	guint tid; /* timer ID */
-};
-
 static void __set_reply_handler(int fd, int pid, int clifd, int cmd);
 static void __real_send(int clifd, int ret);
 static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd);
-
-static void _set_sdk_env(const char* appid, char* str) {
-	char buf[MAX_LOCAL_BUFSZ];
-	int ret;
-
-	_D("key : %s / value : %s", AUL_K_SDK, str);
-	/* http://gcc.gnu.org/onlinedocs/gcc/Cross_002dprofiling.html*/
-	/* GCOV_PREFIX contains the prefix to add to the absolute paths in the object file. */
-	/*		Prefix can be absolute, or relative. The default is no prefix.  */
-	/* GCOV_PREFIX_STRIP indicates the how many initial directory names */
-	/*		to stripoff the hardwired absolute paths. Default value is 0. */
-	if (strncmp(str, SDK_CODE_COVERAGE, strlen(str)) == 0) {
-		snprintf(buf, MAX_LOCAL_BUFSZ, "%s/%s"PATH_DATA, PATH_APP_ROOT, appid);
-		ret = setenv("GCOV_PREFIX", buf, 1);
-		_D("GCOV_PREFIX : %d", ret);
-		ret = setenv("GCOV_PREFIX_STRIP", "4096", 1);
-		_D("GCOV_PREFIX_STRIP : %d", ret);
-	} else if (strncmp(str, SDK_DYNAMIC_ANALYSIS, strlen(str)) == 0) {
-		ret = setenv("LD_PRELOAD", PATH_DA_SO, 1);
-		_D("LD_PRELOAD : %d", ret);
-	}
-}
-
-
-static void _set_env(const char *appid, bundle * kb, const char *hwacc)
-{
-	const char *str;
-	const char **str_array;
-	int len;
-	int i;
-
-	setenv("PKG_NAME", appid, 1);
-
-	USE_ENGINE("gl")
-
-	str = bundle_get_val(kb, AUL_K_STARTTIME);
-	if (str != NULL)
-		setenv("APP_START_TIME", str, 1);
-
-	if(bundle_get_type(kb, AUL_K_SDK) & BUNDLE_TYPE_ARRAY) {
-		str_array = bundle_get_str_array(kb, AUL_K_SDK, &len);
-		if(str_array != NULL) {
-			for (i = 0; i < len; i++) {
-				_D("index : [%d]", i);
-				_set_sdk_env(appid, (char *)str_array[i]);
-			}
-		}
-	} else {
-		str = bundle_get_val(kb, AUL_K_SDK);
-		if(str != NULL) {
-			_set_sdk_env(appid, (char *)str);
-		}
-	}
-	if (hwacc != NULL)
-		setenv("HWACC", hwacc, 1);
-}
-
-static void _prepare_exec(const char *appid, bundle *kb)
-{
-	const struct appinfo *ai;
-	const char *app_path = NULL;
-	const char *pkg_type = NULL;
-	char *file_name;
-	char process_name[AUL_PR_NAME];
-	const char *hwacc;
-	int ret;
-
-	setsid();
-
-	signal(SIGINT, SIG_DFL);
-	signal(SIGTERM, SIG_DFL);
-	signal(SIGCHLD, SIG_DFL);
-
-	ai = appinfo_find(getuid(), appid);
-
-	app_path = appinfo_get_value(ai, AIT_EXEC);
-	pkg_type = appinfo_get_value(ai, AIT_TYPE);
-	hwacc = appinfo_get_value(ai, AIT_HWACC);
-
-	/* SET PRIVILEGES*/
-	 _D("appid : %s / pkg_type : %s / app_path : %s ", appid, pkg_type, app_path);
-	if ((ret = __set_access(appid, pkg_type, app_path)) < 0) {
-		 _D("fail to set privileges - check your package's credential : %d\n", ret);
-		return;
-	}
-
-	/* SET DUMPABLE - for coredump*/
-	prctl(PR_SET_DUMPABLE, 1);
-
-	/* SET PROCESS NAME*/
-	if (app_path == NULL) {
-		_D("app_path should not be NULL - check menu db");
-		return;
-	}
-	file_name = strrchr(app_path, '/') + 1;
-	if (file_name == NULL) {
-		_D("can't locate file name to execute");
-		return;
-	}
-	memset(process_name, '\0', AUL_PR_NAME);
-	snprintf(process_name, AUL_PR_NAME, "%s", file_name);
-	prctl(PR_SET_NAME, process_name);
-
-	/* SET ENVIROMENT*/
-	_set_env(appid, kb, hwacc);
-
-	/* TODO: do security job */
-	/* TODO: setuid */
-}
-static char **__create_argc_argv(bundle * kb, int *margc)
-{
-	char **argv;
-	int argc;
-
-	argc = bundle_export_to_argv(kb, &argv);
-
-	*margc = argc;
-	return argv;
-}
 
 static void __set_stime(bundle *kb)
 {
@@ -209,11 +83,11 @@ static void __set_stime(bundle *kb)
 	bundle_add(kb, AUL_K_STARTTIME, tmp);
 }
 
-int _start_app_local(uid_t uid, char *appid)
+int _start_app_local(uid_t uid, const char *appid)
 {
 	int ret;
 	int pid;
-	struct appinfo* ai;
+	const struct appinfo *ai;
 	bundle *kb;
 	const char *app_path;
 	const char *pkg_type;
@@ -258,116 +132,6 @@ int _start_app_local(uid_t uid, char *appid)
 				appid, app_path, pid, LAUNCHPAD_PID, uid);
 
 	return pid;
-}
-
-static void _free_kt(struct ktimer *kt)
-{
-	if (!kt)
-		return;
-	free(kt->group);
-	free(kt);
-}
-
-static void _kill_pid( pid_t pid)
-{
-	int r;
-
-	if (pid <= INIT_PID) /* block sending to all process or init */
-		return;
-	/* TODO: check pid exist in group */
-
-	r = kill(pid, 0);
-	if (r == -1) {
-		_D("send SIGKILL: pid %d not exist", pid);
-		return;
-	}
-
-	r = kill(pid, SIGKILL);
-	if (r == -1)
-		_E("send SIGKILL: %s", strerror(errno));
-}
-
-static gboolean _ktimer_cb(gpointer data)
-{
-	struct ktimer *kt = data;
-
-	_kill_pid(kt->pid);
-	_kill_list = g_list_remove(_kill_list, kt);
-	_free_kt(kt);
-
-	return FALSE;
-}
-
-static void _add_list(const char *group, pid_t pid)
-{
-	struct ktimer *kt;
-
-	kt = calloc(1, sizeof(*kt));
-	if (!kt)
-		return;
-
-	kt->pid = pid;
-	kt->group = strdup(group);
-	if (!kt->group) {
-		free(kt);
-		return;
-	}
-	kt->tid = g_timeout_add_seconds(TERM_WAIT_SEC, _ktimer_cb, kt);
-
-	_kill_list = g_list_append(_kill_list, kt);
-}
-
-static inline void _del_list(GList *l)
-{
-	struct ktimer *kt;
-
-	if (!l)
-		return;
-
-	kt = l->data;
-
-	g_source_remove(kt->tid);
-	_free_kt(kt);
-	_kill_list = g_list_delete_link(_kill_list, l);
-}
-
-static int _kill_pid_cb(void *user_data, const char *group, pid_t pid)
-{
-	int r;
-
-	if (pid <= INIT_PID) /* block sending to all process or init */
-		return 0;
-
-	r = kill(pid, SIGTERM);
-	if (r == -1)
-		_E("send SIGTERM: %s", strerror(errno));
-
-	_add_list(group, pid);
-
-	return 0;
-}
-
-void service_release(const char *group)
-{
-	GList *l;
-	GList *d;
-
-	if (!group || !*group)
-		return;
-
-	group = FILENAME(group);
-
-	d = NULL;
-	for (l = _kill_list; l; l = g_list_next(l)) {
-		struct ktimer *k = l->data;
-
-		_del_list(d);
-
-		if (k->group && !strcmp(k->group, group))
-			d = l;
-	}
-
-	_del_list(d);
 }
 
 int _send_to_sigkill(int pid)
@@ -433,7 +197,7 @@ int _pause_app(int pid, int clifd)
 	return ret;
 }
 
-void _term_sub_app(int pid)
+int _term_sub_app(int pid)
 {
 	int dummy;
 	int ret;
@@ -443,9 +207,11 @@ void _term_sub_app(int pid)
 		_E("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
 			_E("fail to killing - %d\n", pid);
-			return;
+			return -1;
 		}
 	}
+
+	return 0;
 }
 
 int _term_app(int pid, int clifd)
@@ -721,12 +487,7 @@ static void __set_reply_handler(int fd, int pid, int clifd, int cmd)
 
 static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 {
-	int ret = -1;
-	int r;
-	GPollFD *gpollfd;
-	GSource *src;
-	struct reply_info *r_info;
-	GMainContext *reply_context;
+	int ret;
 
 	switch (cmd) {
 	case APP_OPEN:
@@ -744,6 +505,9 @@ static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 			_E("fake_launch failed. error code = %d", ret);
 		_D("fake launch done");
 		break;
+	default:
+		_E("unknown command: %d", cmd);
+		ret = -1;
 	}
 
 	return ret;
@@ -754,7 +518,6 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	const struct appinfo *ai;
 	int ret = -1;
 	const char *status;
-	const char *componet = NULL;
 	const char *multiple = NULL;
 	const char *app_path = NULL;
 	const char *pkg_type = NULL;
@@ -823,7 +586,6 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		}
 	}
 
-	componet = appinfo_get_value(ai, AIT_COMP);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	permission = appinfo_get_value(ai, AIT_PERM);
@@ -848,8 +610,6 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 			}
 		}
 	}
-
-	pkgmgrinfo_client_request_enable_external_pkg(pkgid);
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
 	if (!multiple || strncmp(multiple, "false", 5) == 0) {
