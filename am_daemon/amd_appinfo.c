@@ -12,6 +12,7 @@
 #include "simple_util.h"
 #include "amd_appinfo.h"
 #include "amd_launch.h"
+#include "amd_status.h"
 
 #define SERVICE_GROUP "Service"
 
@@ -302,8 +303,8 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 	}
 
 	if (uid != GLOBAL_USER) {
-		appinfo_foreach(uid, __handle_onboot, uid);
-		appinfo_foreach(GLOBAL_USER, __handle_onboot, uid);
+		appinfo_foreach(uid, __handle_onboot, (void *)uid);
+		appinfo_foreach(GLOBAL_USER, __handle_onboot, (void *)uid);
 	}
 
 	_D("loaded appinfo table for uid %d", uid);
@@ -372,7 +373,7 @@ static void _appinfo_delete_on_event(uid_t uid, const char *pkgid)
 static void _appinfo_insert_on_event(uid_t uid, const char *pkgid)
 {
 	appinfo_insert(uid, pkgid);
-	appinfo_foreach(uid, __handle_onboot, uid);
+	appinfo_foreach(uid, __handle_onboot, (void *)uid);
 }
 
 static int __package_event_cb(uid_t target_uid, int req_id,
@@ -448,10 +449,11 @@ int appinfo_init(void)
 		_E("appinfo init failed: %s", strerror(errno));
 		return -1;
 	}
-	fgets(buf, sizeof(buf), fp);
-	tmp = strstr(buf, "gles");
-	if(tmp != NULL) {
-		sscanf(tmp,"gles=%d", &gles);
+
+	if (fgets(buf, sizeof(buf), fp) != NULL) {
+		tmp = strstr(buf, "gles");
+		if (tmp != NULL)
+			sscanf(tmp, "gles=%d", &gles);
 	}
 	fclose(fp);
 
@@ -487,7 +489,7 @@ void appinfo_fini(void)
 	_fini_package_event_handler();
 }
 
-const struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
+struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 {
 	struct user_appinfo *info;
 	struct appinfo *ai;
@@ -558,7 +560,7 @@ static void _reload_appinfo(gpointer key, gpointer value, gpointer user_data)
 	r = pkgmgrinfo_pkginfo_get_usr_list(__pkg_list_cb, info, info->uid);
 	if (r != PMINFO_R_OK) {
 		_remove_user_appinfo(info->uid);
-		return NULL;
+		return;
 	}
 
 	_D("reloaded appinfo table for uid %d", info->uid);

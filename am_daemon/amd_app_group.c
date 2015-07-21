@@ -1,11 +1,16 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
 #include <glib.h>
+
 #include <aul.h>
 #include <pkgmgr-info.h>
 
 #include "app_sock.h"
 #include "simple_util.h"
+#include "amd_launch.h"
+#include "amd_app_group.h"
 
 #define APP_SVC_K_LAUNCH_MODE   "__APP_SVC_LAUNCH_MODE__"
 
@@ -56,26 +61,6 @@ static gboolean __hash_table_cb(gpointer key, gpointer value,
 	return FALSE;
 }
 
-static void __print_table()
-{
-	GHashTableIter iter;
-	gpointer key, value;
-
-	g_hash_table_iter_init(&iter, app_group_hash);
-	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
-		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			_D("app_group key= %d pid=%d", (int ) key, ac->pid);
-			i = g_list_next(i);
-		}
-	}
-
-}
-
 static gboolean __is_top(int pid)
 {
 	int cnt;
@@ -112,11 +97,9 @@ static GList* __find_removable_apps(int from)
 	int *pids = NULL;
 	GList *list = NULL;
 	gboolean found = FALSE;
+	int i, j;
 
 	app_group_get_leader_pids(&cnt, &pids);
-
-	int i, j;
-	int lpid = -1;
 
 	for (i = 0; i < cnt; i++) {
 		int *gpids = NULL;
@@ -147,7 +130,7 @@ static GList* __find_removable_apps(int from)
 	return list;
 }
 
-void app_group_init()
+void app_group_init(void)
 {
 	app_group_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
 			NULL);
@@ -288,7 +271,7 @@ void app_group_get_leader_pids(int *cnt, int **pids)
 		leader_pids = (int*) malloc(sizeof(int) * size);
 		if (leader_pids == NULL) {
 			_E("out of memory");
-			*cnt = NULL;
+			*cnt = 0;
 			*pids = NULL;
 			return;
 		}

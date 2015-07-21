@@ -260,6 +260,7 @@ int __agent_dead_handler(uid_t user)
 {
 	__remove_item_running_list_with_uid(user);
 	_status_remove_app_info_list_with_uid(user);
+	return 0;
 }
 
 static int __init()
