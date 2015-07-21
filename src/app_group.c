@@ -4,12 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+
 #include <bundle.h>
+
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_util.h"
 #include "app_sock.h"
 #include "simple_util.h"
+#include "launch.h"
 
 #ifdef WAYLAND
 #include <wayland-client.h>
@@ -44,7 +47,6 @@ static const struct wl_registry_listener reg_listener =
 
 SLPAPI void aul_app_group_add(int leader_pid, int pid, int wid)
 {
-	int ret;
 	bundle *b;
 	char buf[128];
 
@@ -58,13 +60,12 @@ SLPAPI void aul_app_group_add(int leader_pid, int pid, int wid)
 	snprintf(buf, 128, "%d", wid);
 	bundle_add_str(b, AUL_K_WID, buf);
 
-	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_ADD, b);
+	app_send_cmd(AUL_UTIL_PID, APP_GROUP_ADD, b);
 	bundle_free(b);
 }
 
 SLPAPI void aul_app_group_remove(int pid)
 {
-	int ret;
 	bundle *b;
 	char buf[128];
 
@@ -72,7 +73,7 @@ SLPAPI void aul_app_group_remove(int pid)
 	snprintf(buf, 128, "%d", pid);
 	bundle_add_str(b, AUL_K_PID, buf);
 
-	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_REMOVE, b);
+	app_send_cmd(AUL_UTIL_PID, APP_GROUP_REMOVE, b);
 	bundle_free(b);
 }
 
@@ -233,7 +234,7 @@ SLPAPI int aul_app_group_get_leader_pid(int pid)
 SLPAPI int aul_app_group_clear_top(void)
 {
 	int dummy[1] = { 0 };
-	return  __app_send_raw(AUL_UTIL_PID, APP_GROUP_RESUME, dummy, 0);
+	return  __app_send_raw(AUL_UTIL_PID, APP_GROUP_RESUME, (unsigned char *)dummy, 0);
 }
 
 SLPAPI int aul_app_group_is_top(void)

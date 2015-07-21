@@ -41,9 +41,6 @@ static GMainLoop *mainloop = NULL;
 static bundle *create_internal_bundle()
 {
 	bundle *kb;
-	int i;
-	char arg[1024] = {0, };
-	char* val_array[128];
 
 	kb = bundle_create();
 	bundle_add(kb, AUL_K_DEBUG, "1");
@@ -52,8 +49,7 @@ static bundle *create_internal_bundle()
 
 int launch(int debug_option)
 {
-	int pid = -1;
-
+	int pid;
 
 	if(!debug_option)
 		pid = aul_open_app(gargv[1]);
@@ -86,26 +82,27 @@ static int __launch_app_dead_handler(int pid, void *data)
 
 static gboolean run_func(void *data)
 {
-	int pid = -1;
-	char *str = NULL;
-	if ((pid = launch(debugFlag)) > 0) {
+	int pid;
+	const char *str;
+
+	if ((pid = launch(debugFlag)) > 0)
 		printf("... successfully launched\n");
-	} else {
+	else
 		printf("... launch failed\n");
-	}
+
 	if (kb) {
 		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
 
-		if( str && strcmp(str, "SYNC") == 0 ) {
-			aul_listen_app_dead_signal(__launch_app_dead_handler, pid);
-		} else {
+		if (str && strcmp(str, "SYNC") == 0 )
+			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)pid);
+		else
 			g_main_loop_quit(mainloop);
-		}
 
 		bundle_free(kb);
 		kb = NULL;
-	} else 
+	} else {
 		g_main_loop_quit(mainloop);
+	}
 
 
 	return TRUE;
