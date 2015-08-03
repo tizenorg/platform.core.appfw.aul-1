@@ -38,6 +38,8 @@ typedef struct _app_resultcb_info_t {
 	int launched_pid;
 	void (*cb_func) (bundle *kb, int is_cancel, void *data);
 	void *priv_data;
+	void (*caller_cb) (int launched_pid, void *data);
+	void *caller_data;
 	struct _app_resultcb_info_t *next;
 } app_resultcb_info_t;
 
@@ -66,11 +68,13 @@ static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 	app_resultcb_info_t *info;
 
 	info = (app_resultcb_info_t *) malloc(sizeof(app_resultcb_info_t));
-	if(info == NULL)
+	if (info == NULL)
 		return;
 	info->launched_pid = pid;
 	info->cb_func = cbfunc;
 	info->priv_data = data;
+	info->caller_cb = NULL;
+	info->caller_data = NULL;
 
 	info->next = rescb_head;
 	rescb_head = info;
@@ -147,18 +151,23 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		return -1;
 
 	/* In case of aul_forward_app, update the callback data */
-	if(is_cancel == 1 &&
-	(fwdpid_str = (char *)bundle_get_val(kb, AUL_K_FWD_CALLEE_PID)))
-	{
+	if (is_cancel == 1 &&
+			(fwdpid_str = (char *)bundle_get_val(kb, AUL_K_FWD_CALLEE_PID))) {
 		app_resultcb_info_t newinfo;
 		newinfo.launched_pid = atoi(fwdpid_str);
 		newinfo.cb_func = info->cb_func;
 		newinfo.priv_data = info->priv_data;
+		newinfo.caller_cb = NULL;
+		newinfo.caller_data = NULL;
+
+		if (info->caller_cb) {
+			info->caller_cb(newinfo.launched_pid, info->caller_data);
+		}
 
 		__remove_resultcb(info);
 		__add_resultcb(newinfo.launched_pid, newinfo.cb_func, newinfo.priv_data);
 
-		_D("change callback - %s\n",AUL_K_FWD_CALLEE_PID);
+		_D("change callback, fwd pid: %d", newinfo.launched_pid);
 
 		goto end;
 	}
@@ -176,7 +185,7 @@ static int __get_caller_pid(bundle *kb)
 	int pid;
 
 	pid_str = bundle_get_val(kb, AUL_K_ORG_CALLER_PID);
-	if(pid_str)
+	if (pid_str)
 		goto end;
 
 	pid_str = bundle_get_val(kb, AUL_K_CALLER_PID);
@@ -228,7 +237,7 @@ int _app_start_res_prepare(bundle *kb)
 		return 0;
 
 	str = bundle_get_val(kb, AUL_K_NO_CANCEL);
-	if( str && strncmp("1", str, 1) == 0) {
+	if ( str && strncmp("1", str, 1) == 0) {
 		_D("no cancel");
 		return 0;
 	}
@@ -300,11 +309,11 @@ SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
 	bundle *outb;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 
-	if(pkgname == NULL || kb == NULL)
+	if (pkgname == NULL || kb == NULL)
 		return AUL_R_EINVAL;
 
 	caller = (char *)bundle_get_val(kb, AUL_K_CALLER_PID);
-	if(caller == NULL) {
+	if (caller == NULL) {
 		_E("original msg doest not have caller pid");
 		return AUL_R_EINVAL;
 	}
@@ -313,14 +322,14 @@ SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
 	bundle_add(kb, AUL_K_ORG_CALLER_PID, caller);
 
 	dupb = bundle_dup(kb);
-	if(dupb == NULL) {
+	if (dupb == NULL) {
 		_E("bundle duplicate fail");
 		return AUL_R_EINVAL;
 	}
 
-	if(bundle_get_val(kb, AUL_K_WAIT_RESULT) != NULL) {
+	if (bundle_get_val(kb, AUL_K_WAIT_RESULT) != NULL) {
 		ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
-		if(ret < 0)
+		if (ret < 0)
 			goto end;
 	} else {
 		ret = app_request_to_launchpad(APP_START, pkgname, kb);
@@ -332,7 +341,7 @@ SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ,"%d",ret);
 
 	ret = aul_create_result_bundle(dupb, &outb);
-	if(ret < 0)
+	if (ret < 0)
 		goto end;
 
 	bundle_del(outb, AUL_K_FWD_CALLEE_PID);
@@ -356,7 +365,7 @@ SLPAPI int aul_create_result_bundle(bundle *inb, bundle **outb)
 
 	*outb = NULL;
 
-	if(inb == NULL){
+	if (inb == NULL){
 		_E("return msg create fail");
 		return AUL_R_EINVAL;
 	}
@@ -367,7 +376,7 @@ SLPAPI int aul_create_result_bundle(bundle *inb, bundle **outb)
 		return AUL_R_ERROR;
 	}
 
-	if(bundle_get_val(inb, AUL_K_WAIT_RESULT) != NULL) {
+	if (bundle_get_val(inb, AUL_K_WAIT_RESULT) != NULL) {
 		bundle_add(*outb, AUL_K_SEND_RESULT, "1");
 		_D("original msg is msg with result");
 	} else {
@@ -376,7 +385,7 @@ SLPAPI int aul_create_result_bundle(bundle *inb, bundle **outb)
 
 
 	pid_str = bundle_get_val(inb, AUL_K_ORG_CALLER_PID);
-	if(pid_str) {
+	if (pid_str) {
 		bundle_add(*outb, AUL_K_ORG_CALLER_PID, pid_str);
 		goto end;
 	}
@@ -420,7 +429,7 @@ int aul_send_result(bundle *kb, int is_cancel)
 	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 
 	ret = aul_app_get_appid_bypid(callee_pid, callee_appid, sizeof(callee_appid));
-	if(ret == 0) {
+	if (ret == 0) {
 		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
 	} else {
 		_W("fail(%d) to get callee appid by pid", ret);
@@ -430,7 +439,7 @@ int aul_send_result(bundle *kb, int is_cancel)
 
 	_D("app_send_cmd_with_noreply : %d", ret);
 
-	if(latest_caller_pid == pid)
+	if (latest_caller_pid == pid)
 		latest_caller_pid = -1;
 
 	return ret;
@@ -438,7 +447,7 @@ int aul_send_result(bundle *kb, int is_cancel)
 
 int app_subapp_terminate_request()
 {
-	if(is_subapp) {
+	if (is_subapp) {
 		subapp_cb(subapp_data);
 
 		return 0;
@@ -466,7 +475,7 @@ SLPAPI int aul_subapp_terminate_request_pid(int pid)
 		return AUL_R_EINVAL;
 
 	info = __find_resultcb(pid);
-	if(info)
+	if (info)
 		__remove_resultcb(info);
 
 	snprintf(pid_str, MAX_PID_STR_BUFSZ, "%d", pid);
@@ -477,4 +486,64 @@ SLPAPI int aul_subapp_terminate_request_pid(int pid)
 SLPAPI int aul_is_subapp()
 {
 	return is_subapp;
+}
+
+SLPAPI int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data)
+{
+	app_resultcb_info_t *info;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	info = __find_resultcb(pid);
+	if (info == NULL)
+		return AUL_E_ERROR;
+
+	info->caller_cb = caller_cb;
+	info->caller_data = data;
+
+	return AUL_R_OK;
+}
+
+SLPAPI int aul_remove_caller_cb(int pid)
+{
+	app_resultcb_info_t *info;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	info = __find_resultcb(pid);
+	if (info == NULL)
+		return AUL_E_ERROR;
+
+	info->caller_cb = NULL;
+	info->caller_data = NULL;
+
+	return AUL_R_OK;
+}
+
+static gboolean __invoke_caller_cb(gpointer data)
+{
+	int launched_pid = 0;
+	app_resultcb_info_t *info;
+
+	if (data == NULL)
+		return G_SOURCE_REMOVE;
+
+	launched_pid = GPOINTER_TO_INT(data);
+
+	info = __find_resultcb(launched_pid);
+
+	if (info && info->caller_cb)
+		info->caller_cb(info->launched_pid, info->caller_data);
+
+	return G_SOURCE_REMOVE;
+}
+
+SLPAPI int aul_invoke_caller_cb(int pid)
+{
+	if (g_idle_add_full(G_PRIORITY_DEFAULT, __invoke_caller_cb, GINT_TO_POINTER(pid), NULL) > 0)
+		return -1;
+
+	return 0;
 }

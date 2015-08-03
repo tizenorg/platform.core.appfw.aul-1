@@ -1654,6 +1654,9 @@ int aul_set_subapp(subapp_fn cb, void *data);
 int aul_subapp_terminate_request_pid(int pid);
 int aul_is_subapp(void);
 int aul_kill_pid(int pid);
+int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
+int aul_remove_caller_cb(int pid);
+int aul_invoke_caller_cb(int pid);
 
 typedef int (*data_control_provider_handler_fn) (bundle *b, int request_id, void *data);
 int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler);
