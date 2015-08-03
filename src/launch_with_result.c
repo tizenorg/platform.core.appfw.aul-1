@@ -38,6 +38,8 @@ typedef struct _app_resultcb_info_t {
 	int launched_pid;
 	void (*cb_func) (bundle *kb, int is_cancel, void *data);
 	void *priv_data;
+	void (*caller_cb) (int launched_pid, void *data);
+	void *caller_data;
 	struct _app_resultcb_info_t *next;
 } app_resultcb_info_t;
 
@@ -71,6 +73,8 @@ static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 	info->launched_pid = pid;
 	info->cb_func = cbfunc;
 	info->priv_data = data;
+	info->caller_cb = NULL;
+	info->caller_data = NULL;
 
 	info->next = rescb_head;
 	rescb_head = info;
@@ -154,11 +158,17 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		newinfo.launched_pid = atoi(fwdpid_str);
 		newinfo.cb_func = info->cb_func;
 		newinfo.priv_data = info->priv_data;
+		newinfo.caller_cb = NULL;
+		newinfo.caller_data = NULL;
+
+		if(info->caller_cb) {
+			info->caller_cb(newinfo.launched_pid, info->caller_data);
+		}
 
 		__remove_resultcb(info);
 		__add_resultcb(newinfo.launched_pid, newinfo.cb_func, newinfo.priv_data);
 
-		_D("change callback - %s\n",AUL_K_FWD_CALLEE_PID);
+		_D("change callback, fwd pid: %d", newinfo.launched_pid);
 
 		goto end;
 	}
@@ -477,4 +487,62 @@ SLPAPI int aul_subapp_terminate_request_pid(int pid)
 SLPAPI int aul_is_subapp()
 {
 	return is_subapp;
+}
+
+SLPAPI int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data)
+{
+	app_resultcb_info_t *info;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	info = __find_resultcb(pid);
+	if (info) {
+		info->caller_cb = caller_cb;
+		info->caller_data = data;
+	}
+
+	return 0;
+}
+
+SLPAPI int aul_remove_caller_cb(int pid)
+{
+	app_resultcb_info_t *info;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	info = __find_resultcb(pid);
+	if(info) {
+		info->caller_cb = NULL;
+		info->caller_data = NULL;
+	}
+
+	return 0;
+}
+
+static gboolean __invoke_caller_cb(gpointer data)
+{
+	int launched_pid = 0;
+	app_resultcb_info_t *info;
+
+	if (data == NULL)
+		return G_SOURCE_REMOVE;
+
+	launched_pid = GPOINTER_TO_INT(data);
+
+	info = __find_resultcb(launched_pid);
+
+	if (info && info->caller_cb)
+		info->caller_cb(info->launched_pid, info->caller_data);
+
+	return G_SOURCE_REMOVE;
+}
+
+SLPAPI int aul_invoke_caller_cb(int pid)
+{
+	if (g_idle_add_full(G_PRIORITY_DEFAULT, __invoke_caller_cb, GINT_TO_POINTER(pid), NULL) > 0)
+		return -1;
+
+	return 0;
 }
