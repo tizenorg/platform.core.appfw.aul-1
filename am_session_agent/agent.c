@@ -760,9 +760,6 @@ _static_ int __agent_pre_init(int argc, char **argv)
 		return fd;
 	}
 
-	if (rua_clear_history())
-		_E("rua clear history failed");
-
 	return fd;
 }
 
