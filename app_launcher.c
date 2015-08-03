@@ -28,6 +28,7 @@
 #include <glib.h>
 
 #include <pkgmgr-info.h>
+#include <bundle.h>
 
 #include "aul.h"
 
