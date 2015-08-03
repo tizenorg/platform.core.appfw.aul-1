@@ -23,7 +23,6 @@
 #include <bundle.h>
 #include <aul.h>
 #include <glib.h>
-#include <app-checker-server.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,7 +30,6 @@
 #include <sys/time.h>
 #include <pkgmgr-info.h>
 #include <poll.h>
-#include <privacy_manager_client.h>
 #include <tzplatform_config.h>
 
 #include "amd_config.h"
@@ -528,13 +526,11 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
 	const char *permission;
-	const char *pkgid;
 	const char *preload;
 	char caller_appid[256];
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
 	int delay_reply = 0;
 	int pad_pid = LAUNCHPAD_PID;
-	bool consented = true;
 	gboolean is_group_app = FALSE;
 
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
@@ -570,29 +566,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		return -EREJECTED;
 	}
 
-	pkgid = appinfo_get_value(ai, AIT_PKGID);
-
-	if(bundle_get_val(kb, AUL_K_PRIVACY_APPID)){
-		bundle_del(kb, AUL_K_PRIVACY_APPID);
-	} else {
-		privacy_manager_client_check_user_consented(pkgid, &consented);
-
-		_D("consented : %d", consented);
-
-		if(consented == false && bundle_get_val(kb, AUL_K_SDK) == NULL) {
-			_D("appid : %s", appid);
-			bundle_add(kb, AUL_K_PRIVACY_APPID, appid);
-			appid = PRIVACY_POPUP;
-			bundle_del(kb, AUL_K_APPID);
-			bundle_add(kb, AUL_K_APPID, appid);
-			ai = appinfo_find(caller_uid, appid);
-		}
-	}
-
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	permission = appinfo_get_value(ai, AIT_PERM);
-	pkgid = appinfo_get_value(ai, AIT_PKGID);
 
 	if(permission && strncmp(permission, "signature", 9) == 0 ) {
 		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
@@ -653,8 +629,6 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	if(pid > 0) {
 		if (!is_group_app)
 			_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
-		ret = ac_server_check_launch_privilege(appid, appinfo_get_value(ai, AIT_TYPE), pid);
-		return ret != AC_R_ERROR ? pid : -1;
 	}
 
 	return pid;
