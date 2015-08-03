@@ -1629,6 +1629,7 @@ const char *aul_get_app_root_path(void);
 const char *aul_get_app_data_path(void);
 const char *aul_get_app_cache_path(void);
 const char *aul_get_app_resource_path(void);
+const char *aul_get_app_tep_resource_path(void);
 const char *aul_get_app_shared_data_path(void);
 const char *aul_get_app_shared_resource_path(void);
 const char *aul_get_app_shared_trusted_path(void);
