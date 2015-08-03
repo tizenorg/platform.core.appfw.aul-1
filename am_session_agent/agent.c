@@ -50,7 +50,6 @@
 #include "aul_util.h"
 #include "sigchild.h"
 
-#include <app-checker.h>
 #include <sqlite3.h>
 #include <rua.h>
 

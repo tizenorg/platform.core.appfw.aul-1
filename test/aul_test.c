@@ -106,29 +106,6 @@ int dbus_launch_test()
 	return ret;
 }
 
-static void prt_recvd_bundle(const char *key, const char *value, void *d)
-{
-	printf("recvd - key: %s, value: %s\n", key, value);
-}
-
-static void cb_func(bundle *kb, int is_cancel, void *data)
-{
-	int num;
-	num = (int)data;
-
-	if (is_cancel) {
-		printf("==== %d : canceled(preemptted) my request ===\n", num);
-	} else {
-		printf("==== %d : result packet ===\n", num);
-		bundle_iterate(kb, prt_recvd_bundle, NULL);
-	}
-
-	if ((strcmp(cmd, "launch_res") == 0)
-	    || (strcmp(cmd, "open_svc_res") == 0))
-		g_main_loop_quit(mainloop);
-
-}
-
 int open_test()
 {
 	static int num = 0;
@@ -515,90 +492,6 @@ static int test_regex()
 	return 0;
 }
 
-int open_svc_test()
-{
-	static int num = 0;
-	int ret;
-
-	bundle *kb = NULL;
-	kb = create_internal_bundle(3);
-	if (kb == NULL) {
-		printf("bundle creation fail\n");
-		return -1;
-	}
-	printf("[aul_open_service %d test] %s \n", num++, gargv[2]);
-	ret = aul_open_service(gargv[2], kb, NULL, NULL);
-	if (ret >= 0) {
-		printf("open service success\n");
-		if (kb) {
-			bundle_free(kb);
-			kb = NULL;
-		}
-		return 0;
-	} else {
-		printf("open service fail\n");
-		if (kb) {
-			bundle_free(kb);
-			kb = NULL;
-		}
-		return -1;
-	}
-}
-
-int open_svc_res_test()
-{
-	static int num = 0;
-	int ret;
-
-	bundle *kb = NULL;
-	kb = create_internal_bundle(3);
-	if (kb == NULL) {	/* Prevent Fix: ID: 21027,21581 */
-		printf("bundle creation fail\n");
-		return -1;
-	}
-
-	printf("[aul_open_service(wait result) %d test] %s \n", num++,
-	       gargv[2]);
-	ret = aul_open_service(gargv[2], kb, cb_func, (void *)num);
-	if (ret >= 0) {
-		printf("open service(wait result) success\n");
-		if (kb) {
-			bundle_free(kb);
-			kb = NULL;
-		}
-		return 0;
-	} else {
-		printf("open service(wait result) fail\n");
-		if (kb) {
-			bundle_free(kb);
-			kb = NULL;
-		}
-		return -1;
-	}
-}
-
-int get_defapp_svc_test()
-{
-	static int num = 0;
-	int ret;
-	char buf[MAX_LOCAL_BUFSZ];
-	printf("[aul_get_defapp_from_svc %d test] %s \n", num++, gargv[2]);
-	ret = aul_get_defapp_for_service(gargv[2], buf, sizeof(buf));
-	if (ret >= 0)
-		printf("==> defapp name = %s\n", buf);
-	return ret;
-}
-
-int set_defapp_svc_test()
-{
-	static int num = 0;
-	int ret;
-	printf("[aul_set_defapp_with_svc %d test] %s %s\n", num++, gargv[2],
-	       gargv[3]);
-	ret = aul_set_defapp_for_service(gargv[2], gargv[3]);
-	return ret;
-}
-
 int reload_appinfo(void)
 {
 	return aul_reload_appinfo();
@@ -655,15 +548,6 @@ static test_func_t test_func[] = {
 
 	{"test_regex", test_regex, "regular expression parser test",
 		"[usage] test_regex <full text>"},
-
-	{"open_svc", open_svc_test, "aul_open_service test"
-		"[usage] open_svc <svcname> <key1> <val1> <key2> <val2> ..."},
-	{"open_svc_res", open_svc_res_test, "aul_open_service (wait result) test"
-		"[usage] open_svc <svcname> <key1> <val1> <key2> <val2> ..."},
-	{"set_defapp_svc", set_defapp_svc_test, "aul_set_defapp_with_svc test"
-		"[usage] set_defapp_svc <svcname> <defapp to be set>"},
-	{"get_defapp_svc", get_defapp_svc_test, "aul_get_defapp_from_svc test"
-		"[usage] get_defapp_svc <svcname>"},
 
 	{"getpkg", get_pkg_func, "get package",
 	      	"[usage] getpkg <pkgname>"},
