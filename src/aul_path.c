@@ -38,6 +38,7 @@
 static const char _DATA_DIR[] = "data/";
 static const char _CACHE_DIR[] = "cache/";
 static const char _RESOURCE_DIR[] = "res/";
+static const char _TEP_RESOURCE_DIR[] = "res/tep/";
 static const char _SHARED_DATA_DIR[] = "shared/data/";
 static const char _SHARED_TRUSTED_DIR[] = "shared/trusted/";
 static const char _SHARED_RESOURCE_DIR[] = "shared/res/";
@@ -202,6 +203,13 @@ SLPAPI const char *aul_get_app_resource_path(void)
 	static char *path;
 
 	return __get(&path, NULL, _RESOURCE_DIR, getuid(), __get_path);
+}
+
+SLPAPI const char *aul_get_app_tep_resource_path(void)
+{
+	static char *path;
+
+	return __get(&path, NULL, _TEP_RESOURCE_DIR, getuid(), __get_path);
 }
 
 SLPAPI const char *aul_get_app_shared_data_path(void)
