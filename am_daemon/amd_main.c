@@ -27,7 +27,6 @@
 #include <string.h>
 #include <aul.h>
 #include <vconf.h>
-#include <app-checker-server.h>
 #include <pkgmgr-info.h>
 #include <glib.h>
 #include <stdlib.h>
@@ -301,10 +300,6 @@ int main(int argc, char *argv[])
 {
 	GMainLoop *mainloop = NULL;
 
-	if (ac_server_initialize() != AC_R_OK) {
-		_E("ac_server_initialize failed!\n");
-		return -1;
-	}
 	if (__init() != 0) {
 		_E("AMD Initialization failed!\n");
 		return -1;

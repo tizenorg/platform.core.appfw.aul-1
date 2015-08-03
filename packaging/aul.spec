@@ -26,18 +26,14 @@ BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
-BuildRequires:  pkgconfig(ail)
 BuildRequires:  xdgmime-devel, pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(security-manager)
-BuildRequires:  pkgconfig(app-checker)
-BuildRequires:  pkgconfig(app-checker-server)
 BuildRequires:  pkgconfig(rua)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  libattr-devel
-BuildRequires:  pkgconfig(privacy-manager-client)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libsystemd-daemon)
 %if %{with wayland}
@@ -75,7 +71,8 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
-%cmake . \
+MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
+%cmake . -DFULLVER=%{version} -DMAJORVER=${MAJORVER} \
 %if %{with wayland}
 -Dwith_wayland=TRUE\
 %endif
@@ -88,10 +85,6 @@ CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %install
 rm -rf %{buildroot}
 %make_install
-
-mkdir -p %{buildroot}%{TZ_SYS_DB}
-sqlite3 %{buildroot}%{TZ_SYS_DB}/.mida.db < %{buildroot}%{_datadir}/aul/mida_db.sql
-rm -rf %{buildroot}%{_datadir}/aul/mida_db.sql
 
 mkdir -p %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_unitdir}/default.target.wants
@@ -127,16 +120,11 @@ systemctl daemon-reload
 %files
 %license LICENSE
 %manifest %{name}.manifest
-%attr(0644,root,root) %{_libdir}/libaul.so.0
-%attr(0644,root,root) %{_libdir}/libaul.so.0.1.0
-%config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db
-%config(noreplace) %attr(0644,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_DB}/.mida.db-journal
-%attr(0755,root,root) %{_bindir}/aul_mime.sh
+%attr(0644,root,root) %{_libdir}/libaul.so.*
 %{_bindir}/aul_test
 %{_bindir}/app_launcher
 %caps(cap_mac_admin,cap_mac_override,cap_setgid=ei) %{_bindir}/amd_session_agent
 %{_datadir}/aul/miregex/*
-%{_datadir}/aul/service/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
 %{_tmpfilesdir}/ac.conf
@@ -152,11 +140,9 @@ systemctl daemon-reload
 %{_bindir}/daemon-manager-launch-agent
 
 
-%files  test
+%files test
 %{_bindir}/launch_app
 %{_bindir}/open_app
-%attr(0755,root,root) %{_bindir}/aul_service.sh
-%attr(0755,root,root) %{_bindir}/aul_service_test.sh
 
 %files devel
 %{_includedir}/aul/*.h

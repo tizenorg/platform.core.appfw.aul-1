@@ -24,7 +24,6 @@
 #define __MENU_DB_UTIL_H_
 
 #include <pkgmgr-info.h>
-#include <ail.h>
 #include <string.h>
 #include <stdio.h>
 #include "simple_util.h"
