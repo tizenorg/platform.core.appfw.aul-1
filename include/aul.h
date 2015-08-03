@@ -222,8 +222,6 @@ typedef enum _aul_type{
 /** AUL internal private key - To support data control*/
 #define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
 
-#define PRIVACY_POPUP "tizenprv00.privacy-popup"
-
 
 /**
  * @brief	This is callback function for aul_launch_init
