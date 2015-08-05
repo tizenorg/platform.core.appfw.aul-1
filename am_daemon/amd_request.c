@@ -434,13 +434,11 @@ static gboolean __request_handler(gpointer data)
 	struct ucred cr;
 	int *status;
 	int ret = -1;
-	int free_pkt = 1;
 	char *appid;
 	char *term_pid;
 	int pid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
-	pkt_t *pkt_uid;
 	struct appinfo *ai;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
@@ -467,11 +465,6 @@ static gboolean __request_handler(gpointer data)
 				item->pid = ret;
 				item->uid = cr.uid;
 				strncpy(item->appid, appid, 511);
-				free_pkt = 0;
-
-				pkt_uid = calloc(1, sizeof(pkt_t));
-				pkt_uid->caller_uid = cr.uid;
-				pkt_uid->pkt = pkt;
 
 				g_timeout_add(1200, __add_item_running_list, item);
 			}
@@ -628,8 +621,7 @@ static gboolean __request_handler(gpointer data)
 			close(clifd);
 	}
 
-	if (free_pkt)
-		free(pkt);
+	free(pkt);
 
 	if (kb != NULL)
 		bundle_free(kb), kb = NULL;
