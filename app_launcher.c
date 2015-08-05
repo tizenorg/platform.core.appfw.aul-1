@@ -123,10 +123,8 @@ static int __appinfo_list_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 	char *label;
 	char *appid;
 
-	if (pkgmgrinfo_appinfo_get_label(handle, &label)) {
-		printf("Failed to get app label\n");
-		return -1;
-	}
+	if (pkgmgrinfo_appinfo_get_label(handle, &label))
+		label = "";
 
 	if (pkgmgrinfo_appinfo_get_appid(handle, &appid)) {
 		printf("Failed to get appid\n");
