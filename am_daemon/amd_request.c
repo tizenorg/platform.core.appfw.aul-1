@@ -440,7 +440,6 @@ static gboolean __request_handler(gpointer data)
 	int pid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
-	pkt_t *pkt_uid;
 	struct appinfo *ai;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
@@ -468,10 +467,6 @@ static gboolean __request_handler(gpointer data)
 				item->uid = cr.uid;
 				strncpy(item->appid, appid, 511);
 				free_pkt = 0;
-
-				pkt_uid = calloc(1, sizeof(pkt_t));
-				pkt_uid->caller_uid = cr.uid;
-				pkt_uid->pkt = pkt;
 
 				g_timeout_add(1200, __add_item_running_list, item);
 			}
