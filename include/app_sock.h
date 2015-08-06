@@ -88,6 +88,7 @@ typedef struct _app_pkt_t {
 	int len;
 	unsigned char data[1];
 } app_pkt_t;
+#define AUL_PKT_HEADER_SIZE (sizeof(int) + sizeof(int))
 
 typedef struct _pkt_t {
 	uid_t caller_uid;

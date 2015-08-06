@@ -358,7 +358,7 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
-	int ret;
+	int sent = 0;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
 
@@ -373,53 +373,28 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 	if (fd < 0)
 		return -ECOMM;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
 	memcpy(pkt->data, kb_data, datalen);
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
-				if (ret < 0) {
-					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE) {
-						_E("pid:%d, fd:%d\n", pid, fd);
-					}
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("sendto() len - %d %d", len, datalen + 8);
-			}
-		} else {
-			if (errno == EPIPE) {
-				_E("pid:%d, fd:%d\n", pid, fd);
-			}
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error pid:%d, fd:%d (errno %d)", pid, fd, errno);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
+			free(pkt);
 			return -ECOMM;
 		}
+		sent += len;
 	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
-	}
+
+	free(pkt);
 
 retry_recv:
 	len = recv(fd, &res, sizeof(int), 0);
@@ -445,7 +420,7 @@ int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
-	int ret;
+	int sent = 0;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
 
@@ -460,53 +435,28 @@ int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen)
 	if (fd < 0)
 		return -ECOMM;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
 	memcpy(pkt->data, kb_data, datalen);
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
-				if (ret < 0) {
-					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE) {
-						_E("uid:%d, fd:%d\n", uid, fd);
-					}
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("sendto() len - %d %d", len, datalen + 8);
-			}
-		} else {
-			if (errno == EPIPE) {
-				_E("uid:%d, fd:%d\n", uid, fd);
-			}
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error uid:%d, fd:%d (errno %d)", uid, fd, errno);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
+			free(pkt);
 			return -ECOMM;
 		}
+		sent += len;
 	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
-	}
+
+	free(pkt);
 
 retry_recv:
 	len = recv(fd, &res, sizeof(int), 0);
@@ -532,11 +482,11 @@ int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, 
 {
 	int fd;
 	int len;
-	int ret;
+	int sent = 0;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
 
-	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
 		_E("keybundle error\n");
 		return -EINVAL;
 	}
@@ -547,73 +497,42 @@ int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, 
 	if (fd < 0)
 		return -ECOMM;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
 	memcpy(pkt->data, kb_data, datalen);
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
-				if (ret < 0) {
-					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE) {
-						_E("uid:%d, fd:%d\n", uid, fd);
-					}
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("sendto() len - %d %d", len, datalen + 8);
-			}
-		} else {
-			if (errno == EPIPE) {
-				_E("uid:%d, fd:%d\n", uid, fd);
-			}
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error uid:%d, fd:%d (errno %d)", uid, fd, errno);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
+			free(pkt);
 			return -ECOMM;
 		}
-	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
+		sent += len;
 	}
 
+	free(pkt);
 	close(fd);
 
 	return res;
 }
-
-
-
-
-
 
 int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
-	int ret;
+	int sent = 0;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
 
-	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
 		_E("keybundle error\n");
 		return -EINVAL;
 	}
@@ -624,72 +543,41 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 	if (fd < 0)
 		return -ECOMM;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
 	memcpy(pkt->data, kb_data, datalen);
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
-				if (ret < 0) {
-					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE) {
-						_E("pid:%d, fd:%d\n", pid, fd);
-					}
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("sendto() len - %d %d", len, datalen + 8);
-			}
-		} else {
-			if (errno == EPIPE) {
-				_E("pid:%d, fd:%d\n", pid, fd);
-			}
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error pid:%d, fd:%d (errno %d)", pid, fd, errno);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
+			free(pkt);
 			return -ECOMM;
 		}
-	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
+		sent += len;
 	}
 
+	free(pkt);
 	close(fd);
 
 	return res;
 }
 
-
-
-
-
-
 int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
-	int ret;
+	int sent = 0;
 	app_pkt_t *pkt = NULL;
 
-	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
+	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
 		_E("keybundle error\n");
 		return -EINVAL;
 	}
@@ -700,53 +588,28 @@ int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, in
 	if (fd < 0)
 		return -ECOMM;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
 	memcpy(pkt->data, kb_data, datalen);
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, 0);
-				if (ret < 0) {
-					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE) {
-						_E("pid:%d, fd:%d\n", pid, fd);
-					}
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("sendto() len - %d %d", len, datalen + 8);
-			}
-		} else {
-			if (errno == EPIPE) {
-				_E("pid:%d, fd:%d\n", pid, fd);
-			}
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error pid:%d, fd:%d (errno %d)", pid, fd, errno);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
+			free(pkt);
 			return -ECOMM;
 		}
+		sent += len;
 	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
-	}
+
+	free(pkt);
 
 	return fd;
 }
@@ -759,6 +622,9 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 	int sun_size;
 	app_pkt_t *pkt = NULL;
 	int cl = sizeof(struct ucred);
+	unsigned char buf[AUL_SOCK_MAXBUFF];
+	int cmd;
+	int datalen;
 
 	sun_size = sizeof(struct sockaddr_un);
 
@@ -776,31 +642,34 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 		return NULL;
 	}
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
-	if(pkt == NULL) {
-		close(*clifd);
-		return NULL;
-	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
-
 	__set_sock_option(*clifd, 1);
 
  retry_recv:
-	/* receive single packet from socket */
-	len = recv(*clifd, pkt, AUL_SOCK_MAXBUFF, 0);
+	/* receive header(cmd, datalen) */
+	len = recv(*clifd, buf, AUL_PKT_HEADER_SIZE, 0);
 	if (len < 0)
 		if (errno == EINTR)
 			goto retry_recv;
 
-	if (len < 8) {
-		_E("recv error %d %d", len, pkt->len);
-		free(pkt);
+	if (len < AUL_PKT_HEADER_SIZE) {
+		_E("recv error");
 		close(*clifd);
 		return NULL;
 	}
+	memcpy(&cmd, buf, sizeof(int));
+	memcpy(&datalen, buf + sizeof(int), sizeof(int));
 
-	while( len != (pkt->len + 8) ) {
-		ret = recv(*clifd, &pkt->data[len-8], AUL_SOCK_MAXBUFF, 0);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
+	if (pkt == NULL) {
+		close(*clifd);
+		return NULL;
+	}
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+
+	len = 0;
+	while( len != pkt->len ) {
+		ret = recv(*clifd, pkt->data + len, pkt->len - len, 0);
 		if (ret < 0) {
 			_E("recv error %d %d", len, pkt->len);
 			free(pkt);
@@ -818,55 +687,78 @@ app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, 
 {
 	int fd;
 	int len;
+	int ret;
+	int sent = 0;
 	app_pkt_t *pkt = NULL;
+	unsigned char buf[AUL_SOCK_MAXBUFF];
 
 	fd = __create_client_sock(pid);
 	if (fd < 0)
 		return NULL;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return NULL;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
-	if(kb_data) {
+	if (kb_data) {
 		memcpy(pkt->data, kb_data, datalen);
 	}
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d", len);
-		if (errno == EPIPE) {
-			_E("pid:%d, fd:%d\n", pid, fd);
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error pid:%d, fd:%d (errno %d)", pid, fd, errno);
+			close(fd);
+			free(pkt);
+			return -ECOMM;
 		}
-		close(fd);
-
-		free(pkt);
-		return NULL;
+		sent += len;
 	}
+	free(pkt);
 
 retry_recv:
-       /* receive single packet from socket */
-	len = recv(fd, pkt, AUL_SOCK_MAXBUFF, 0);
-	if (len == -1) {
-		if (errno == EAGAIN) {
-			_E("recv timeout \n");
-			free(pkt);
-			close(fd);
-			return NULL;
-		} else if (errno == EINTR) {
+	/* receive header(cmd, datalen) */
+	len = recv(fd, buf, AUL_PKT_HEADER_SIZE, 0);
+	if (len < 0)
+		if (errno == EINTR)
 			goto retry_recv;
-		} else {
-			_E("recv error %s\n", strerror(errno));
-			free(pkt);
-			close(fd);
-			return NULL;
+
+	if (len < AUL_PKT_HEADER_SIZE) {
+		_E("recv error");
+		close(fd);
+		return NULL;
+	}
+	memcpy(&cmd, buf, sizeof(int));
+	memcpy(&datalen, buf + sizeof(int), sizeof(int));
+
+	pkt = (app_pkt_t *) malloc(AUL_PKT_HEADER_SIZE + datalen);
+	if (pkt == NULL) {
+		close(fd);
+		return NULL;
+	}
+	pkt->cmd = cmd;
+	pkt->len = datalen;
+
+	len = 0;
+	while( len != pkt->len ) {
+		ret = recv(fd, pkt->data + len, pkt->len - len, 0);
+		if (ret < 0) {
+			if (errno == EINTR) {
+				continue;
+			} else {
+				_E("recv error %s\n", strerror(errno));
+				free(pkt);
+				close(fd);
+				return NULL;
+			}
 		}
-	} else
-		_D("recv result  = %d", len);
+		len += ret;
+		_D("recv len %d %d", len, pkt->len);
+	}
 	close(fd);
 
 	return pkt;

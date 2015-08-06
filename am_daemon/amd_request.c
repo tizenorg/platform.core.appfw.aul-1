@@ -61,12 +61,11 @@ static int __send_result_data(int fd, int cmd, unsigned char *kb_data, int datal
 		return -EINVAL;
 	}
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(sizeof(int) + sizeof(int) + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
@@ -462,6 +461,10 @@ static gboolean __request_handler(gpointer data)
 			}
 			if(ret > 0) {
 				item = calloc(1, sizeof(item_pkt_t));
+				if (item == NULL) {
+					_E("out of memory");
+					return FALSE;
+				}
 				item->pid = ret;
 				item->uid = cr.uid;
 				strncpy(item->appid, appid, 511);
@@ -530,6 +533,11 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_IS_RUNNING:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
+			if (appid == NULL) {
+				_E("out of memory");
+				__send_result_to_client(clifd, -1);
+				break;
+			}
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 			ret = _status_app_is_running(appid, cr.uid);
 			SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
@@ -557,6 +565,11 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
+			if (appid == NULL) {
+				_E("out of memory");
+				__send_result_to_client(clifd, -1);
+				break;
+			}
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 			ret = __release_srv(cr.uid, appid);
 			__send_result_to_client(clifd, ret);

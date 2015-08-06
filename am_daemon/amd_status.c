@@ -57,6 +57,10 @@ int _status_add_app_info_list(const char *appid, const char *app_path, int pid, 
 	}
 
 	info_t = malloc(sizeof(app_status_info_t));
+	if (info_t == NULL) {
+		_E("out of memory");
+		return -1;
+	}
 	strncpy(info_t->appid, appid, MAX_PACKAGE_STR_SIZE-1);
 	strncpy(info_t->app_path, app_path, MAX_PACKAGE_APP_PATH_SIZE-1);
 	info_t->status = STATUS_LAUNCHING;
@@ -200,14 +204,7 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 	app_pkt_t *pkt = NULL;
 	int len;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
-
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
-	if(!pkt) {
-		_E("malloc fail");
-		return 0;
-	}
-
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
+	char buf[AUL_SOCK_MAXBUFF] = {0, };
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
@@ -216,16 +213,24 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 			continue;
 
 		snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", info_t->pid);
-		strncat((char *)pkt->data, tmp_pid, MAX_PID_STR_BUFSZ);
-		strncat((char *)pkt->data, ":", 1);
-		strncat((char *)pkt->data, info_t->appid, MAX_PACKAGE_STR_SIZE);
-		strncat((char *)pkt->data, ":", 1);
-		strncat((char *)pkt->data, info_t->app_path, MAX_PACKAGE_APP_PATH_SIZE);
-		strncat((char *)pkt->data, ";", 1);
+		strncat(buf, tmp_pid, MAX_PID_STR_BUFSZ);
+		strncat(buf, ":", 1);
+		strncat(buf, info_t->appid, MAX_PACKAGE_STR_SIZE);
+		strncat(buf, ":", 1);
+		strncat(buf, info_t->app_path, MAX_PACKAGE_APP_PATH_SIZE);
+		strncat(buf, ";", 1);
+	}
+
+	len = strlen(buf) + 1;
+	pkt = (app_pkt_t *) malloc(sizeof(int) + sizeof(int) + len);
+	if (!pkt) {
+		_E("malloc fail");
+		return 0;
 	}
 
 	pkt->cmd = APP_RUNNING_INFO_RESULT;
-	pkt->len = strlen((char *)pkt->data) + 1;
+	pkt->len = len;
+	memcpy(pkt->data, buf, len);
 
 	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
 		if (errno == EPIPE)
@@ -233,7 +238,7 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 		_E("send fail to client");
 	}
 
-	if(pkt)
+	if (pkt)
 		free(pkt);
 
 	close(fd);
@@ -243,6 +248,7 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 
 int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 {
+	const char *app_exec;
 	char *apppath;
 	int ret;
 	int i = 0;
@@ -252,11 +258,19 @@ int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 		return -1;
 
 	ai = appinfo_find(caller_uid, appid);
-
-	if(ai == NULL)
+	if (ai == NULL)
 		return -1;
 
-	apppath = strdup(appinfo_get_value(ai, AIT_EXEC));
+	app_exec = appinfo_get_value(ai, AIT_EXEC);
+	if (app_exec == NULL) {
+		_E("invalid appinfo");
+		return -1;
+	}
+	apppath = strdup(app_exec);
+	if (apppath == NULL) {
+		_E("out of memory");
+		return -1;
+	}
 
 	/*truncate apppath if it includes default bundles */
 	while (apppath[i] != 0) {
@@ -278,17 +292,25 @@ static int __get_pkginfo(const char *dname, const char *cmdline, void *priv,uid_
 {
 	app_info_from_db *menu_info;
 	char *r_info;
+	char *appid;
+	char *app_path;
 
 	r_info = (char *)priv;
 
 	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL)
 		goto out;
 	else {
+		appid = _get_appid(menu_info);
+		if (appid == NULL)
+			goto out;
+		app_path = _get_app_path(menu_info);
+		if (app_path == NULL)
+			goto out;
 		strncat(r_info, dname, 8);
 		strncat(r_info, ":", 1);
-		strncat(r_info, _get_appid(menu_info), MAX_PACKAGE_STR_SIZE);
+		strncat(r_info, appid, MAX_PACKAGE_STR_SIZE);
 		strncat(r_info, ":", 1);
-		strncat(r_info, _get_app_path(menu_info), MAX_PACKAGE_APP_PATH_SIZE);
+		strncat(r_info, app_path, MAX_PACKAGE_APP_PATH_SIZE);
 		strncat(r_info, ";", 1);
 	}
 
@@ -302,20 +324,21 @@ int _status_send_running_appinfo_v2(int fd)
 {
 	app_pkt_t *pkt = NULL;
 	int len;
+	char buf[AUL_SOCK_MAXBUFF] = {0 ,};
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
-	if(!pkt) {
+	__proc_iter_cmdline(__get_pkginfo, buf);
+	len = strlen(buf) + 1;
+
+	pkt = (app_pkt_t *) malloc(sizeof(int) + sizeof(int) + len);
+	if (!pkt) {
 		_E("malloc fail");
 		close(fd);
 		return 0;
 	}
 
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
-
-	__proc_iter_cmdline(__get_pkginfo, pkt->data);
-
 	pkt->cmd = APP_RUNNING_INFO_RESULT;
-	pkt->len = strlen((char *)pkt->data) + 1;
+	pkt->len = len;
+	memcpy(pkt->data, buf, len);
 
 	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
 		if (errno == EPIPE)
@@ -341,8 +364,10 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 		return -1;
 
 	uid = __proc_get_usr_bypid(pid);
-	if (uid == -1)
+	if (uid == -1) {
+		free(cmdline);
 		return -1;
+	}
 
 	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
 		free(cmdline);
@@ -360,37 +385,43 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 int _status_get_appid_bypid(int fd, int pid)
 {
 	app_pkt_t *pkt = NULL;
-	int len;
+	int cmd;
+	int len = 0;
 	int pgid;
+	char appid[MAX_PACKAGE_STR_SIZE] = {0, };
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
-	if(!pkt) {
-		_E("malloc fail");
-		close(fd);
-		return 0;
-	}
+	cmd = APP_GET_APPID_BYPID_ERROR;
 
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
-
-	pkt->cmd = APP_GET_APPID_BYPID_ERROR;
-
-	if (__get_appid_bypid(pid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0) {
+	if (__get_appid_bypid(pid, appid, MAX_PACKAGE_STR_SIZE) == 0) {
 		SECURE_LOGD("appid for %d is %s", pid, pkt->data);
-		pkt->cmd = APP_GET_APPID_BYPID_OK;
+		len = strlen(appid) + 1;
+		cmd = APP_GET_APPID_BYPID_OK;
 		goto out;
 	}
 	/* support app launched by shell script*/
 	_D("second chance");
 	pgid = getpgid(pid);
-	if (pgid <= 1)
-		goto out;
+	if (pgid <= 1) {
+		close(fd);
+		return 0;
+	}
 
 	_D("second change pgid = %d, pid = %d", pgid, pid);
-	if (__get_appid_bypid(pgid, (char *)pkt->data, MAX_PACKAGE_STR_SIZE) == 0)
-		pkt->cmd = APP_GET_APPID_BYPID_OK;
+	if (__get_appid_bypid(pgid, appid, MAX_PACKAGE_STR_SIZE) == 0) {
+		len = strlen(appid) + 1;
+		cmd = APP_GET_APPID_BYPID_OK;
+	}
 
  out:
-	pkt->len = strlen((char *)pkt->data) + 1;
+	pkt = (app_pkt_t *)malloc(sizeof(int) + sizeof(int) + len);
+	if (!pkt) {
+		_E("malloc fail");
+		close(fd);
+		return 0;
+	}
+	pkt->cmd = cmd;
+	pkt->len = len;
+	memcpy(pkt->data, appid, len);
 
 	if ((len = send(fd, pkt, pkt->len + 8, 0)) != pkt->len + 8) {
 		if (errno == EPIPE)
@@ -398,7 +429,7 @@ int _status_get_appid_bypid(int fd, int pid)
 		_E("send fail to client");
 	}
 
-	if(pkt)
+	if (pkt)
 		free(pkt);
 
 	close(fd);
