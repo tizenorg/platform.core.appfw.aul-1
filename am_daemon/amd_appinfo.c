@@ -291,6 +291,7 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 			_free_appinfo);
 	if (info->tbl == NULL) {
 		_E("out of memory");
+		free(info);
 		return NULL;
 	}
 
