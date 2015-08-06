@@ -191,6 +191,10 @@ gboolean __add_item_running_list(gpointer user_data)
 	}
 	if (found == 0) {
 		info_t = malloc(sizeof(r_app_info_t));
+		if (info_t == NULL) {
+			_E("out of memory");
+			return false;
+		}
 		strncpy(info_t->pkg_name, pkgname, sizeof(info_t->pkg_name));
 		info_t->pkg_name[sizeof(info_t->pkg_name) - 1] = '\0';
 		info_t->pid = pid;

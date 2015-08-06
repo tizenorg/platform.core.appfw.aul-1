@@ -373,7 +373,7 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 	if (fd < 0)
 		return -ECOMM;
 
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(sizeof(int) + sizeof(int) + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
