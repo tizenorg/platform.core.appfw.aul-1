@@ -153,8 +153,8 @@ int _resume_app(int pid, int clifd)
 	int dummy;
 	int ret;
 	if ((ret =
-	     __app_send_raw_with_delay_reply(pid, APP_RESUME_BY_PID, (unsigned char *)&dummy,
-			    sizeof(int))) < 0) {
+	     __app_send_raw_with_delay_reply(pid, APP_RESUME_BY_PID,
+		     (unsigned char *)&dummy, 0)) < 0) {
 		if (ret == -EAGAIN)
 			_E("resume packet timeout error");
 		else {
@@ -178,8 +178,8 @@ int _pause_app(int pid, int clifd)
 	int dummy;
 	int ret;
 	if ((ret =
-	    __app_send_raw_with_delay_reply(pid, APP_PAUSE_BY_PID, (unsigned char *)&dummy,
-			    sizeof(int))) < 0) {
+	    __app_send_raw_with_delay_reply(pid, APP_PAUSE_BY_PID,
+		    (unsigned char *)&dummy, 0)) < 0) {
 		if (ret == -EAGAIN)
 			_E("pause packet timeout error");
 		else {
@@ -203,7 +203,7 @@ int _term_sub_app(int pid)
 	int ret;
 
 	if ( (ret = __app_send_raw_with_noreply(pid, APP_TERM_BY_PID_ASYNC,
-					(unsigned char *)&dummy, sizeof(int))) < 0) {
+					(unsigned char *)&dummy, 0)) < 0) {
 		_E("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
 			_E("fail to killing - %d\n", pid);
@@ -237,7 +237,7 @@ int _term_app(int pid, int clifd)
 	}
 
 	if ( (ret = __app_send_raw_with_delay_reply
-	    (pid, APP_TERM_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
+	    (pid, APP_TERM_BY_PID, (unsigned char *)&dummy, 0)) < 0) {
 		_D("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
 			_E("fail to killing - %d\n", pid);
@@ -259,7 +259,7 @@ int _term_req_app(int pid, int clifd)
 	int ret;
 
 	if ( (ret = __app_send_raw_with_delay_reply
-		(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, sizeof(int))) < 0) {
+		(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, 0)) < 0) {
 		_D("terminate req send error");
 		__real_send(clifd, ret);
 	}
@@ -338,6 +338,9 @@ int _fake_launch_app(int cmd, int pid, bundle *kb, int clifd)
 
 static void __real_send(int clifd, int ret)
 {
+	if (clifd < 0)
+		return;
+
 	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
 		if (errno == EPIPE) {
 			_E("send failed due to EPIPE.\n");
