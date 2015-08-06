@@ -338,6 +338,9 @@ int _fake_launch_app(int cmd, int pid, bundle *kb, int clifd)
 
 static void __real_send(int clifd, int ret)
 {
+	if (clifd < 0)
+		return;
+
 	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
 		if (errno == EPIPE) {
 			_E("send failed due to EPIPE.\n");
