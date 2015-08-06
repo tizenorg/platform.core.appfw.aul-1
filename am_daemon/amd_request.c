@@ -52,58 +52,34 @@ static gboolean __request_handler(gpointer data);
 static int __send_result_data(int fd, int cmd, unsigned char *kb_data, int datalen)
 {
 	int len;
-	int ret;
+	int sent = 0;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
 
-	if (datalen > AUL_SOCK_MAXBUFF - 8) {
-		_E("datalen > AUL_SOCK_MAXBUFF\n");
-		return -EINVAL;
-	}
-
-	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(sizeof(int) + sizeof(int) + datalen);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
 	memcpy(pkt->data, kb_data, datalen);
 
-	if ((len = send(fd, pkt, datalen + 8, MSG_NOSIGNAL)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len-8], datalen + 8 - len, MSG_NOSIGNAL);
-				if (ret < 0) {
-					_E("second sendto() failed - %d %d (errno %d)", ret, datalen + 8, errno);
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("sendto() len - %d %d", len, datalen + 8);
-			}
-		} else {
+	while (sent != AUL_PKT_HEADER_SIZE + datalen) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + datalen - sent, 0);
+		if (len <= 0) {
+			_E("send error fd:%d (errno %d)", fd, errno);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
+			free(pkt);
 			return -ECOMM;
 		}
-	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
+		sent += len;
 	}
 
+	free(pkt);
 	close(fd);
+
 	return res;
 }
 
@@ -462,6 +438,10 @@ static gboolean __request_handler(gpointer data)
 			}
 			if(ret > 0) {
 				item = calloc(1, sizeof(item_pkt_t));
+				if (item == NULL) {
+					_E("out of memory");
+					return FALSE;
+				}
 				item->pid = ret;
 				item->uid = cr.uid;
 				strncpy(item->appid, appid, 511);
@@ -530,6 +510,11 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_IS_RUNNING:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
+			if (appid == NULL) {
+				_E("out of memory");
+				__send_result_to_client(clifd, -1);
+				break;
+			}
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 			ret = _status_app_is_running(appid, cr.uid);
 			SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
@@ -557,6 +542,11 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
+			if (appid == NULL) {
+				_E("out of memory");
+				__send_result_to_client(clifd, -1);
+				break;
+			}
 			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 			ret = __release_srv(cr.uid, appid);
 			__send_result_to_client(clifd, ret);
