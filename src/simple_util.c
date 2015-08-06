@@ -216,8 +216,8 @@ char *__proc_get_exe_bypid(int pid)
 	ssize_t len;
 
 	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-	len=readlink(buf,buf2,MAX_CMD_BUFSZ);
-	if (len<=0)
+	len=readlink(buf, buf2, MAX_CMD_BUFSZ - 1);
+	if (len <= 0)
 		return NULL;
 	buf2[len] = 0;
 	return strdup(buf2);
@@ -226,7 +226,7 @@ char *__proc_get_exe_bypid(int pid)
 static inline int __get_pgid_from_stat(int pid)
 {
 	char buf[MAX_LOCAL_BUFSZ];
-	char *str;
+	char *str = NULL;
 	int ret;
 	int i;
 	int count = 0;
@@ -251,7 +251,7 @@ static inline int __get_pgid_from_stat(int pid)
 		}
 	}
 
-	if (count == PROC_STAT_GID_POS)
+	if (count == PROC_STAT_GID_POS && str != NULL)
 		pid = atoi(str);
 	else
 		pid = -1;
