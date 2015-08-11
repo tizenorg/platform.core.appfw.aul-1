@@ -497,7 +497,7 @@ SLPAPI int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *da
 
 	info = __find_resultcb(pid);
 	if (info == NULL)
-		return AUL_E_ERROR;
+		return AUL_R_ERROR;
 
 	info->caller_cb = caller_cb;
 	info->caller_data = data;
@@ -514,7 +514,7 @@ SLPAPI int aul_remove_caller_cb(int pid)
 
 	info = __find_resultcb(pid);
 	if (info == NULL)
-		return AUL_E_ERROR;
+		return AUL_R_ERROR;
 
 	info->caller_cb = NULL;
 	info->caller_data = NULL;
