@@ -23,7 +23,6 @@ Requires(preun):  /usr/bin/systemctl
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
-BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  xdgmime-devel, pkgconfig(xdgmime)

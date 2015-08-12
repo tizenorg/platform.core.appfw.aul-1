@@ -50,7 +50,6 @@
 #include "aul_util.h"
 #include "sigchild.h"
 
-#include <sqlite3.h>
 #include <rua.h>
 
 #define _static_ static inline
@@ -718,7 +717,6 @@ _static_ void __agent_main_loop(int main_fd)
 		free(pkt);
 
 	if (initialized > AUL_POLL_CNT) {
-		sqlite3_release_memory(SQLITE_FLUSH_MAX);
 		malloc_trim(0);
 		initialized = 1;
 	}
