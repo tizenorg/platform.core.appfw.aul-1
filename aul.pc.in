@@ -8,6 +8,6 @@ includedir=@INCLUDE_INSTALL_DIR@
 Name: libaul
 Description: new application utility library 
 Version: @VERSION@
-Requires: bundle glib-2.0 xdgmime vconf dlog
+Requires: bundle glib-2.0 xdgmime vconf dlog libsmack db-util sqlite3
 Libs: -L${libdir} -laul
 Cflags: -I${includedir} -I${includedir}/aul
