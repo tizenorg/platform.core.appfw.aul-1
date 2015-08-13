@@ -24,6 +24,7 @@
 #include <aul.h>
 #include <glib.h>
 #include <string.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/prctl.h>
@@ -552,7 +553,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	ai = appinfo_find(caller_uid, appid);
 	if (ai == NULL) {
 		_D("cannot find appinfo of %s", appid);
-		__real_send(fd, -1);
+		__real_send(fd, -ENOENT);
 		return -1;
 	}
 

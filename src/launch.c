@@ -113,6 +113,44 @@ static int app_pause(void)
 	return 0;
 }
 
+static int __get_aul_error(int res)
+{
+	int ret;
+
+	switch (res) {
+	case -EREJECTED:
+		ret = AUL_R_EREJECTED;
+		break;
+	case -ENOENT:
+		ret = AUL_R_ENOAPP;
+		break;
+	case -ENOLAUNCHPAD:
+		ret = AUL_R_ENOLAUNCHPAD;
+		break;
+	case -ETERMINATING:
+		ret = AUL_R_ETERMINATING;
+		break;
+	case -EILLEGALACCESS:
+		ret = AUL_R_EILLACC;
+		break;
+	case -ELOCALLAUNCH_ID:
+		ret = AUL_R_LOCAL;
+		break;
+	case -EAGAIN:
+		ret = AUL_R_ETIMEOUT;
+		break;
+	case -EINVAL:
+		ret = AUL_R_EINVAL;
+		break;
+	case -ECOMM:
+		ret = AUL_R_ECOMM;
+		break;
+	default:
+		ret = AUL_R_ERROR;
+	}
+
+	return ret;
+}
 
 /**
  * @brief	encode kb and send it to 'pid'
@@ -127,36 +165,8 @@ SLPAPI int app_agent_send_cmd(int uid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_agent_send_raw(uid, cmd, kb_data, datalen)) < 0) {
-		switch (res) {
-		case -EINVAL:
-			res = AUL_R_EINVAL;
-			break;
-		case -ECOMM:
-			res = AUL_R_ECOMM;
-			break;
-		case -EAGAIN:
-			res = AUL_R_ETIMEOUT;
-			break;
-		case -ELOCALLAUNCH_ID:
-			res = AUL_R_LOCAL;
-			break;
-		case -EILLEGALACCESS:
-			res = AUL_R_EILLACC;
-			break;
-		case -ETERMINATING:
-			res = AUL_R_ETERMINATING;
-			break;
-		case -ENOLAUNCHPAD:
-			res = AUL_R_ENOLAUNCHPAD;
-			break;
-		case -EREJECTED:
-			res = AUL_R_EREJECTED;
-			break;
-		default:
-			res = AUL_R_ERROR;
-		}
-	}
+	if ((res = __app_agent_send_raw(uid, cmd, kb_data, datalen)) < 0)
+		res = __get_aul_error(res);
 	free(kb_data);
 
 	return res;
@@ -169,39 +179,12 @@ SLPAPI int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw_with_noreply(uid, cmd, kb_data, datalen)) < 0) {
-		switch (res) {
-		case -EINVAL:
-			res = AUL_R_EINVAL;
-			break;
-		case -ECOMM:
-			res = AUL_R_ECOMM;
-			break;
-		case -EAGAIN:
-			res = AUL_R_ETIMEOUT;
-			break;
-		case -ELOCALLAUNCH_ID:
-			res = AUL_R_LOCAL;
-			break;
-		case -EILLEGALACCESS:
-			res = AUL_R_EILLACC;
-			break;
-		default:
-			res = AUL_R_ERROR;
-		}
-	}
+	if ((res = __app_send_raw_with_noreply(uid, cmd, kb_data, datalen)) < 0)
+		res = __get_aul_error(res);
 	free(kb_data);
 
 	return res;
 }
-
-
-
-
-
-
-
-
 
 /**
  * @brief	encode kb and send it to 'pid'
@@ -216,33 +199,8 @@ SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw(pid, cmd, kb_data, datalen)) < 0) {
-		switch (res) {
-		case -EINVAL:
-			res = AUL_R_EINVAL;
-			break;
-		case -ECOMM:
-			res = AUL_R_ECOMM;
-			break;
-		case -EAGAIN:
-			res = AUL_R_ETIMEOUT;
-			break;
-		case -ELOCALLAUNCH_ID:
-			res = AUL_R_LOCAL;
-			break;
-		case -EILLEGALACCESS:
-			res = AUL_R_EILLACC;
-			break;
-		case -ETERMINATING:
-			res = AUL_R_ETERMINATING;
-			break;
-		case -ENOLAUNCHPAD:
-			res = AUL_R_ENOLAUNCHPAD;
-			break;
-		default:
-			res = AUL_R_ERROR;
-		}
-	}
+	if ((res = __app_send_raw(pid, cmd, kb_data, datalen)) < 0)
+		res = __get_aul_error(res);
 	free(kb_data);
 
 	return res;
@@ -255,27 +213,8 @@ SLPAPI int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0) {
-		switch (res) {
-		case -EINVAL:
-			res = AUL_R_EINVAL;
-			break;
-		case -ECOMM:
-			res = AUL_R_ECOMM;
-			break;
-		case -EAGAIN:
-			res = AUL_R_ETIMEOUT;
-			break;
-		case -ELOCALLAUNCH_ID:
-			res = AUL_R_LOCAL;
-			break;
-		case -EILLEGALACCESS:
-			res = AUL_R_EILLACC;
-			break;
-		default:
-			res = AUL_R_ERROR;
-		}
-	}
+	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0)
+		res = __get_aul_error(res);
 	free(kb_data);
 
 	return res;
