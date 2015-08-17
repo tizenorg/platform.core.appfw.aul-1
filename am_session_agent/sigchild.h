@@ -19,11 +19,11 @@
  *
  */
 
+#include <sys/signalfd.h>
 #include "launch.h"
 #include "aul_util.h"
 #include "app_signal.h"
 
-static struct sigaction old_sigchild;
 static DBusConnection *bus = NULL;
 sigset_t oldmask;
 
@@ -166,14 +166,22 @@ static int __sigchild_action(void *data)
 	return 0;
 }
 
-static void __agent_sig_child(int signo, siginfo_t *info, void *data)
+static void __agent_sig_child(int sigchld_fd)
 {
+	struct signalfd_siginfo info;
+	ssize_t s;
 	int status;
 	pid_t child_pid;
 	pid_t child_pgid;
 
-	child_pgid = getpgid(info->si_pid);
-	_D("dead_pid = %d pgid = %d", info->si_pid, child_pgid);
+	s = read(sigchld_fd, &info, sizeof(struct signalfd_siginfo));
+	if (s != sizeof(struct signalfd_siginfo)) {
+		_E("error reading sigchld info");
+		return;
+	}
+
+	child_pgid = getpgid(info.ssi_pid);
+	_D("dead_pid = %d pgid = %d", info.ssi_pid, child_pgid);
 
 	while ((child_pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		if (child_pid == child_pgid)
@@ -187,6 +195,17 @@ static void __agent_sig_child(int signo, siginfo_t *info, void *data)
 static inline int __signal_init(void)
 {
 	int i;
+	DBusError error;
+
+	dbus_error_init(&error);
+	dbus_threads_init_default();
+	bus = dbus_bus_get_private(DBUS_BUS_SESSION, &error);
+	if (!bus) {
+		_E("Failed to connect to the D-BUS daemon: %s", error.message);
+		dbus_error_free(&error);
+		return -1;
+	}
+
 	for (i = 0; i < _NSIG; i++) {
 		switch (i) {
 			/* controlled by sys-assert package*/
@@ -210,66 +229,29 @@ static inline int __signal_init(void)
 	return 0;
 }
 
-static inline int __signal_set_sigchld(void)
+static inline int __signal_get_sigchld_fd(void)
 {
-	struct sigaction act;
-	DBusError error;
+	sigset_t mask;
+	int sfd;
 
-	dbus_error_init(&error);
-	dbus_threads_init_default();
-	bus = dbus_bus_get_private(DBUS_BUS_SESSION, &error);
-	if (!bus) {
-		_E("Failed to connect to the D-BUS daemon: %s", error.message);
-		dbus_error_free(&error);
-		return -1;
-	}
-	/* TODO: if process stop mechanism is included,
-	should be modified (SA_NOCLDSTOP)*/
-	act.sa_handler = NULL;
-	act.sa_sigaction = __agent_sig_child;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
 
-	if (sigaction(SIGCHLD, &act, &old_sigchild) < 0)
-		return -1;
+	if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1)
+		_E("failed to sigprocmask");
 
-	return 0;
-}
-
-static inline int __signal_unset_sigchld(void)
-{
-	struct sigaction dummy;
-
-	if (bus == NULL)
-		return 0;
-
-	dbus_connection_close(bus);
-	if (sigaction(SIGCHLD, &old_sigchild, &dummy) < 0)
-		return -1;
-
-	return 0;
-}
-
-static inline int __signal_block_sigchld(void)
-{
-	sigset_t newmask;
-
-	sigemptyset(&newmask);
-	sigaddset(&newmask, SIGCHLD);
-
-	if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) < 0) {
-		_E("SIG_BLOCK error");
+	sfd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+	if (sfd == -1) {
+		_E("failed to create signal for SIGCHLD");
 		return -1;
 	}
 
-	_D("SIGCHLD blocked");
-
-	return 0;
+	return sfd;
 }
 
 static inline int __signal_unblock_sigchld(void)
 {
-	if(sigprocmask(SIG_SETMASK, &oldmask, NULL) < 0) {
+	if (sigprocmask(SIG_SETMASK, &oldmask, NULL) < 0) {
 		_E("SIG_SETMASK error");
 		return -1;
 	}
@@ -280,6 +262,9 @@ static inline int __signal_unblock_sigchld(void)
 
 static inline int __signal_fini(void)
 {
+	if (bus)
+		dbus_connection_close(bus);
+
 #ifndef PRELOAD_ACTIVATE
 	int i;
 	for (i = 0; i < _NSIG; i++)
