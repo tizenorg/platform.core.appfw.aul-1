@@ -53,11 +53,15 @@
 #include <rua.h>
 
 #define _static_ static inline
-#define POLLFD_MAX 1
 #define SQLITE_FLUSH_MAX       (1048576)       /* (1024*1024) */
 #define AUL_POLL_CNT		15
 #define AUL_PR_NAME			16
 
+enum {
+	MAIN_FD = 0,
+	SIGCHLD_FD,
+	POLLFD_MAX
+};
 
 static char *agent_cmdline;
 static int initialized = 0;
@@ -81,9 +85,8 @@ _static_ int __term_app(int pid);
 _static_ int __resume_app(int pid);
 _static_ int __real_send(int clifd, int ret);
 _static_ void __send_result_to_caller(int clifd, int ret);
-_static_ void __agent_main_loop(int main_fd);
+_static_ void __agent_main_loop(struct pollfd pfds[]);
 _static_ int __agent_pre_init(int argc, char **argv);
-_static_ int __agent_post_init();
 
 
 
@@ -589,8 +592,10 @@ static void __add_history(const char *pkg_name, const char *app_path, unsigned c
 		_E("rua add history error");
 }
 
-_static_ void __agent_main_loop(int main_fd)
+_static_ void __agent_main_loop(struct pollfd pfds[])
 {
+	int main_fd = pfds[MAIN_FD].fd;
+	int sigchld_fd = pfds[SIGCHLD_FD].fd;
 	bundle *kb = NULL;
 	app_pkt_t *pkt = NULL;
 	app_info_from_db *menu_info = NULL;
@@ -659,8 +664,7 @@ _static_ void __agent_main_loop(int main_fd)
 	_D("start %s: type=%s caller_uid=%d path=%s",appId,menu_info->pkg_type,uid,app_path);
 
 	PERF("get package information & modify bundle done");
-	if( !strcmp(menu_info->pkg_type, "wgt") || !strcmp(menu_info->pkg_type, "rpm") || !strcmp(menu_info->pkg_type, "tpk"))
-	{
+	if (!strcmp(menu_info->pkg_type, "wgt") || !strcmp(menu_info->pkg_type, "rpm") || !strcmp(menu_info->pkg_type, "tpk")) {
 		pid = fork();
 		if (pid == 0) {
 			PERF("fork done");
@@ -668,7 +672,8 @@ _static_ void __agent_main_loop(int main_fd)
 
 			close(clifd);
 			close(main_fd);
-			__signal_unset_sigchld();
+			close(sigchld_fd);
+			__signal_unblock_sigchld();
 			__signal_fini();
 
 			snprintf(sock_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, getpid());
@@ -700,9 +705,7 @@ _static_ void __agent_main_loop(int main_fd)
 	if (pid > 0) {
 		if (is_real_launch) {
 			/*TODO: retry*/
-			__signal_block_sigchld();
 			__send_app_launch_signal_dbus(pid);
-			__signal_unblock_sigchld();
 
 			__add_history(appId, app_path, pkt->data);
 		}
@@ -760,25 +763,6 @@ _static_ int __agent_pre_init(int argc, char **argv)
 	return fd;
 }
 
-_static_ int __agent_post_init()
-{
-	/* Setting this as a global variable to keep track
-	of agent poll cnt */
-	/* static int initialized = 0;*/
-
-	if (initialized) {
-		initialized++;
-		return 0;
-	}
-
-	if (__signal_set_sigchld() < 0)
-		return -1;
-
-	initialized++;
-
-	return 0;
-}
-
 static void __send_dead_siganl_to_amd(void)
 {
 	bundle *kb;
@@ -791,6 +775,7 @@ static void __send_dead_siganl_to_amd(void)
 int main(int argc, char **argv)
 {
 	int main_fd;
+	int sigchld_fd;
 	struct pollfd pfds[POLLFD_MAX];
 	int i;
 
@@ -803,24 +788,34 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-	pfds[0].fd = main_fd;
-	pfds[0].events = POLLIN;
-	pfds[0].revents = 0;
+	pfds[MAIN_FD].fd = main_fd;
+	pfds[MAIN_FD].events = POLLIN;
+	pfds[MAIN_FD].revents = 0;
+
+	sigchld_fd = __signal_get_sigchld_fd();
+	if (sigchld_fd < 0) {
+		_E("get sigchld fd failed");
+		exit(-1);
+	}
+
+	pfds[SIGCHLD_FD].fd = sigchld_fd;
+	pfds[SIGCHLD_FD].events = POLLIN;
+	pfds[SIGCHLD_FD].revents = 0;
 
 	while (loop_flag == TRUE) {
 		if (poll(pfds, POLLFD_MAX, -1) < 0)
 			continue;
 
-		/* init with concerning X & EFL (because of booting
-		sequence problem)*/
-		if (__agent_post_init() < 0) {
-			_E("agent post init failed");
-			exit(-1);
-		}
-
 		for (i = 0; i < POLLFD_MAX; i++) {
 			if ((pfds[i].revents & POLLIN) != 0) {
-				__agent_main_loop(pfds[i].fd);
+				switch (i) {
+				case MAIN_FD:
+					__agent_main_loop(pfds);
+					break;
+				case SIGCHLD_FD:
+					__agent_sig_child(pfds[i].fd);
+					break;
+				}
 			}
 		}
 	}
