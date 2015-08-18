@@ -430,13 +430,12 @@ static gboolean __request_handler(gpointer data)
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 			if (cr.uid == 0) {
-				_E("Root user request to start app assumming this is done by system deamon... Please fix it...switch to DEFAULT_USER");
-				ret = _start_app(appid, kb, pkt->cmd, cr.pid, DEFAULT_USER, clifd);
-			}
-			else {
+				_E("request from root, treat as global user");
+				ret = _start_app(appid, kb, pkt->cmd, cr.pid, GLOBAL_USER, clifd);
+			} else {
 				ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 			}
-			if(ret > 0) {
+			if (ret > 0) {
 				item = calloc(1, sizeof(item_pkt_t));
 				if (item == NULL) {
 					_E("out of memory");

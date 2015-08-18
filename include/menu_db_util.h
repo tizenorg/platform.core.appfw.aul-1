@@ -208,9 +208,8 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 	int ret = PMINFO_R_OK;
 
 	if (uid == 0) {
-		_E("Root user request to start app assumming this is done by"
-				"system deamon... Please fix it...switch to DEFAULT_USER");
-		uid = DEFAULT_USER;
+		_E("request from root, treat as global user");
+		uid = GLOBAL_USER;
 	}
 
 	if (apppath == NULL)
