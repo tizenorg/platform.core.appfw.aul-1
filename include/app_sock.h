@@ -64,6 +64,7 @@ enum app_cmd {
 	APP_GROUP_GET_GROUP_PIDS,
 	APP_GROUP_RESUME,
 	APP_GROUP_GET_LEADER_PID,
+	APP_GET_STATUS,
 
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
