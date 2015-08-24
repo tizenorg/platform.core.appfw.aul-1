@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/smack.h>
 #include <fcntl.h>
 #include <string.h>
 #include <aul.h>
@@ -266,6 +267,33 @@ int __agent_dead_handler(uid_t user)
 	return 0;
 }
 
+static void _data_contol_init()
+{
+	char dir_path[] = "/tmp/data-control";
+	if (access(dir_path, F_OK) != 0 ) {
+		if (mkdir(dir_path, 01777) != 0) {
+			_E("Unable to create data-control directory\n");
+			return;
+		}
+	}
+	if (chmod(dir_path, 01777) != 0) {
+		_E("Unable to chmod data-control directory\n");
+		rmdir(dir_path);
+		return;
+	}
+	if (smack_setlabel((dir_path),
+				"User::App::Shared", SMACK_LABEL_ACCESS)) {
+		_E("Unable to label data-control directory\n");
+		rmdir(dir_path);
+		return;
+	}
+	if (smack_setlabel((dir_path), "1", SMACK_LABEL_TRANSMUTE)) {
+		_E("Unable to label transmute data-control directory\n");
+		rmdir(dir_path);
+		return;
+	}
+}
+
 static int __init()
 {
 	if (appinfo_init()) {
@@ -275,6 +303,7 @@ static int __init()
 
 	_requset_init();
 	app_group_init();
+	_data_contol_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
 				__vconf_cb, NULL) != 0)
