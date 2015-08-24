@@ -7,6 +7,7 @@ Description=Start the Access Control server
 
 [Service]
 EnvironmentFile=-/run/tizen-system-env
+ExecStartPre=/bin/sh -c 'mkdir -p /tmp/data-control && chmod 777 /tmp/data-control && chsmack -a "User::App::Shared" -t /tmp/data-control'
 ExecStart=/usr/bin/amd
 
 OOMScoreAdjust=-100
