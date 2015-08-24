@@ -31,6 +31,8 @@
 #include "simple_util.h"
 #include "aul.h"
 
+#define ROOT_UID 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define _EXTERNAL_APP_SPECIFIC_PATH \
 	tzplatform_mkpath(TZ_SYS_STORAGE, "sdcard/apps/")
 #define _APP_SPECIFIC_PATH tzplatform_getenv(TZ_USER_APP)
@@ -42,6 +44,19 @@ static const char _TEP_RESOURCE_DIR[] = "res/tep/";
 static const char _SHARED_DATA_DIR[] = "shared/data/";
 static const char _SHARED_TRUSTED_DIR[] = "shared/trusted/";
 static const char _SHARED_RESOURCE_DIR[] = "shared/res/";
+
+static const char * __get_specific_path(uid_t uid)
+{
+	const char * path;
+	if (uid == ROOT_UID || uid == GLOBAL_USER)
+		path = tzplatform_getenv(TZ_SYS_RO_APP);
+	else {
+		tzplatform_set_user(uid);
+		path = tzplatform_getenv(TZ_USER_APP);
+		tzplatform_reset_user();
+	}
+	return path;
+}
 
 static int __get_pkgid(char *pkgid, int len, const char *appid, uid_t uid)
 {
@@ -61,9 +76,8 @@ static int __get_pkgid(char *pkgid, int len, const char *appid, uid_t uid)
 		_appid = appid;
 	}
 
-	ret = pkgmgrinfo_appinfo_get_appinfo(_appid, &appinfo);
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(_appid, uid, &appinfo);
 	if (ret != PMINFO_R_OK) {
-		ret = pkgmgrinfo_appinfo_get_usr_appinfo(_appid, uid, &appinfo);
 		if (ret != PMINFO_R_OK) {
 			_E("Failed to get app info. (ret:%d)", ret);
 			return AUL_R_ENOAPP;
@@ -83,89 +97,31 @@ static int __get_pkgid(char *pkgid, int len, const char *appid, uid_t uid)
 	return AUL_R_OK;
 }
 
-static int __get_external_path(char **path, const char *appid,
-		const char *dir_name, uid_t uid)
-{
-	char buf[PATH_MAX];
-	char pkgid[NAME_MAX];
-	int ret;
-
-	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, uid);
-	if (ret != AUL_R_OK)
-		return ret;
-
-	snprintf(buf, sizeof(buf), "%s%s/%s", _EXTERNAL_APP_SPECIFIC_PATH,
-			pkgid, dir_name ? dir_name : "");
-
-	assert(path);
-	*path = strdup(buf);
-
-	return AUL_R_OK;
-}
-
-static int __get_path(char **path, const char *appid, const char *dir_name,
-		uid_t uid)
-{
-	char *_path;
-	char buf[PATH_MAX];
-	char pkgid[NAME_MAX];
-	int ret;
-	pkgmgrinfo_pkginfo_h pkginfo;
-	int len;
-
-	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, uid);
-	if (ret != AUL_R_OK)
-		return ret;
-
-	ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &pkginfo);
-	if (ret != PMINFO_R_OK) {
-		ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(pkgid, uid, &pkginfo);
-		if (ret != PMINFO_R_OK) {
-			_E("Failed to get pkginfo. (ret:%d)", ret);
-			pkgmgrinfo_pkginfo_destroy_pkginfo(pkginfo);
-			return AUL_R_ENOAPP;
-		}
-	}
-	ret = pkgmgrinfo_pkginfo_get_root_path(pkginfo, &_path);
-	if (ret != PMINFO_R_OK) {
-		_E("Failed to get root path. (ret:%d)", ret);
-		pkgmgrinfo_pkginfo_destroy_pkginfo(pkginfo);
-		return AUL_R_ERROR;
-	}
-
-	len = _path ? strlen(_path) : 0;
-	if (len == 0) {
-		_E("Root path is null or empty");
-		pkgmgrinfo_pkginfo_destroy_pkginfo(pkginfo);
-		return AUL_R_ERROR;
-	}
-
-	snprintf(buf, sizeof(buf), "%s%s%s", _path,
-			_path[len - 1] == '/' ?  "" : "/",
-			dir_name ? dir_name : "");
-
-	pkgmgrinfo_pkginfo_destroy_pkginfo(pkginfo);
-
-	assert(path);
-	*path = strdup(buf);
-
-	return AUL_R_OK;
-}
-
-static const char *__get(char **path, const char *appid,
+static const char *__get_path(char **path, const char *appid,
 		const char *dir_name, uid_t uid,
-		int (*func_get)(char **, const char *, const char *, uid_t))
+		bool ext)
 {
-	int r;
+	char buf[PATH_MAX];
+	char pkgid[NAME_MAX];
+	int ret;
 
 	if (*path)
 		return *path;
 
-	assert(func_get);
+	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, uid);
+	if (ret != AUL_R_OK)
+		return ret;
 
-	r = func_get(path, appid, dir_name, uid);
-	if (r != AUL_R_OK)
-		return NULL;
+	if (ext) {
+		snprintf(buf, sizeof(buf), "%s%s/%s", _EXTERNAL_APP_SPECIFIC_PATH,
+				pkgid, dir_name ? dir_name : "");
+	} else {
+		snprintf(buf, sizeof(buf), "%s/%s/%s", __get_specific_path(uid),
+				pkgid, dir_name ? dir_name : "");
+	}
+
+	assert(path);
+	*path = strdup(buf);
 
 	return *path;
 }
@@ -174,90 +130,89 @@ SLPAPI const char *aul_get_app_external_root_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, NULL, getuid(), __get_external_path);
+	return __get_path(&path, NULL, NULL, getuid(), true);
 }
 
 SLPAPI const char *aul_get_app_root_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, NULL, getuid(), __get_path);
+	return __get_path(&path, NULL, NULL, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_data_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _DATA_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _DATA_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_cache_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _CACHE_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _CACHE_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_resource_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _RESOURCE_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _RESOURCE_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_tep_resource_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _TEP_RESOURCE_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _TEP_RESOURCE_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_shared_data_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _SHARED_DATA_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _SHARED_DATA_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_shared_resource_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _SHARED_RESOURCE_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _SHARED_RESOURCE_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_shared_trusted_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _SHARED_TRUSTED_DIR, getuid(), __get_path);
+	return __get_path(&path, NULL, _SHARED_TRUSTED_DIR, getuid(), false);
 }
 
 SLPAPI const char *aul_get_app_external_data_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _DATA_DIR, getuid(), __get_external_path);
+	return __get_path(&path, NULL, _DATA_DIR, getuid(), true);
 }
 
 SLPAPI const char *aul_get_app_external_cache_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _CACHE_DIR, getuid(), __get_external_path);
+	return __get_path(&path, NULL, _CACHE_DIR, getuid(), true);
 }
 
 SLPAPI const char *aul_get_app_external_shared_data_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _SHARED_DATA_DIR, getuid(),
-			__get_external_path);
+	return __get_path(&path, NULL, _SHARED_DATA_DIR, getuid(), true);
 }
 
 SLPAPI const char *aul_get_app_specific_path(void)
 {
-	return _APP_SPECIFIC_PATH;
+	return __get_specific_path(getuid());
 }
 
 SLPAPI const char *aul_get_app_external_specific_path(void)
@@ -270,7 +225,7 @@ SLPAPI int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_path(path, appid, _SHARED_DATA_DIR, getuid());
+	return __get_path(path, appid, _SHARED_DATA_DIR, getuid(), false);
 }
 
 SLPAPI int aul_get_app_shared_resource_path_by_appid(const char *appid,
@@ -279,7 +234,7 @@ SLPAPI int aul_get_app_shared_resource_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_path(path, appid, _SHARED_RESOURCE_DIR, getuid());
+	return __get_path(path, appid, _SHARED_RESOURCE_DIR, getuid(), false);
 }
 
 SLPAPI int aul_get_app_shared_trusted_path_by_appid(const char *appid,
@@ -288,7 +243,7 @@ SLPAPI int aul_get_app_shared_trusted_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_path(path, appid, _SHARED_TRUSTED_DIR, getuid());
+	return __get_path(path, appid, _SHARED_TRUSTED_DIR, getuid(), false);
 }
 
 SLPAPI int aul_get_app_external_shared_data_path_by_appid(const char *appid,
@@ -297,7 +252,7 @@ SLPAPI int aul_get_app_external_shared_data_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_external_path(path, appid, _SHARED_DATA_DIR, getuid());
+	return __get_path(path, appid, _SHARED_DATA_DIR, getuid(), true);
 }
 
 SLPAPI int aul_get_usr_app_shared_data_path_by_appid(const char *appid,
@@ -306,7 +261,7 @@ SLPAPI int aul_get_usr_app_shared_data_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_path(path, appid, _SHARED_DATA_DIR, uid);
+	return __get_path(path, appid, _SHARED_DATA_DIR, uid, false);
 }
 
 SLPAPI int aul_get_usr_app_shared_resource_path_by_appid(const char *appid,
@@ -315,7 +270,7 @@ SLPAPI int aul_get_usr_app_shared_resource_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_path(path, appid, _SHARED_RESOURCE_DIR, uid);
+	return __get_path(path, appid, _SHARED_RESOURCE_DIR, uid, false);
 }
 
 SLPAPI int aul_get_usr_app_shared_trusted_path_by_appid(const char *appid,
@@ -324,7 +279,7 @@ SLPAPI int aul_get_usr_app_shared_trusted_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_path(path, appid, _SHARED_TRUSTED_DIR, uid);
+	return __get_path(path, appid, _SHARED_TRUSTED_DIR, uid, false);
 }
 
 SLPAPI int aul_get_usr_app_external_shared_data_path_by_appid(const char *appid,
@@ -333,5 +288,5 @@ SLPAPI int aul_get_usr_app_external_shared_data_path_by_appid(const char *appid,
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
 
-	return __get_external_path(path, appid, _SHARED_DATA_DIR, uid);
+	return __get_path(path, appid, _SHARED_DATA_DIR, uid, true);
 }
