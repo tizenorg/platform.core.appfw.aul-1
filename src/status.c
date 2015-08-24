@@ -27,13 +27,125 @@
 #include "aul_api.h"
 #include "launch.h"
 
+typedef struct _app_status_cb_info_t {
+	int (*handler) (int status, void *data);
+	void *data;
+	struct _app_status_cb_info_t *next;
+} app_status_cb_info_t;
+
+app_status_cb_info_t *app_status_cb = NULL;
+
+static int app_status = STATUS_LAUNCHING;
+
 SLPAPI int aul_status_update(int status)
 {
 	int ret;
+	app_status_cb_info_t *cb = app_status_cb;
+
+	app_status = status;
 
 	ret = __app_send_raw_with_noreply(AUL_UTIL_PID, APP_STATUS_UPDATE, (unsigned char *)&status, sizeof(status));
 
+	if (!ret) {
+		while (cb) {
+			if (cb->handler) {
+				if (cb->handler(app_status, cb->data) < 0)
+					aul_remove_status_local_cb(cb->handler, cb->data);
+			}
+
+			cb = cb->next;
+		}
+	}
+
 	return ret;
+}
+
+SLPAPI  int aul_app_get_status_bypid(int pid)
+{
+	int ret;
+
+	if (pid == getpid()) {
+		return app_status;
+	}
+
+	ret = __app_send_raw(AUL_UTIL_PID, APP_GET_STATUS, (unsigned char *)&pid, sizeof(pid));
+
+	return ret;
+}
+
+SLPAPI int aul_add_status_local_cb(int (*func)(int status, void *data), void *data)
+{
+	app_status_cb_info_t *cb = app_status_cb;
+
+	if (func == NULL)
+		return -1;
+
+	// check known callback
+	while (cb) {
+		if (cb && cb->handler == func && cb->data == data) {
+			// already in list
+			return 0;
+		}
+		cb = cb->next;
+	}
+
+	cb = (app_status_cb_info_t *)malloc(sizeof(app_status_cb_info_t));
+	if (cb == NULL)
+		return -1;
+
+	cb->handler = func;
+	cb->data = data;
+
+	cb->next = app_status_cb;
+	app_status_cb = cb;
+
+	return 0;
+}
+
+SLPAPI int aul_remove_status_local_cb(int (*func)(int status, void *data), void *data)
+{
+	app_status_cb_info_t *cb = app_status_cb;
+	app_status_cb_info_t *tmp = NULL;
+
+	if (app_status_cb
+		 && app_status_cb->handler == func
+		 && app_status_cb->data == data) {
+		cb = app_status_cb->next;
+		free(app_status_cb);
+		app_status_cb = cb;
+		return 0;
+	}
+
+	while (cb) {
+		if (cb->next
+			 && cb->next->handler == func
+			 && cb->next->data == data) {
+			tmp = cb->next->next;
+			free(cb->next);
+			cb->next = tmp;
+			return 0;
+		}
+
+		cb = cb->next;
+	}
+
+	return -1;
+}
+
+SLPAPI int aul_invoke_status_local_cb(int status)
+{
+	app_status_cb_info_t *cb = app_status_cb;
+
+	while (cb) {
+		if (cb->handler) {
+			if (cb->handler(status, cb->data) < 0)
+				aul_remove_status_local_cb(cb->handler, cb->data);
+		}
+
+		cb = cb->next;
+	}
+
+	return 0;
 }
 
 SLPAPI int aul_running_list_update(char *appid, char *app_path, char *pid)
