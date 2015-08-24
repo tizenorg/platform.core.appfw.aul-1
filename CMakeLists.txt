@@ -24,7 +24,7 @@ FOREACH(flag ${libpkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
-SET(AUL-1_PKG_CHECK_MODULES dlog rua glib-2.0 gio-2.0 vconf pkgmgr-info pkgmgr bundle)
+SET(AUL-1_PKG_CHECK_MODULES dlog rua glib-2.0 gio-2.0 vconf pkgmgr-info pkgmgr bundle libsmack)
 pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
 FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
