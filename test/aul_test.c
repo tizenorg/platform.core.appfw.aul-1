@@ -399,6 +399,32 @@ static int get_pkg_func()
 	return 0;
 }
 
+static char *status_text[] = {
+	"STATUS_LAUNCHING",
+	"STATUS_CREATED",
+	"STATUS_FOCUS",
+	"STATUS_VISIBLE",
+	"STATUS_BG",
+	"STATUS_DYING",
+	"STATUS_HOME",
+	"STATUS_NORESTART",
+	"STATUS_SERVICE",
+};
+
+static int get_status_pid()
+{
+	int ret;
+	ret = aul_app_get_status_bypid(apn_pid);
+
+	printf("pid: %d status: %d ", apn_pid, ret);
+	if (ret >= STATUS_LAUNCHING && ret <= STATUS_NORESTART)
+		printf("(%s)", status_text[ret]);
+
+	printf("\n");
+
+	return 0;
+}
+
 static int update_running_list()
 {
 	aul_running_list_update(gargv[2], gargv[3], gargv[4]);
@@ -559,6 +585,8 @@ static test_func_t test_func[] = {
 	      	"[usage] update_list <appid> <app_path> <pid>"},
 	{"reload", reload_appinfo, "reload appinfo table",
 		"[usage] reload"},
+	{"get_status_pid", get_status_pid, "aul_app_get_status_bypid test",
+		"[usage] get_status_pid <pid>"},
 /*
 	{"setpkg", set_pkg_func, "set package",
 	      	"[usage] setpkg <pkgname> <apppath>"},
