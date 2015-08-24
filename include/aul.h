@@ -94,7 +94,9 @@ enum app_status {
 	STATUS_VISIBLE,
 	STATUS_BG,
 	STATUS_DYING,
-	STATUS_HOME
+	STATUS_HOME,
+	STATUS_NORESTART,
+	STATUS_SERVICE
 };
 
 /** @} */
@@ -1655,6 +1657,152 @@ int aul_kill_pid(int pid);
 int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
 int aul_remove_caller_cb(int pid);
 int aul_invoke_caller_cb(int pid);
+
+/**
+ * @par Description:
+ *	This API gets status of specified application process id.
+ * @par Purpose:
+ *	This API's purpose is to get the application's status.
+ *
+ * @param[in]	pid	pid of application
+ * @return	0 or greater if success, nagative value if fail
+ * @retval	STATUS_LAUNCHING
+ * @retval	STATUS_CREATED
+ * @retval	STATUS_FOCUS
+ * @retval	STATUS_VISIBLE
+ * @retval	STATUS_BG
+ * @retval	STATUS_DYING
+ * @retval	STATUS_HOME
+ * @retval	STATUS_NORESTART
+ * @see
+ *	aul_status_update
+ * @pre
+ * 	None
+ * @post
+ * 	None
+ * @code
+ * #include <aul.h>
+ *
+ * int iterfunc(const aul_app_info *info, void *data)
+ * {
+ *	int status;
+ *	status = aul_app_get_status_bypid(info->pid);
+ *	if (status == STATUS_FOCUS) {
+ *		printf("%s has focus", info->app_id);
+ *		(int *)data = info->pid;
+ *		return -1;
+ *	}
+ *	return 0;
+ * }
+ *
+ * int find_focus_app_pid()
+ * {
+ *	int pid = 0;
+ *	aul_app_get_running_app_info(iterfunc, &pid);
+ *	return pid;
+ * }
+ * @endcode
+ * @remark
+ *	None
+ */
+int aul_app_get_status_bypid(int pid);
+
+/**
+ * @par Description
+ * 	This API sets callback function that on application status changed.
+ * @par Purpose:
+ *	This API's purpose is to listen the application's status changed within
+ *	the caller process. In general, a library that required to release resource on
+ *	application's status may use this API.
+ *
+ * @param[in]	func	callback function
+ * @param[in]	data	user data
+ * @return	0 if success, negative value if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- general error
+ * @see
+ *	aul_remove_status_local_cb
+ * @pre
+ *	None
+ * @post
+ * 	None
+ * @code
+ * #include <aul.h>
+ *
+ * int status_changed(int status, void *data)
+ * {
+ *	if (status == STATUS_FOCUS)
+ *		printf("%d has focus\n", getpid());
+ *
+ *	if (status == STATUS_VISIBLE)
+ *		printf("%d resume\n", getpid());
+ *
+ *	if (status == STATUS_BG0
+ *		printf("%d pause\n", getpid());
+ * }
+ *
+ * void listen_app_status()
+ * {
+ *	aul_add_status_local_cb(status_changed, NULL);
+ * }
+ * @endcode
+ * @remark
+ * 	None
+ *
+ */
+int aul_add_status_local_cb(int (*func) (int, void *), void *data);
+
+/**
+ * @par Description
+ * 	This API unsets callback function that on application status changed.
+ * @par Purpose:
+ *	This API's purpose is to remove callback that added by
+ *	aul_add_status_local_cb.
+ *
+ * @param[in]	func	callback function
+ * @param[in]	data	user data
+ * @return	0 if success, negative value if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @pre
+ *	None
+ * @post
+ * 	None
+ * @see
+ *	aul_add_status_local_cb
+ * @code
+ * #include <aul.h>
+ *
+ * int status_changed(int status, void *data)
+ * {
+ *	if (status == STATUS_FOCUS)
+ *		printf("%d has focus\n", getpid());
+ *
+ *	if (status == STATUS_VISIBLE)
+ *		printf("%d resume\n", getpid());
+ *
+ *	if (status == STATUS_BG0
+ *		printf("%d pause\n", getpid());
+ * }
+ *
+ * void listen_app_status()
+ * {
+ *	aul_add_status_local_cb(status_changed, NULL);
+ * }
+ *
+ * void ignore_app_status()
+ * {
+ *	aul_remove_status_local_cb(status_changed, NULL);
+ * }
+ *
+ * @endcode
+ * @remark
+ * 	None
+ *
+ */
+int aul_remove_status_local_cb(int (*func) (int, void *), void *data);
+int aul_invoke_status_local_cb(int status);
 
 typedef int (*data_control_provider_handler_fn) (bundle *b, int request_id, void *data);
 int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler);

@@ -159,7 +159,8 @@ int _status_get_app_info_status(int pid, uid_t uid)
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
-		if(pid == info_t->pid && uid == info_t->uid) {
+		if (pid == info_t->pid &&
+				(uid == 0) ? true : (uid == info_t->uid)) {
 			return info_t->status;
 		}
 	}

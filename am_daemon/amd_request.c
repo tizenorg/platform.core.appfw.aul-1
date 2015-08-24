@@ -539,6 +539,11 @@ static gboolean __request_handler(gpointer data)
 			//__send_result_to_client(clifd, ret);
 			close(clifd);
 			break;
+		case APP_GET_STATUS:
+			memcpy(&pid, pkt->data, sizeof(int));
+			ret = _status_get_app_info_status(pid, 0);
+			__send_result_to_client(clifd, ret);
+			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
 			if (appid == NULL) {
