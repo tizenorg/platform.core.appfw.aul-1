@@ -535,9 +535,20 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_STATUS_UPDATE:
 			status = (int *)pkt->data;
-			ret = _status_update_app_info_list(cr.pid, *status, cr.uid);
+			if(*status == STATUS_NORESTART) {
+				appid = _status_app_get_appid_bypid(cr.pid);
+				ai = appinfo_find(cr.uid, appid);
+				appinfo_set_value((struct appinfo *)ai, AIT_STATUS, "norestart");
+			} else {
+				ret = _status_update_app_info_list(cr.pid, *status, cr.uid);
+			}
 			//__send_result_to_client(clifd, ret);
 			close(clifd);
+			break;
+		case APP_GET_STATUS:
+			memcpy(&pid, pkt->data, sizeof(int));
+			ret = _status_get_app_info_status(pid, 0);
+			__send_result_to_client(clifd, ret);
 			break;
 		case APP_RELEASED:
 			appid = malloc(MAX_PACKAGE_STR_SIZE);
