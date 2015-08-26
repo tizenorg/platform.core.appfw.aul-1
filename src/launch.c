@@ -47,7 +47,6 @@ static void *_aul_data;
 
 
 
-static int __call_aul_handler(aul_type type, bundle *kb);
 static int app_resume();
 static int app_terminate();
 static void __clear_internal_key(bundle *kb);
@@ -64,7 +63,7 @@ int aul_is_initialized()
 	return aul_initialized;
 }
 
-static int __call_aul_handler(aul_type type, bundle *kb)
+int __call_aul_handler(aul_type type, bundle *kb)
 {
 	if (_aul_handler)
 		_aul_handler(type, kb, _aul_data);

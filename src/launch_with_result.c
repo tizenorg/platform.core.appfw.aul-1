@@ -449,11 +449,11 @@ int app_subapp_terminate_request()
 {
 	if (is_subapp) {
 		subapp_cb(subapp_data);
-
-		return 0;
+	} else {
+		__call_aul_handler(AUL_TERMINATE, NULL);
 	}
 
-	return -1;
+	return 0;
 }
 
 SLPAPI int aul_set_subapp(subapp_fn cb, void *data)
