@@ -60,6 +60,11 @@ static inline char *_get_appid(app_info_from_db *menu_info)
 	return menu_info ? menu_info->appid : NULL;
 }
 
+static inline char *_get_pkgid(app_info_from_db *menu_info)
+{
+	return menu_info ? menu_info->pkg_id : NULL;
+}
+
 static inline char *_get_app_path(app_info_from_db *menu_info)
 {
 	int i = 0;

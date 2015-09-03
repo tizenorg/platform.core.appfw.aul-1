@@ -394,12 +394,12 @@ int _status_get_appid_bypid(int fd, int pid)
 	int pgid;
 	char appid[MAX_PACKAGE_STR_SIZE] = {0, };
 
-	cmd = APP_GET_APPID_BYPID_ERROR;
+	cmd = APP_GET_INFO_ERROR;
 
 	if (__get_appid_bypid(pid, appid, MAX_PACKAGE_STR_SIZE) == 0) {
 		SECURE_LOGD("appid for %d is %s", pid, appid);
 		len = strlen(appid);
-		cmd = APP_GET_APPID_BYPID_OK;
+		cmd = APP_GET_INFO_OK;
 		goto out;
 	}
 	/* support app launched by shell script*/
@@ -413,7 +413,7 @@ int _status_get_appid_bypid(int fd, int pid)
 	_D("second change pgid = %d, pid = %d", pgid, pid);
 	if (__get_appid_bypid(pgid, appid, MAX_PACKAGE_STR_SIZE) == 0) {
 		len = strlen(appid);
-		cmd = APP_GET_APPID_BYPID_OK;
+		cmd = APP_GET_INFO_OK;
 	}
 
  out:
@@ -426,6 +426,90 @@ int _status_get_appid_bypid(int fd, int pid)
 	pkt->cmd = cmd;
 	pkt->len = len;
 	memcpy(pkt->data, appid, len);
+
+	if ((len = send(fd, pkt, pkt->len + AUL_PKT_HEADER_SIZE, 0)) !=
+			pkt->len + AUL_PKT_HEADER_SIZE) {
+		if (errno == EPIPE)
+			_E("send failed due to EPIPE.\n");
+		_E("send fail to client");
+	}
+
+	if (pkt)
+		free(pkt);
+
+	close(fd);
+
+	return 0;
+}
+
+static int __get_pkgid_bypid(int pid, char *pkgid, int len)
+{
+	char *cmdline;
+	app_info_from_db *menu_info;
+	uid_t uid;
+	cmdline = __proc_get_cmdline_bypid(pid);
+	if (cmdline == NULL)
+		return -1;
+
+	uid = __proc_get_usr_bypid(pid);
+	if (uid == -1) {
+		free(cmdline);
+		return -1;
+	}
+
+	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
+		free(cmdline);
+		return -1;
+	} else {
+		snprintf(pkgid, len, "%s", _get_pkgid(menu_info));
+	}
+
+	free(cmdline);
+	_free_app_info_from_db(menu_info);
+
+	return 0;
+}
+
+int _status_get_pkgid_bypid(int fd, int pid)
+{
+	app_pkt_t *pkt = NULL;
+	int cmd;
+	int len = 0;
+	int pgid;
+	char pkgid[MAX_PACKAGE_STR_SIZE] = {0, };
+
+	cmd = APP_GET_INFO_ERROR;
+
+	if (__get_pkgid_bypid(pid, pkgid, MAX_PACKAGE_STR_SIZE) == 0) {
+		SECURE_LOGD("pkgid for %d is %s", pid, pkgid);
+		len = strlen(pkgid);
+		cmd = APP_GET_INFO_OK;
+		goto out;
+	}
+	/* support app launched by shell script*/
+	_D("second chance");
+	pgid = getpgid(pid);
+	if (pgid <= 1) {
+		close(fd);
+		return 0;
+	}
+
+	_D("second change pgid = %d, pid = %d", pgid, pid);
+	if (__get_pkgid_bypid(pgid, pkgid, MAX_PACKAGE_STR_SIZE) == 0) {
+		len = strlen(pkgid);
+		cmd = APP_GET_INFO_OK;
+	}
+
+ out:
+	pkt = (app_pkt_t *)malloc(AUL_PKT_HEADER_SIZE + len);
+	if (!pkt) {
+		_E("malloc fail");
+		close(fd);
+		return 0;
+	}
+	pkt->cmd = cmd;
+	pkt->len = len;
+	memcpy(pkt->data, pkgid, len);
 
 	if ((len = send(fd, pkt, pkt->len + AUL_PKT_HEADER_SIZE, 0)) !=
 			pkt->len + AUL_PKT_HEADER_SIZE) {

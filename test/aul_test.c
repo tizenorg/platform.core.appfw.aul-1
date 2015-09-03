@@ -266,7 +266,7 @@ int get_allpkg_test()
 	return aul_app_get_running_app_info(iterfunc, NULL);
 }
 
-int get_pkgpid_test()
+int get_app_bypid_test()
 {
 	int pid = 0;
 	static int num = 0;
@@ -276,6 +276,23 @@ int get_pkgpid_test()
 	pid = atoi(gargv[2]);
 
 	if (aul_app_get_appid_bypid(pid, buf, sizeof(buf)) < 0)
+		printf("no such pkg by %d\n", pid);
+	else
+		printf("pkgname = %s, pid = %d\n", buf, pid);
+
+	return 0;
+}
+
+int get_pkg_bypid_test()
+{
+	int pid = 0;
+	static int num = 0;
+	char buf[MAX_LOCAL_BUFSZ];
+
+	printf("[aul_app_get_pkgid_bypid %d test] \n", num++);
+	pid = atoi(gargv[2]);
+
+	if (aul_app_get_pkgid_bypid(pid, buf, sizeof(buf)) < 0)
 		printf("no such pkg by %d\n", pid);
 	else
 		printf("pkgname = %s, pid = %d\n", buf, pid);
@@ -549,8 +566,10 @@ static test_func_t test_func[] = {
 		"[usage] is_run <pkgname>"},
 	{"getallpkg", get_allpkg_test, "aul_app_get_running_app_info test",
 		"[usage] getallpkg all"},
-	{"getpkgpid", get_pkgpid_test, "aul_app_get_appid_bypid test",
-		"[usage] getpkgpid <pid>"},
+	{"get_app_bypid", get_app_bypid_test, "aul_app_get_appid_bypid test",
+		"[usage] get_app_bypid <pid>"},
+	{"get_pkg_bypid", get_pkg_bypid_test, "aul_app_get_pkgid_bypid test",
+		"[usage] get_pkg_bypid <pid>"},
 
 	{"open_file", open_file_test, "aul_open_file test",
 		"[usage] open_file <filename>"},

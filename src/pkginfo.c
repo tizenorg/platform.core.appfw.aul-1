@@ -36,8 +36,6 @@ typedef struct _internal_param_t {
 	void *user_param;
 } internal_param_t;
 
-static int __get_appid_bypid(int pid, char *appid, int len);
-
 SLPAPI int aul_app_is_running(const char *appid)
 {
 	int ret = 0;
@@ -89,7 +87,7 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	return AUL_R_OK;
 }
 
-static int __get_appid_bypid(int pid, char *appid, int len)
+static int __get_info_bypid(int pid, char *appid, int len, int cmd)
 {
 	char *cmdline;
 	app_info_from_db *menu_info;
@@ -102,8 +100,12 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
 		free(cmdline);
 		return -1;
-	} else
-		snprintf(appid, len, "%s", _get_appid(menu_info));
+	} else {
+		if (cmd == APP_GET_APPID_BYPID)
+			snprintf(appid, len, "%s", _get_appid(menu_info));
+		else
+			snprintf(appid, len, "%s", _get_pkgid(menu_info));
+	}
 
 	free(cmdline);
 	_free_app_info_from_db(menu_info);
@@ -120,9 +122,10 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 {
 	app_pkt_t *pkt = NULL;
 	int pgid;
+	int cmd = APP_GET_APPID_BYPID;
 
-	if(pid == getpid() || getuid()==0 || geteuid()==0) {
-		if (__get_appid_bypid(pid, appid, len) == 0) {
+	if (pid == getpid() || getuid()==0 || geteuid()==0) {
+		if (__get_info_bypid(pid, appid, len, cmd) == 0) {
 			SECURE_LOGD("appid for %d is %s", pid, appid);
 			return AUL_R_OK;
 		}
@@ -133,7 +136,7 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 			return AUL_R_ERROR;
 
 		_D("second change pgid = %d, pid = %d", pgid, pid);
-		if (__get_appid_bypid(pgid, appid, len) == 0)
+		if (__get_info_bypid(pgid, appid, len, cmd) == 0)
 			return AUL_R_OK;
 
 		return AUL_R_ERROR;
@@ -142,16 +145,59 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	if (appid == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GET_APPID_BYPID, (unsigned char *)&pid, sizeof(pid));
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, cmd,
+			(unsigned char *)&pid, sizeof(pid));
 
-	if(pkt == NULL)
+	if (pkt == NULL)
 		return AUL_R_ERROR;
-	if(pkt->cmd == APP_GET_APPID_BYPID_ERROR) {
+	if (pkt->cmd == APP_GET_INFO_ERROR) {
 		free(pkt);
 		return AUL_R_ERROR;
 	}
 
 	snprintf(appid, len, "%s", pkt->data);
+	free(pkt);
+	return AUL_R_OK;
+}
+
+SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
+{
+	app_pkt_t *pkt = NULL;
+	int pgid;
+	int cmd = APP_GET_PKGID_BYPID;
+
+	if (pid == getpid() || getuid()==0 || geteuid()==0) {
+		if (__get_info_bypid(pid, pkgid, len, cmd) == 0) {
+			SECURE_LOGD("pkgid for %d is %s", pid, pkgid);
+			return AUL_R_OK;
+		}
+		/* support app launched by shell script*/
+
+		pgid = getpgid(pid);
+		if (pgid <= 1)
+			return AUL_R_ERROR;
+
+		_D("second change pgid = %d, pid = %d", pgid, pid);
+		if (__get_info_bypid(pgid, pkgid, len, cmd) == 0)
+			return AUL_R_OK;
+
+		return AUL_R_ERROR;
+	}
+
+	if (pkgid == NULL)
+		return AUL_R_EINVAL;
+
+	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, cmd,
+			(unsigned char *)&pid, sizeof(pid));
+
+	if (pkt == NULL)
+		return AUL_R_ERROR;
+	if (pkt->cmd == APP_GET_INFO_ERROR) {
+		free(pkt);
+		return AUL_R_ERROR;
+	}
+
+	snprintf(pkgid, len, "%s", pkt->data);
 	free(pkt);
 	return AUL_R_OK;
 }

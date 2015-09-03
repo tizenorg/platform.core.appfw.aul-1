@@ -523,6 +523,11 @@ static gboolean __request_handler(gpointer data)
 			ret = _status_get_appid_bypid(clifd, pid);
 			_D("APP_GET_APPID_BYPID : %d : %d", pid, ret);
 			break;
+		case APP_GET_PKGID_BYPID:
+			memcpy(&pid, pkt->data, sizeof(int));
+			ret = _status_get_pkgid_bypid(clifd, pid);
+			_D("APP_GET_PKGID_BYPID : %d : %d", pid, ret);
+			break;
 		case APP_KEY_RESERVE:
 			// support for key events has been removed (sdx-20140813)
 			__send_result_to_client(clifd, 0);
