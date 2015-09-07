@@ -18,6 +18,7 @@
  * limitations under the License.
  *
  */
+#include <stdlib.h>
 
 #include <aul.h>
 #include <bundle.h>
