@@ -790,6 +790,45 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
 
 /**
  * @par Description:
+ *	This API get application pkgid by pid
+ * @par Purpose:
+ *	If you want to get pkgid of running application, use this API
+ * @par Typical use case:
+ *	In general, You can use this API when you want to know caller's information.
+ *
+ * @param[in]	pid		given pid
+ * @param[out]	pkgid		package id
+ * @param[in]	len		length of pkgid
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- no such a appid
+ * @pre
+ *	None
+ * @post
+ *	None
+ * @see
+ *	None
+ * @code
+ * #include <aul.h>
+ * #include <bundle.h>
+ *
+ * static int app_reset(bundle *b, void *data)
+ * {
+ *	int pid;
+ * 	char pkgid[255];
+ *
+ * 	pid = atoi(bundle_get_val(b, AUL_K_CALLER_PID));
+ *	aul_app_get_pkgid_bypid(pid, pkgid, sizeof(pkgid));
+ * }
+ *
+ * @endcode
+ * @remark
+ *	None
+*/
+int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len);
+
+/**
+ * @par Description:
  *	This API get application appid by pid
  * @par Purpose:
  *	If you want to get appid of running application, use this API
@@ -826,7 +865,6 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
  *	None
 */
 int aul_app_get_appid_bypid(int pid, char *appid, int len);
-
 
 /** @} */
 
