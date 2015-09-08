@@ -35,6 +35,9 @@ BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libsystemd-daemon)
+BuildRequires:  pkgconfig(cynara-client)
+BuildRequires:  pkgconfig(cynara-creds-socket)
+BuildRequires:  pkgconfig(cynara-session)
 %if %{with wayland}
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(tizen-extension-client)
