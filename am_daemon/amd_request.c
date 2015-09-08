@@ -33,6 +33,9 @@
 #include <aul.h>
 #include <bundle.h>
 #include <tzplatform_config.h>
+#include <cynara-client.h>
+#include <cynara-creds-socket.h>
+#include <cynara-session.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -45,6 +48,12 @@
 #include "amd_app_group.h"
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
+
+#define PRIVILEGE_APPMANAGER_LAUNCH "http://tizen.org/privilege/appmanager.launch"
+#define PRIVILEGE_APPMANAGER_KILL "http://tizen.org/privilege/appmanager.kill"
+#define PRIVILEGE_APPMANAGER_KILL_BGAPP "http://tizen.org/privilege/appmanager.kill.bgapp"
+
+static cynara *r_cynara = NULL;
 
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
@@ -399,6 +408,113 @@ static void __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt)
 		free(pids);
 }
 
+static int __get_caller_info_from_cynara(int sockfd, char **client, char **user, char **session)
+{
+	pid_t pid;
+	int r;
+	char buf[MAX_LOCAL_BUFSZ] = {0,};
+
+	r = cynara_creds_socket_get_pid(sockfd, &pid);
+	if (r != CYNARA_API_SUCCESS) {
+		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
+		_E("cynara_creds_socket_get_pid failed: %s", buf);
+		return -1;
+	}
+
+	*session = cynara_session_from_pid(pid);
+	if (*session == NULL) {
+		_E("cynara_session_from_pid failed.");
+		return -1;
+	}
+
+	_D("session: %s", *session);
+
+	r = cynara_creds_socket_get_user(sockfd, USER_METHOD_DEFAULT, user);
+	if (r != CYNARA_API_SUCCESS) {
+		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
+		_E("cynara_cred_socket_get_user failed.");
+		return -1;
+	}
+
+	_D("user: %s", *user);
+
+	r = cynara_creds_socket_get_client(sockfd, CLIENT_METHOD_DEFAULT, client);
+	if (r != CYNARA_API_SUCCESS) {
+		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
+		_E("cynara_creds_socket_get_client failed.");
+		return -1;
+	}
+
+	_D("client: %s", *client);
+
+	return 0;
+}
+
+static const char *__convert_cmd_to_privilege(int cmd)
+{
+	switch (cmd) {
+	case APP_OPEN:
+	case APP_RESUME:
+	case APP_START:
+	case APP_START_RES:
+		return PRIVILEGE_APPMANAGER_LAUNCH;
+	case APP_TERM_BY_PID_WITHOUT_RESTART:
+	case APP_TERM_BY_PID_ASYNC:
+	case APP_TERM_BY_PID:
+	case APP_KILL_BY_PID:
+		return PRIVILEGE_APPMANAGER_KILL;
+	case APP_TERM_BGAPP_BY_PID:
+		return PRIVILEGE_APPMANAGER_KILL_BGAPP;
+	default:
+		return NULL;
+	}
+}
+
+static int __check_privilege_by_cynara(int sockfd, int cmd)
+{
+	int r;
+	int ret;
+	const char *privilege = NULL;
+	char buf[MAX_LOCAL_BUFSZ] = {0,};
+	char *client = NULL;
+	char *session = NULL;
+	char *user = NULL;
+
+	privilege = __convert_cmd_to_privilege(cmd);
+	if (privilege == NULL)
+		return 0;
+
+	r = __get_caller_info_from_cynara(sockfd, &client, &user, &session);
+	if (r < 0) {
+		ret = -1;
+		goto end;
+	}
+
+	r = cynara_check(r_cynara, client, session, user, privilege);
+	switch (r) {
+	case CYNARA_API_ACCESS_ALLOWED:
+		_D("%s(%s) from user %s privilege %s allowed.", client, session, user, privilege);
+		ret = 0;
+		break;
+	case CYNARA_API_ACCESS_DENIED:
+		_E("%s(%s) from user %s privilege %s denied.", client, session, user, privilege);
+		ret = -1;
+		break;
+	default:
+		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
+		_E("cynara_check failed: %s", buf);
+		ret = -1;
+		break;
+	}
+
+end:
+	free(user);
+	free(session);
+	free(client);
+
+	return ret;
+}
+
 static gboolean __request_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
@@ -425,29 +541,36 @@ static gboolean __request_handler(gpointer data)
 		case APP_RESUME:
 		case APP_START:
 		case APP_START_RES:
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			if (cr.uid == 0) {
-				_E("request from root, treat as global user");
-				ret = _start_app(appid, kb, pkt->cmd, cr.pid, GLOBAL_USER, clifd);
+			ret = __check_privilege_by_cynara(clifd, pkt->cmd);
+			if (ret < 0) {
+				_E("launch request has been denied by smack");
+				ret = -EILLEGALACCESS;
+				__real_send(clifd, ret);
 			} else {
-				ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
-			}
-			if (ret > 0) {
-				item = calloc(1, sizeof(item_pkt_t));
-				if (item == NULL) {
-					_E("out of memory");
-					return FALSE;
+				kb = bundle_decode(pkt->data, pkt->len);
+				appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+				if (cr.uid == 0) {
+					_E("request from root, treat as global user");
+					ret = _start_app(appid, kb, pkt->cmd, cr.pid, GLOBAL_USER, clifd);
+				} else {
+					ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 				}
-				item->pid = ret;
-				item->uid = cr.uid;
-				strncpy(item->appid, appid, 511);
+				if (ret > 0) {
+					item = calloc(1, sizeof(item_pkt_t));
+					if (item == NULL) {
+						_E("out of memory");
+						return FALSE;
+					}
+					item->pid = ret;
+					item->uid = cr.uid;
+					strncpy(item->appid, appid, 511);
 
-				g_timeout_add(1200, __add_item_running_list, item);
+					g_timeout_add(1200, __add_item_running_list, item);
+				}
+
+				if (kb != NULL)
+					bundle_free(kb), kb = NULL;
 			}
-
-			if (kb != NULL)
-				bundle_free(kb), kb = NULL;
 			break;
 		case APP_RESULT:
 		case APP_CANCEL:
@@ -476,31 +599,49 @@ static gboolean __request_handler(gpointer data)
 			break;
 		case APP_TERM_BY_PID_WITHOUT_RESTART:
 		case APP_TERM_BY_PID_ASYNC:
-			/* TODO: check caller's privilege */
-			kb = bundle_decode(pkt->data, pkt->len);
-			term_pid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			appid = _status_app_get_appid_bypid(atoi(term_pid));
-			ai = appinfo_find(cr.uid, appid);
-			if (ai) {
-				appinfo_set_value(ai, AIT_STATUS, "norestart");
-				ret = __app_process_by_pid(pkt->cmd, term_pid, &cr, clifd);
+			ret = __check_privilege_by_cynara(clifd, pkt->cmd);
+			if (ret < 0) {
+				_E("terminate request has been denied by smack");
+				ret = -EILLEGALACCESS;
+				__real_send(clifd, ret);
 			} else {
-				ret = -1;
-				close(clifd);
+				kb = bundle_decode(pkt->data, pkt->len);
+				term_pid = (char *)bundle_get_val(kb, AUL_K_APPID);
+				appid = _status_app_get_appid_bypid(atoi(term_pid));
+				ai = appinfo_find(cr.uid, appid);
+				if (ai) {
+					appinfo_set_value(ai, AIT_STATUS, "norestart");
+					ret = __app_process_by_pid(pkt->cmd, term_pid, &cr, clifd);
+				} else {
+					ret = -1;
+					close(clifd);
+				}
 			}
 			break;
 		case APP_TERM_BY_PID:
 		case APP_KILL_BY_PID:
-			/* TODO: check caller's privilege */
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
+			ret = __check_privilege_by_cynara(clifd, pkt->cmd);
+			if (ret < 0) {
+				_E("terminate request has been denied by smack");
+				ret = -EILLEGALACCESS;
+				__real_send(clifd, ret);
+			} else {
+				kb = bundle_decode(pkt->data, pkt->len);
+				appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+				ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
+			}
 			break;
 		case APP_TERM_BGAPP_BY_PID:
-			/* TODO: check caller's privilege */
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
+			ret = __check_privilege_by_cynara(clifd, pkt->cmd);
+			if (ret < 0) {
+				_E("terminate request has been denied by smack");
+				ret = -EILLEGALACCESS;
+				__real_send(clifd, ret);
+			} else {
+				kb = bundle_decode(pkt->data, pkt->len);
+				appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+				ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
+			}
 			break;
 		case APP_RUNNING_INFO:
 			_status_send_running_appinfo(clifd, cr.uid);
@@ -671,18 +812,43 @@ int _requset_init(void)
 {
 	int fd;
 	int r;
-	GPollFD *gpollfd;
-	GSource *src;
+	GPollFD *gpollfd = NULL;
+	GSource *src = NULL;
 
 	fd = __create_sock_activation();
 	if (fd == -1) {
 		_D("Create server socket without socket activation");
 		fd = __create_server_sock(AUL_UTIL_PID);
+		if (fd == -1) {
+			_E("Create server socket failed.");
+			return -1;
+		}
+	}
+
+	r = cynara_initialize(&r_cynara, NULL);
+	if (r != CYNARA_API_SUCCESS) {
+		_E("cynara initialize failed.");
+		close(fd);
+		return -1;
 	}
 
 	src = g_source_new(&funcs, sizeof(GSource));
+	if (!src) {
+		_E("out of memory");
+		cynara_finish(r_cynara);
+		close(fd);
+		return -1;
+	}
 
 	gpollfd = (GPollFD *) g_malloc(sizeof(GPollFD));
+	if (!gpollfd) {
+		_E("out of memory");
+		g_source_destroy(src);
+		cynara_finish(r_cynara);
+		close(fd);
+		return -1;
+	}
+
 	gpollfd->events = POLLIN;
 	gpollfd->fd = fd;
 
@@ -692,13 +858,13 @@ int _requset_init(void)
 	g_source_set_priority(src, G_PRIORITY_DEFAULT);
 
 	r = g_source_attach(src, NULL);
-	if (r  == 0)
-	{
-		/* TODO: error handle*/
+	if (r  == 0) {
+		g_free(gpollfd);
+		g_source_destroy(src);
+		cynara_finish(r_cynara);
+		close(fd);
 		return -1;
 	}
 
 	return 0;
 }
-
-
