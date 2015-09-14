@@ -36,6 +36,7 @@
 #include <cynara-client.h>
 #include <cynara-creds-socket.h>
 #include <cynara-session.h>
+#include <systemd/sd-login.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -48,6 +49,7 @@
 #include "amd_app_group.h"
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
+#define REGULAR_UID_MIN     5000
 
 #define PRIVILEGE_APPMANAGER_LAUNCH "http://tizen.org/privilege/appmanager.launch"
 #define PRIVILEGE_APPMANAGER_KILL "http://tizen.org/privilege/appmanager.kill"
@@ -478,7 +480,10 @@ static gboolean __request_handler(gpointer data)
 	int ret = -1;
 	char *appid;
 	char *term_pid;
+	char *target_uid;
+	char *state;
 	int pid;
+	int t_uid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
 	struct appinfo *ai;
@@ -489,15 +494,17 @@ static gboolean __request_handler(gpointer data)
 		return FALSE;
 	}
 
-	privilege = __convert_cmd_to_privilege(pkt->cmd);
-	if (privilege) {
-		ret = __check_privilege_by_cynara(clifd, privilege);
-		if (ret < 0) {
-			_E("request has been denied by smack");
-			ret = -EILLEGALACCESS;
-			__real_send(clifd, ret);
-			free(pkt);
-			return TRUE;
+	if (cr.uid >= REGULAR_UID_MIN) {
+		privilege = __convert_cmd_to_privilege(pkt->cmd);
+		if (privilege) {
+			ret = __check_privilege_by_cynara(clifd, privilege);
+			if (ret < 0) {
+				_E("request has been denied by smack");
+				ret = -EILLEGALACCESS;
+				__real_send(clifd, ret);
+				free(pkt);
+				return TRUE;
+			}
 		}
 	}
 
@@ -508,9 +515,25 @@ static gboolean __request_handler(gpointer data)
 		case APP_START_RES:
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			if (cr.uid == 0) {
-				_E("request from root, treat as global user");
-				ret = _start_app(appid, kb, pkt->cmd, cr.pid, GLOBAL_USER, clifd);
+			if (cr.uid < REGULAR_UID_MIN) {
+				target_uid = bundle_get_val(kb, AUL_K_TARGET_UID);
+				if (target_uid != NULL) {
+					t_uid = atoi(target_uid);
+					sd_uid_get_state(t_uid, &state);
+					if (strcmp(state, "offline") &&
+							strcmp(state, "closing")) {
+						ret = _start_app(appid, kb, pkt->cmd, cr.pid,
+								t_uid, clifd);
+					} else {
+						_E("uid:%d session is %s", t_uid, state);
+						__real_send(clifd, AUL_R_ERROR);
+						return FALSE;
+					}
+				} else {
+					_E("request from root, treat as global user");
+					ret = _start_app(appid, kb, pkt->cmd, cr.pid,
+							GLOBAL_USER, clifd);
+				}
 			} else {
 				ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 			}
@@ -749,7 +772,7 @@ int _requset_init(void)
 	fd = __create_sock_activation();
 	if (fd == -1) {
 		_D("Create server socket without socket activation");
-		fd = __create_server_sock(AUL_UTIL_PID);
+		fd = __create_server_sock(AUL_UTIL_PID, getuid());
 		if (fd == -1) {
 			_E("Create server socket failed.");
 			return -1;

@@ -482,7 +482,7 @@ int aul_svc_set_category(bundle *b, const char *category);
  *
  */
 int aul_svc_run_service(bundle *b, int request_code, aul_svc_res_fn cbfunc, void *data);
-int aul_svc_run_service_with_uid(bundle *b, int request_code,
+int aul_svc_run_service_for_uid(bundle *b, int request_code,
 		aul_svc_res_fn cbfunc, void *data, uid_t uid);
 
 /**
@@ -531,7 +531,7 @@ static int iter_fn(const char* appid, void *data)
  *
  */
 int aul_svc_get_list(bundle *b, aul_svc_info_iter_fn iter_fn, void *data);
-int aul_svc_get_list_with_uid(bundle *b, aul_svc_info_iter_fn iter_fn,
+int aul_svc_get_list_for_uid(bundle *b, aul_svc_info_iter_fn iter_fn,
 		void *data, uid_t uid);
 
 /**
@@ -571,7 +571,7 @@ static int iter_fn(const char* appid, void *data)
  *
  */
 int aul_svc_get_all_defapps(aul_svc_info_iter_fn iter_fn, void *data);
-int aul_svc_get_all_defapps_with_uid(aul_svc_info_iter_fn iter_fn,
+int aul_svc_get_all_defapps_for_uid(aul_svc_info_iter_fn iter_fn,
 		void *data, uid_t uid);
 
 /**
@@ -899,7 +899,7 @@ int aul_svc_send_result(bundle *b, aul_svc_result_val result);
  */
 int aul_svc_set_defapp(const char *op, const char *mime_type, const char *uri,
                       const char *defapp);
-int aul_svc_set_defapp_with_uid(const char *op, const char *mime_type, const char *uri,
+int aul_svc_set_defapp_for_uid(const char *op, const char *mime_type, const char *uri,
                       const char *defapp, uid_t uid);
 
 /**
@@ -928,7 +928,7 @@ int aul_svc_set_defapp_with_uid(const char *op, const char *mime_type, const cha
  *
  */
 int aul_svc_unset_defapp(const char *defapp);
-int aul_svc_unset_defapp_with_uid(const char *defapp, uid_t uid);
+int aul_svc_unset_defapp_for_uid(const char *defapp, uid_t uid);
 
 /**
  * @par Description:
@@ -955,7 +955,7 @@ int aul_svc_unset_defapp_with_uid(const char *defapp, uid_t uid);
  *
  */
 int aul_svc_unset_all_defapps();
-int aul_svc_unset_all_defapps_with_uid(uid_t uid);
+int aul_svc_unset_all_defapps_for_uid(uid_t uid);
 
 /**
  * @par Description:
@@ -988,7 +988,7 @@ int aul_svc_unset_all_defapps_with_uid(uid_t uid);
 *
 */
 int aul_svc_is_defapp(const char *appid);
-int aul_svc_is_defapp_with_uid(const char *pkg_name, uid_t uid);
+int aul_svc_is_defapp_for_uid(const char *pkg_name, uid_t uid);
 
 
 /**

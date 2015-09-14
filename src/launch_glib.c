@@ -108,6 +108,12 @@ static gboolean __app_start_internal(gpointer data)
 SLPAPI int aul_launch_init(
 	int (*aul_handler) (aul_type type, bundle *, void *), void *data)
 {
+	return aul_launch_init_for_uid(aul_handler, data, getuid());
+}
+
+SLPAPI int aul_launch_init_for_uid(
+	int (*aul_handler) (aul_type type, bundle *, void *), void *data, uid_t uid)
+{
 	int fd;
 	GPollFD *gpollfd;
 	int ret;
@@ -115,7 +121,7 @@ SLPAPI int aul_launch_init(
 	if (aul_handler != NULL)
 		aul_register_init_callback(aul_handler, data);
 
-	fd = aul_initialize();
+	fd = aul_initialize_for_uid(uid);
 	if (fd < 0)
 		return fd;
 

@@ -159,6 +159,8 @@ typedef enum _aul_type{
 #define AUL_K_CALLER_UID	"__AUL_CALLER_UID__"
 /** AUL public key - added for multiuser mode */
 #define AUL_K_CALLEE_UID	"__AUL_CALLEE_UID__"
+/** AUL public key - added for multiuser mode */
+#define AUL_K_TARGET_UID	"__AUL_TARGET_UID__"
 
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_APPID	"__AUL_CALLER_APPID__"
@@ -298,6 +300,7 @@ typedef int (*aul_handler_fn) (aul_type type, bundle * b, void *data);
  *	None
 */
 int aul_launch_init(aul_handler_fn handler, void *data);
+int aul_launch_init_for_uid(aul_handler_fn handler, void *data, uid_t uid);
 
 /**
  * @par Description:
@@ -439,6 +442,7 @@ int aul_launch_local(bundle *b);
  *	None
  */
 int aul_launch_app(const char *appid, bundle *kb);
+int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid);
 
 /**
  * @par Description:
