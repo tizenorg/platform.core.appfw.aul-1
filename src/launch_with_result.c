@@ -271,11 +271,12 @@ int app_result(int cmd, bundle *kb, int launched_pid)
 	return 0;
 }
 
-SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
+SLPAPI int aul_launch_app_with_result_with_uid(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
-			       void *data)
+			       void *data, uid_t uid)
 {
 	int ret;
+	char buf[MAX_UID_STR_BUFSZ];
 
 	if (!aul_is_initialized()) {
 		if (aul_launch_init(NULL, NULL) < 0)
@@ -285,6 +286,9 @@ SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 	if (pkgname == NULL || cbfunc == NULL || kb == NULL)
 		return AUL_R_EINVAL;
 
+	snprintf(buf, MAX_UID_STR_BUFSZ, "%d", uid);
+	bundle_add(kb, AUL_K_TARGET_UID, buf);
+
 	pthread_mutex_lock(&result_lock);
 	ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
 
@@ -293,6 +297,14 @@ SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 	pthread_mutex_unlock(&result_lock);
 
 	return ret;
+}
+
+SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
+			       void (*cbfunc) (bundle *, int, void *),
+			       void *data)
+{
+	return aul_launch_app_with_result_with_uid(pkgname, kb, cbfunc,
+			data, getuid());
 }
 
 void __iterate(const char *key, const char *val, void *data)
