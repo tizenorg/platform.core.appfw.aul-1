@@ -193,12 +193,17 @@ SLPAPI int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb)
  */
 SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
 {
+	return app_send_cmd_for_uid(pid, getuid(), cmd, kb);
+}
+
+SLPAPI int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
+{
 	int datalen;
 	bundle_raw *kb_data;
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw(pid, cmd, kb_data, datalen)) < 0)
+	if ((res = __app_send_raw_for_uid(pid, uid, cmd, kb_data, datalen)) < 0)
 		res = __get_aul_error(res);
 	free(kb_data);
 
@@ -279,6 +284,11 @@ static int __app_resume_local()
  */
 int app_request_to_launchpad(int cmd, const char *appid, bundle *kb)
 {
+	return app_request_to_launchpad_for_uid(cmd, appid, kb, getuid());
+}
+
+int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid_t uid)
+{
 	int must_free = 0;
 	int ret = 0;
 
@@ -291,7 +301,7 @@ int app_request_to_launchpad(int cmd, const char *appid, bundle *kb)
 
 	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
-	ret = app_send_cmd(AUL_UTIL_PID, cmd, kb);
+	ret = app_send_cmd_for_uid(AUL_UTIL_PID, uid, cmd, kb);
 
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
@@ -523,6 +533,19 @@ SLPAPI int aul_launch_app(const char *appid, bundle *kb)
 		return AUL_R_EINVAL;
 
 	ret = app_request_to_launchpad(APP_START, appid, kb);
+	return ret;
+}
+
+SLPAPI int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid)
+{
+	int ret;
+	char buf[MAX_PID_STR_BUFSZ];
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+	snprintf(buf, MAX_UID_STR_BUFSZ, "%d", uid);
+	bundle_add(kb, AUL_K_TARGET_UID, buf);
+
+	ret = app_request_to_launchpad_for_uid(APP_START, appid, kb, uid);
 	return ret;
 }
 
