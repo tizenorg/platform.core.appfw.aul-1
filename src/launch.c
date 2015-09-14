@@ -533,6 +533,19 @@ SLPAPI int aul_launch_app(const char *appid, bundle *kb)
 	return ret;
 }
 
+SLPAPI int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid)
+{
+	int ret;
+	char buf[MAX_PID_STR_BUFSZ];
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+	snprintf(buf, MAX_UID_STR_BUFSZ, "%d", uid);
+	bundle_add(kb, AUL_K_TARGET_UID, buf);
+
+	ret = app_request_to_launchpad(APP_START, appid, kb);
+	return ret;
+}
+
 SLPAPI int aul_open_app(const char *appid)
 {
 	int ret;
