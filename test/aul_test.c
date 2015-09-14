@@ -85,6 +85,27 @@ int launch_test()
 	return ret;
 }
 
+int launch_test_for_uid()
+{
+	static int num = 0;
+	int ret = 0;
+	bundle *kb = NULL;
+
+	kb = create_internal_bundle(3);
+	if (NULL == kb) {
+		return -1;
+	}
+	printf("[aul_launch_app %d test] %s \n", num++, gargv[2]);
+
+	ret = aul_launch_app_for_uid(gargv[2], kb, atoi(gargv[3]));
+
+	if (kb) {
+		bundle_free(kb);
+		kb = NULL;
+	}
+	return ret;
+}
+
 int dbus_launch_test()
 {
 	bundle *kb = NULL;
@@ -543,6 +564,8 @@ int reload_appinfo(void)
 static test_func_t test_func[] = {
 	{"launch",launch_test,"aul_launch_app test",
 		"[usage] launch <pkgname> <key1> <val1> <key2> <val2> ..."},
+	{"launch_for_uid", launch_test_for_uid, "launch with uid test",
+		"[usage] launch_for_uid <appid> <uid>"},
 	{"open",open_test,"aul_open_app test",
 		"[usage] open <pkgname>" },
 	{"resume",resume_test,"aul_resume_app test",
