@@ -43,6 +43,9 @@ int aul_send_result(bundle *kb, int is_cancel);
 int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data);
+int aul_launch_app_with_result_with_uid(const char *pkgname, bundle *kb,
+			       void (*cbfunc) (bundle *, int, void *),
+			       void *data, uid_t uid);
 
 int app_agent_send_cmd(int uid, int cmd, bundle *kb);
 int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb);

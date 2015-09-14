@@ -637,7 +637,7 @@ _static_ void __agent_main_loop(struct pollfd pfds[])
 		_E("Invalid caller uid");
 		goto end;
 	}
-	if ((uid != 0) && (uid != getuid())) {
+	if (uid != getuid()) {
 		_E("Invalid request coming from another user");
 		goto end;
 	}
