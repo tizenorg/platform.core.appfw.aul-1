@@ -36,6 +36,7 @@
 #include <cynara-client.h>
 #include <cynara-creds-socket.h>
 #include <cynara-session.h>
+#include <systemd/sd-login.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -515,7 +516,10 @@ static gboolean __request_handler(gpointer data)
 	int ret = -1;
 	char *appid;
 	char *term_pid;
+	char *target_uid;
+	char *state;
 	int pid;
+	int t_uid;
 	bundle *kb = NULL;
 	item_pkt_t *item;
 	struct appinfo *ai;
@@ -546,8 +550,23 @@ static gboolean __request_handler(gpointer data)
 			kb = bundle_decode(pkt->data, pkt->len);
 			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 			if (cr.uid == 0) {
-				_E("request from root, treat as global user");
-				ret = _start_app(appid, kb, pkt->cmd, cr.pid, GLOBAL_USER, clifd);
+				target_uid = bundle_get_val(kb, AUL_K_TARGET_UID);
+				if (target_uid != NULL) {
+					t_uid = atoi(target_uid);
+					sd_uid_get_state(t_uid, &state);
+					if (!strcmp(state, "online")) {
+						ret = _start_app(appid, kb, pkt->cmd, cr.pid,
+								t_uid, clifd);
+					} else {
+						_E("uid:%d session is not online", t_uid);
+						__real_send(clifd, AUL_R_ERROR);
+						return FALSE;
+					}
+				} else {
+					_E("request from root, treat as global user");
+					ret = _start_app(appid, kb, pkt->cmd, cr.pid,
+							GLOBAL_USER, clifd);
+				}
 			} else {
 				ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
 			}
