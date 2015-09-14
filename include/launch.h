@@ -34,8 +34,10 @@ int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb);
 
 int app_start(bundle *kb);
 int app_send_cmd(int pid, int cmd, bundle *kb);
+int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb);
 int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb);
 int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb);
+int app_request_to_launchpad_for_uid(int cmd, const char *pkgname, bundle *kb, uid_t uid);
 
 int _app_start_res_prepare(bundle *kb);
 int app_result(int cmd, bundle *kb, int launched_pid);
@@ -43,6 +45,9 @@ int aul_send_result(bundle *kb, int is_cancel);
 int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data);
+int aul_launch_app_with_result_for_uid(const char *pkgname, bundle *kb,
+			       void (*cbfunc) (bundle *, int, void *),
+			       void *data, uid_t uid);
 
 int app_agent_send_cmd(int uid, int cmd, bundle *kb);
 int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb);

@@ -4,5 +4,7 @@
 	</request>
 	<assign>
 		<filesystem path="/usr/bin/app_launcher" exec_label="User" />
+		<filesystem path="/usr/bin/aul_test" exec_label="User" />
+		<filesystem path="/usr/bin/open_app" exec_label="User" />
 	</assign>
 </manifest>

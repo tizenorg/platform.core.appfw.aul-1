@@ -245,7 +245,7 @@ int __create_agent_client_sock(int uid)
 }
 
 
-int __create_client_sock(int pid)
+int __create_client_sock(int pid, uid_t uid)
 {
 	int fd = -1;
 	struct sockaddr_un saddr = { 0, };
@@ -268,7 +268,7 @@ int __create_client_sock(int pid)
 	}
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/%d", getuid(), pid);
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/%d", uid, pid);
  retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
@@ -351,6 +351,11 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
  */
 int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
+	return __app_send_raw_for_uid(pid, getuid(), cmd, kb_data, datalen);
+}
+
+int __app_send_raw_for_uid(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen)
+{
 	int fd;
 	int len;
 	int sent = 0;
@@ -364,7 +369,7 @@ int __app_send_raw(int pid, int cmd, unsigned char *kb_data, int datalen)
 
 	_D("pid(%d) : cmd(%d)", pid, cmd);
 
-	fd = __create_client_sock(pid);
+	fd = __create_client_sock(pid, uid);
 	if (fd < 0)
 		return -ECOMM;
 
@@ -521,6 +526,11 @@ int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, 
 
 int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
+	return __app_send_raw_with_noreply_for_uid(pid, getuid(), cmd, kb_data, datalen);
+}
+
+int __app_send_raw_with_noreply_for_uid(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen)
+{
 	int fd;
 	int len;
 	int sent = 0;
@@ -534,7 +544,7 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 
 	_D("pid(%d) : cmd(%d)", pid, cmd);
 
-	fd = __create_client_sock(pid);
+	fd = __create_client_sock(pid, uid);
 	if (fd < 0)
 		return -ECOMM;
 
@@ -567,6 +577,11 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 
 int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
+	return __app_send_raw_with_delay_reply_for_uid(pid, getuid(), cmd, kb_data, datalen);
+}
+
+int __app_send_raw_with_delay_reply_for_uid(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen)
+{
 	int fd;
 	int len;
 	int sent = 0;
@@ -579,7 +594,7 @@ int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, in
 
 	_D("pid(%d) : cmd(%d)", pid, cmd);
 
-	fd = __create_client_sock(pid);
+	fd = __create_client_sock(pid, uid);
 	if (fd < 0)
 		return -ECOMM;
 
@@ -681,6 +696,11 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 
 app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, int datalen)
 {
+	return (app_pkt_t *)__app_send_cmd_with_result_for_uid(pid, getuid(), cmd, kb_data, datalen);
+}
+
+app_pkt_t *__app_send_cmd_with_result_for_uid(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen)
+{
 	int fd;
 	int len;
 	int ret;
@@ -688,7 +708,7 @@ app_pkt_t *__app_send_cmd_with_result(int pid, int cmd, unsigned char *kb_data, 
 	app_pkt_t *pkt = NULL;
 	unsigned char buf[AUL_SOCK_MAXBUFF];
 
-	fd = __create_client_sock(pid);
+	fd = __create_client_sock(pid, uid);
 	if (fd < 0)
 		return NULL;
 
