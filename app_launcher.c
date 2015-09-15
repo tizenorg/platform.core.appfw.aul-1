@@ -113,6 +113,7 @@ static void print_usage(char *program)
 			"   -S                        --status            Display running apps list\n"
 			"   -s [tizen application ID] --start             Launch widget with tizen application ID\n"
 			"   -k [tizen application ID] --kill              Kill widget with tizen application ID\n"
+			"   -t [tizen application ID] --terminate         Terminate widget with tizen application ID\n"
 			"   -r [tizen application ID] --is-running        Check whether application is running by tizen application ID,\n"
 			"                                                 If widget is running, 0(zero) will be returned.\n"
 			"   -d                        --debug             Activate debug mode\n"
@@ -169,6 +170,17 @@ static int __iterfunc_kill(const aul_app_info *info, void *data)
 	return 0;
 }
 
+static int __iterfunc_term(const aul_app_info *info, void *data)
+{
+	if (!data)
+		return 0;
+	if (strcmp(info->appid, data) == 0) {
+		aul_terminate_pid(info->pid);
+		printf("\t Terminate appId: %s (%d)\n", info->appid, info->pid);
+	}
+	return 0;
+}
+
 static int is_app_installed(char *appid)
 {
 	int is_installed = 0;
@@ -215,6 +227,7 @@ int main(int argc, char **argv)
 		{ "start", required_argument, 0, 's' },
 		{ "args", required_argument, 0, 'a' },
 		{ "kill", required_argument, 0, 'k' },
+		{ "terminate", required_argument, 0, 't' },
 		{ "is-running", required_argument, 0, 'r' },
 		{ "debug", no_argument, 0, 'd' },
 		{ 0, 0, 0, 0 }
@@ -224,7 +237,7 @@ int main(int argc, char **argv)
 	do {
 		next_opt = getopt_long(argc,
 				argv,
-				"hlSs:k:r:d",
+				"hlSs:k:t:r:d",
 				long_options,
 				&opt_idx);
 
@@ -259,6 +272,7 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 		case 'k':
+		case 't':
 		case 'r':
 			if (strlen(optarg) > 255) {
 				print_usage(argv[0]);
@@ -315,6 +329,15 @@ int main(int argc, char **argv)
 		is_running = aul_app_is_running(args.appid);
 		if (true == is_running) {
 			aul_app_get_running_app_info(__iterfunc_kill,
+					args.appid);
+		} else {
+			printf("result: %s\n", "App isn't running");
+			return 1;
+		}
+	} else if (op == 't') {
+		is_running = aul_app_is_running(args.appid);
+		if (true == is_running) {
+			aul_app_get_running_app_info(__iterfunc_term,
 					args.appid);
 		} else {
 			printf("result: %s\n", "App isn't running");
