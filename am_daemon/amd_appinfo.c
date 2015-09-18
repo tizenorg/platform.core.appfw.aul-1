@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <glib.h>
@@ -265,7 +266,7 @@ static void _remove_user_appinfo(uid_t uid)
 static void __handle_onboot(void *user_data, const char *appid,
 		struct appinfo *info)
 {
-	uid_t uid = (uid_t)user_data;
+	uid_t uid = (uid_t)(intptr_t)user_data;
 
 	if (!strcmp(info->val[_AI_ONBOOT], "true")) {
 		if (_status_app_is_running(appid, uid) > 0)
@@ -304,8 +305,9 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 	}
 
 	if (uid != GLOBAL_USER) {
-		appinfo_foreach(uid, __handle_onboot, (void *)uid);
-		appinfo_foreach(GLOBAL_USER, __handle_onboot, (void *)uid);
+		appinfo_foreach(uid, __handle_onboot, (void *)(intptr_t)uid);
+		appinfo_foreach(GLOBAL_USER, __handle_onboot,
+				(void *)(intptr_t)uid);
 	}
 
 	_D("loaded appinfo table for uid %d", uid);
@@ -374,7 +376,7 @@ static void _appinfo_delete_on_event(uid_t uid, const char *pkgid)
 static void _appinfo_insert_on_event(uid_t uid, const char *pkgid)
 {
 	appinfo_insert(uid, pkgid);
-	appinfo_foreach(uid, __handle_onboot, (void *)uid);
+	appinfo_foreach(uid, __handle_onboot, (void *)(intptr_t)uid);
 }
 
 static int __package_event_cb(uid_t target_uid, int req_id,

@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
@@ -66,7 +67,7 @@ static bundle *_create_internal_bundle(struct launch_arg *args)
 
 static int __launch_app_dead_handler(int pid, void *data)
 {
-	int listen_pid = (int)data;
+	int listen_pid = (intptr_t)data;
 
 	if (listen_pid == pid)
 		g_main_loop_quit(mainloop);
@@ -92,7 +93,7 @@ static gboolean run_func(void *data)
 		printf("... successfully launched pid = %d with debug %d\n",
 				pid, launch_arg_data->flag_debug);
 		if (launch_arg_data->sync) {
-			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)pid);
+			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
 			return FALSE;
 		}
 	} else {
