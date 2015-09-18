@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include <glib.h>
 
@@ -28,7 +29,7 @@ static gint __comp_pid(gconstpointer a, gconstpointer b)
 {
 	app_group_context_t *ac1 = (app_group_context_t*) a;
 
-	return ac1->pid - (int)b;
+	return ac1->pid - GPOINTER_TO_INT(b);
 }
 
 static void __list_destroy_cb(gpointer data)
@@ -39,7 +40,7 @@ static void __list_destroy_cb(gpointer data)
 static gboolean __hash_table_cb(gpointer key, gpointer value,
 		gpointer user_data)
 {
-	int pid = (int) user_data;
+	int pid = GPOINTER_TO_INT(user_data);
 	GList *list = (GList*) value;
 	GList *itr = g_list_first(list);
 
@@ -113,7 +114,7 @@ static GList* __find_removable_apps(int from)
 			}
 
 			if (found) {
-				list = g_list_append(list, (gpointer) gpids[j]);
+				list = g_list_append(list, GINT_TO_POINTER(gpids[j]));
 			}
 		}
 
@@ -151,7 +152,7 @@ void app_group_add(int leader_pid, int pid, int wid)
 	GList *list = (GList*) g_hash_table_lookup(app_group_hash,
 			GINT_TO_POINTER(leader_pid));
 	if (list != NULL) {
-		if (g_list_find_custom(list, (gconstpointer)pid, __comp_pid) != NULL) {
+		if (g_list_find_custom(list, (gconstpointer)(intptr_t)pid, __comp_pid) != NULL) {
 			_E("pid exist");
 			free(ac);
 			return;
@@ -199,7 +200,7 @@ void app_group_clear_top(int pid)
 			GList *itr = g_list_last(list);
 
 			while (itr != NULL) {
-				int p = (int)(itr->data);
+				int p = GPOINTER_TO_INT((itr->data));
 
 				aul_app_group_detach_window(p);
 				_term_sub_app(p);
@@ -279,7 +280,7 @@ void app_group_get_leader_pids(int *cnt, int **pids)
 		g_hash_table_iter_init(&iter, app_group_hash);
 		int i = 0;
 		while (g_hash_table_iter_next(&iter, &key, &value)) {
-			leader_pids[i] = (int) key;
+			leader_pids[i] = GPOINTER_TO_INT(key);
 			i++;
 		}
 
@@ -319,7 +320,7 @@ void app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		if ((int) key == leader_pid) {
+		if (GPOINTER_TO_INT(key) == leader_pid) {
 			GList *list = (GList*) value;
 			GList *i = g_list_first(list);
 			int size = g_list_length(list);
@@ -368,7 +369,7 @@ gboolean app_group_is_sub_app(int pid)
 		GList *found = NULL;
 
 		if (list != NULL) {
-			if ((found = g_list_find_custom(list, (gconstpointer)pid, __comp_pid)) != NULL) {
+			if ((found = g_list_find_custom(list, (gconstpointer)(intptr_t)pid, __comp_pid)) != NULL) {
 				if (g_list_first(list) == found)
 					return FALSE;
 				return TRUE;
@@ -392,7 +393,7 @@ void app_group_reroute(int pid)
 		GList *after = NULL;
 
 		if (list != NULL) {
-			if ((found = g_list_find_custom(list, (gconstpointer)pid, __comp_pid)) != NULL) {
+			if ((found = g_list_find_custom(list, (gconstpointer)(intptr_t)pid, __comp_pid)) != NULL) {
 				before = g_list_previous(found);
 				after = g_list_next(found);
 
@@ -424,8 +425,8 @@ repeat:
 		GList *list = (GList*) value;
 
 		if (list != NULL) {
-			if (g_list_find_custom(list, (gconstpointer)pid, __comp_pid) != NULL) {
-				lpid = (int)key;
+			if (g_list_find_custom(list, (gconstpointer)(intptr_t)pid, __comp_pid) != NULL) {
+				lpid = GPOINTER_TO_INT(key);
 				break;
 			}
 		}

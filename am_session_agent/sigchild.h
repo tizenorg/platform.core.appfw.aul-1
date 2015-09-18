@@ -151,7 +151,7 @@ static int __sigchild_action(void *data)
 	pid_t dead_pid;
 	char buf[MAX_LOCAL_BUFSZ];
 
-	dead_pid = (pid_t) data;
+	dead_pid = (pid_t)(intptr_t)data;
 	if (dead_pid <= 0)
 		goto end;
 
@@ -186,7 +186,7 @@ static void __agent_sig_child(int sigchld_fd)
 	while ((child_pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		if (child_pid == child_pgid)
 			killpg(child_pgid, SIGKILL);
-		__sigchild_action((void *)child_pid);
+		__sigchild_action((void *)(intptr_t)child_pid);
 	}
 
 	return;

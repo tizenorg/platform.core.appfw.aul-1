@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
@@ -90,7 +91,7 @@ void print_usage(char *progname)
 
 static int __launch_app_dead_handler(int pid, void *data)
 {
-	int listen_pid = (int) data;
+	int listen_pid = (intptr_t)data;
 
 	if(listen_pid == pid)
 		g_main_loop_quit(mainloop);
@@ -108,7 +109,7 @@ static gboolean run_func(void *data)
 		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
 
 		if (str && strcmp(str, "SYNC") == 0 )
-			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)pid);
+			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
 		else
 			g_main_loop_quit(mainloop);
 	} else {
