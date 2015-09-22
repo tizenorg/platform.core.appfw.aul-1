@@ -1,5 +1,5 @@
 [Socket]
-ListenStream=/tmp/alaunch/-2
+ListenStream=/run/user/%U/-2
 DirectoryMode=0777
 
 [Install]

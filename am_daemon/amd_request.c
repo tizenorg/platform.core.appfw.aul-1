@@ -248,43 +248,6 @@ static int __release_srv(uid_t caller_uid, const char *appid)
 	return 0;
 }
 
-static int __handle_dead_signal(bundle *kb, int clifd, struct ucred *pcr)
-{
-	int ret = -1;
-	const char *pid_str;
-	int pid = 0;
-
-	/* check the credentials from the caller: must be the amd agent */
-	char *caller = __proc_get_exe_bypid(pcr->pid);
-	if (!caller) {
-		_D("handle_dead_signal: unable to get caller exe");
-		return -1;
-	}
-
-	if (strcmp(caller, "/usr/bin/amd_session_agent")) {
-		_D("handle_dead_signal: caller is not amd session agent, %d : '%s'",
-				pcr->pid, caller);
-		free(caller);
-		return -1;
-	}
-	free(caller);
-
-	/* get app pid from bundle */
-	pid_str = bundle_get_val(kb, AUL_K_PID);
-	if (!pid_str)
-		return -1;
-
-	pid = atoi(pid_str);
-	if (pid <= 1)
-		return -1;
-
-	_D("APP_DEAD_SIGNAL : %d", pid);
-
-	ret = __app_dead_handler(pid, pcr->uid);
-
-	return ret;
-}
-
 static void __handle_agent_dead_signal(struct ucred *pcr)
 {
 	/* TODO: check the credentials from the caller: must be the amd agent */
@@ -689,12 +652,6 @@ static gboolean __request_handler(gpointer data)
 			  ret = _status_add_app_info_list(appid, app_path, pid);*/
 			ret = 0;
 			__send_result_to_client(clifd, ret);
-			break;
-		case APP_DEAD_SIGNAL:
-			_D("APP_DEAD_SIGNAL");
-			kb = bundle_decode(pkt->data, pkt->len);
-			ret = __handle_dead_signal(kb, clifd, &cr);
-			close(clifd);
 			break;
 		case AGENT_DEAD_SIGNAL:
 			_D("AMD_AGENT_DEAD_SIGNAL");

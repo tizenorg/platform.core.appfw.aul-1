@@ -545,10 +545,13 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	if (cmd == APP_START_RES)
 		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
 
+	/* FIXME: get caller appid by process label */
+#if 0
 	ret = aul_app_get_appid_bypid(caller_pid, caller_appid, sizeof(caller_appid));
 	if(ret == 0) {
 		bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
 	}
+#endif
 
 	ai = appinfo_find(caller_uid, appid);
 	if (ai == NULL) {
