@@ -35,7 +35,8 @@ static inline void __socket_garbage_collector()
 	struct dirent *dentry;
 	char tmp[MAX_LOCAL_BUFSZ];
 
-	dp = opendir(AUL_SOCK_PREFIX);
+	snprintf(tmp, sizeof(tmp), "/run/user/%d", getuid());
+	dp = opendir(tmp);
 	if (dp == NULL)
 		return;
 
@@ -45,7 +46,7 @@ static inline void __socket_garbage_collector()
 
 		snprintf(tmp, MAX_LOCAL_BUFSZ, "/proc/%s", dentry->d_name);
 		if (access(tmp, F_OK) < 0) {	/* Flawfinder: ignore */
-			snprintf(tmp, MAX_LOCAL_BUFSZ, "%s/%s", AUL_SOCK_PREFIX,
+			snprintf(tmp, MAX_LOCAL_BUFSZ, "/run/user/%d/%s", getuid(),
 				 dentry->d_name);
 			unlink(tmp);
 			continue;
@@ -158,7 +159,7 @@ static int __sigchild_action(void *data)
 	__send_app_dead_signal_amd(dead_pid);
 	__send_app_dead_signal_dbus(dead_pid);
 
-	snprintf(buf, MAX_LOCAL_BUFSZ, "%s/%d", AUL_SOCK_PREFIX, dead_pid);
+	snprintf(buf, MAX_LOCAL_BUFSZ, "/run/user/%d/%d", getuid(), dead_pid);
 	unlink(buf);
 
 	__socket_garbage_collector();

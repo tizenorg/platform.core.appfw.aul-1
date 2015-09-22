@@ -89,16 +89,15 @@ rm -rf %{buildroot}
 %make_install
 
 mkdir -p %{buildroot}%{_tmpfilesdir}
-mkdir -p %{buildroot}%{_unitdir}/default.target.wants
-mkdir -p %{buildroot}%{_unitdir}/sockets.target.wants
+mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
 mkdir -p %{buildroot}%{_unitdir_user}/sockets.target.wants
 install -m 0644 %SOURCE100 %{buildroot}%{_tmpfilesdir}/ac.conf
-install -m 0644 %SOURCE101 %{buildroot}%{_unitdir}/ac.service
-install -m 0644 %SOURCE102 %{buildroot}%{_unitdir}/ac.socket
+install -m 0644 %SOURCE101 %{buildroot}%{_unitdir_user}/ac.service
+install -m 0644 %SOURCE102 %{buildroot}%{_unitdir_user}/ac.socket
 install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.service
 install -m 0644 %SOURCE104 %{buildroot}%{_unitdir_user}/amd_session_agent.socket
-ln -sf ../ac.service %{buildroot}%{_unitdir}/default.target.wants/ac.service
-ln -sf ../ac.socket %{buildroot}%{_unitdir}/sockets.target.wants/ac.socket
+ln -sf ../ac.service %{buildroot}%{_unitdir_user}/default.target.wants/ac.service
+ln -sf ../ac.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/ac.socket
 ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 
 %preun
@@ -130,10 +129,10 @@ systemctl daemon-reload
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
 %{_tmpfilesdir}/ac.conf
-%{_unitdir}/ac.service
-%{_unitdir}/default.target.wants/ac.service
-%{_unitdir}/ac.socket
-%{_unitdir}/sockets.target.wants/ac.socket
+%{_unitdir_user}/ac.service
+%{_unitdir_user}/default.target.wants/ac.service
+%{_unitdir_user}/ac.socket
+%{_unitdir_user}/sockets.target.wants/ac.socket
 %{_unitdir_user}/amd_session_agent.service
 %{_unitdir_user}/amd_session_agent.socket
 %{_unitdir_user}/sockets.target.wants/amd_session_agent.socket

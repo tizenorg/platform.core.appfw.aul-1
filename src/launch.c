@@ -355,13 +355,6 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && cr.uid != 0) {
-		_E("security error");
-		__send_result_to_launchpad(clifd, -1);
-		free(pkt);
-		return -1;
-	}
-
 	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC) {
 		ret = __send_result_to_launchpad(clifd, 0);
 		if (ret < 0) {
