@@ -35,7 +35,8 @@ static inline void __socket_garbage_collector()
 	struct dirent *dentry;
 	char tmp[MAX_LOCAL_BUFSZ];
 
-	dp = opendir(AUL_SOCK_PREFIX);
+	snprintf(tmp, sizeof(tmp), "/run/user/%d", getuid());
+	dp = opendir(tmp);
 	if (dp == NULL)
 		return;
 
@@ -45,42 +46,13 @@ static inline void __socket_garbage_collector()
 
 		snprintf(tmp, MAX_LOCAL_BUFSZ, "/proc/%s", dentry->d_name);
 		if (access(tmp, F_OK) < 0) {	/* Flawfinder: ignore */
-			snprintf(tmp, MAX_LOCAL_BUFSZ, "%s/%s", AUL_SOCK_PREFIX,
+			snprintf(tmp, MAX_LOCAL_BUFSZ, "/run/user/%d/%s", getuid(),
 				 dentry->d_name);
 			unlink(tmp);
 			continue;
 		}
 	}
 	closedir(dp);
-}
-
-static inline int __send_app_dead_signal_amd(int dead_pid) {
-	bundle* kb=NULL;
-	char tmpbuf[MAX_PID_STR_BUFSZ];
-	int ret;
-
-	// send signal to AMD daemon using direct request
-	kb=bundle_create();
-	if (kb==NULL) {
-		_E("bundle creation failed");
-		return -1;
-	}
-
-	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", dead_pid);
-	bundle_add(kb,AUL_K_PID,tmpbuf);
-
-	ret=app_send_cmd_with_noreply(AUL_UTIL_PID, APP_DEAD_SIGNAL,kb);
-
-	if (ret) {
-		_E("unable to send dead signal to amd proc PID %d",dead_pid);
-	}
-	else {
-		_D("send_app_dead_signal_amd done (pid=%d)\n",dead_pid);
-	}
-
-	bundle_free(kb);
-
-	return ret;
 }
 
 static inline int __send_app_dead_signal_dbus(int dead_pid)
@@ -155,10 +127,9 @@ static int __sigchild_action(void *data)
 	if (dead_pid <= 0)
 		goto end;
 
-	__send_app_dead_signal_amd(dead_pid);
 	__send_app_dead_signal_dbus(dead_pid);
 
-	snprintf(buf, MAX_LOCAL_BUFSZ, "%s/%d", AUL_SOCK_PREFIX, dead_pid);
+	snprintf(buf, MAX_LOCAL_BUFSZ, "/run/user/%d/%d", getuid(), dead_pid);
 	unlink(buf);
 
 	__socket_garbage_collector();
