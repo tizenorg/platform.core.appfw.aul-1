@@ -234,15 +234,12 @@ static void __vconf_cb(keynode_t *key, void *data)
 	}
 }
 
-int __app_dead_handler(int pid, uid_t user)
+int __app_dead_handler(int pid, void *data)
 {
-	/* This function was called in single user mode as a callback to
-	 * aul_listen_app_dead_signal but in multiuser mode, AMD daemon can't
-	 * listen any more on DBUS system to catch those events.
-	 * AMD Agents must connect to AMD Daemon to signal a dead process
-	 */
-	if(pid <= 0)
+	if (pid <= 0)
 		return 0;
+
+	 _D("APP_DEAD_SIGNAL : %d", pid);
 
 	if (app_group_is_leader_pid(pid)) {
 		app_group_clear_top(pid);
@@ -254,8 +251,9 @@ int __app_dead_handler(int pid, uid_t user)
 		app_group_remove(pid);
 	}
 
-	__remove_item_running_list(pid, user);
-	_status_remove_app_info_list(pid, user);
+	__remove_item_running_list(pid, getuid());
+	_status_remove_app_info_list(pid, getuid());
+
 	return 0;
 }
 
@@ -273,6 +271,11 @@ static int __init()
 		return -1;
 	}
 
+	if (aul_listen_app_dead_signal(__app_dead_handler, NULL)) {
+		_E("aul_listen_app_dead_signal failed");
+		return -1;
+	}
+
 	_requset_init();
 	app_group_init();
 
@@ -283,23 +286,6 @@ static int __init()
 	return 0;
 }
 
-gboolean  __amd_ready(gpointer user_data)
-{
-	int fd;
-
-	fd = creat("/run/amd_ready",
-			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-
-	if (fd == -1) {
-		_E("failed to create /run/amd_ready: %s\n",
-			strerror(errno));
-		return FALSE;
-	}
-
-	close(fd);
-	return FALSE;
-}
-
 int main(int argc, char *argv[])
 {
 	GMainLoop *mainloop = NULL;
@@ -308,8 +294,6 @@ int main(int argc, char *argv[])
 		_E("AMD Initialization failed!\n");
 		return -1;
 	}
-
-	g_idle_add(__amd_ready, NULL);
 
 	mainloop = g_main_loop_new(NULL, FALSE);
 	if (!mainloop) {

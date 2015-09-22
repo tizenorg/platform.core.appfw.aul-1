@@ -676,7 +676,7 @@ _static_ void __agent_main_loop(struct pollfd pfds[])
 			__signal_unblock_sigchld();
 			__signal_fini();
 
-			snprintf(sock_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, getpid());
+			snprintf(sock_path, UNIX_PATH_MAX, "/run/user/%d/%d", getuid(), getpid());
 			unlink(sock_path);
 
 			PERF("prepare exec - first done");

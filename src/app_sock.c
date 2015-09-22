@@ -56,11 +56,6 @@ int __create_server_sock(int pid)
 	int fd;
 	mode_t orig_mask;
 
-	/* Create basedir for our sockets */
-	orig_mask = umask(0);
-	(void) mkdir(AUL_SOCK_PREFIX, S_IRWXU | S_IRWXG | S_IRWXO | S_ISVTX);
-	umask(orig_mask);
-
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
 	if (fd < 0) {
@@ -78,7 +73,7 @@ int __create_server_sock(int pid)
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, pid);
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/%d", getuid(), pid);
 	unlink(saddr.sun_path);
 
 	/* labeling to socket for SMACK */
@@ -129,8 +124,8 @@ int __create_server_sock(int pid)
 		int pgid;
 		pgid = getpgid(pid);
 		if (pgid > 1) {
-			snprintf(p_saddr.sun_path, UNIX_PATH_MAX, "%s/%d",
-				 AUL_SOCK_PREFIX, pgid);
+			snprintf(p_saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/%d",
+				 getuid(), pgid);
 			if (link(saddr.sun_path, p_saddr.sun_path) < 0) {
 				if (errno == EEXIST)
 					_D("pg path - already exists");
@@ -273,7 +268,7 @@ int __create_client_sock(int pid)
 	}
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "%s/%d", AUL_SOCK_PREFIX, pid);
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/%d", getuid(), pid);
  retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);

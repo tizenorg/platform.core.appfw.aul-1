@@ -70,7 +70,6 @@ enum app_cmd {
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */
-	APP_DEAD_SIGNAL,
 	AGENT_DEAD_SIGNAL
 };
 
