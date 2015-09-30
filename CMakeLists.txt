@@ -13,7 +13,7 @@ ENDIF (with_x11)
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon security-manager cynara-client cynara-creds-socket cynara-session)
+SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon security-manager cynara-client cynara-creds-socket cynara-session capi-system-info vconf)
 IF (with_wayland)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client)
 ENDIF (with_wayland)
@@ -69,6 +69,7 @@ add_library(aul SHARED
 		src/status.c
 		src/aul_path.c
 		src/app_group.c
+		src/aul_rsc_mgr.c
 		)
 TARGET_LINK_LIBRARIES(aul aul_mods ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
@@ -116,6 +117,7 @@ CONFIGURE_FILE(feature/preexec_list.txt.in feature/preexec_list.txt @ONLY)
 
 # Install headers, other files
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul.h DESTINATION include/aul)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_rsc_mgr.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/aul.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/legacy/preload_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/feature/preexec_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
