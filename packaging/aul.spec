@@ -23,8 +23,10 @@ Requires(preun):  /usr/bin/systemctl
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
+BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  xdgmime-devel, pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(security-manager)
 BuildRequires:  pkgconfig(rua)
@@ -32,6 +34,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(pkgmgr)
+BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libsystemd-daemon)
@@ -102,6 +105,9 @@ ln -sf ../ac.service %{buildroot}%{_unitdir}/default.target.wants/ac.service
 ln -sf ../ac.socket %{buildroot}%{_unitdir}/sockets.target.wants/ac.socket
 ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 
+mkdir -p %{buildroot}%{_datadir}/appsvc
+cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
+
 %preun
 if [ $1 == 0 ]; then
     systemctl stop ac.service
@@ -130,6 +136,7 @@ systemctl daemon-reload
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
+%{_datadir}/appsvc/*
 %{_tmpfilesdir}/ac.conf
 %{_unitdir}/ac.service
 %{_unitdir}/default.target.wants/ac.service
@@ -141,7 +148,6 @@ systemctl daemon-reload
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent
-
 
 %files test
 %{_bindir}/launch_app
