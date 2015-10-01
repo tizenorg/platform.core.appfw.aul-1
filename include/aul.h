@@ -1850,6 +1850,7 @@ int aul_pause_pid(int pid);
 int aul_reload_appinfo(void);
 int aul_status_update(int status);
 int aul_running_list_update(char *appid, char *app_path, char *pid);
+int aul_request_socket_pair(bundle *b, int *fd);
 
 void aul_app_group_add(int leader_pid, int pid, int wid);
 void aul_app_group_remove(int pid);
