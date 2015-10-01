@@ -23,8 +23,10 @@ Requires(preun):  /usr/bin/systemctl
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
+BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  xdgmime-devel, pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(security-manager)
 BuildRequires:  pkgconfig(rua)
@@ -32,6 +34,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(pkgmgr)
+BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libsystemd-daemon)
