@@ -39,6 +39,8 @@ BuildRequires:  pkgconfig(cynara-client)
 BuildRequires:  pkgconfig(cynara-creds-socket)
 BuildRequires:  pkgconfig(cynara-session)
 BuildRequires:  pkgconfig(capi-system-info)
+BuildRequires:  pkgconfig(iniparser)
+BuildRequires:  pkgconfig(sqlite3)
 %if %{with wayland}
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(tizen-extension-client)
@@ -101,6 +103,9 @@ ln -sf ../ac.service %{buildroot}%{_unitdir_user}/default.target.wants/ac.servic
 ln -sf ../ac.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/ac.socket
 ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 
+mkdir -p %{buildroot}%{_datadir}/appsvc
+cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
+
 %preun
 if [ $1 == 0 ]; then
     systemctl stop ac.service
@@ -129,6 +134,7 @@ systemctl daemon-reload
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
+%{_datadir}/appsvc/*
 %{_tmpfilesdir}/ac.conf
 %{_unitdir_user}/ac.service
 %{_unitdir_user}/default.target.wants/ac.service
