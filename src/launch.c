@@ -185,6 +185,56 @@ SLPAPI int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb)
 	return res;
 }
 
+SLPAPI int app_send_cmd_with_fd(int pid, int cmd, bundle *kb, int *ret_fd)
+{
+	int datalen;
+	bundle_raw *kb_data = NULL;
+	int res = AUL_R_OK;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE) {
+		return AUL_R_EINVAL;
+	}
+	if ((res = __app_send_raw_with_fd_reply(pid, cmd, kb_data, datalen, ret_fd)) < 0) {
+		switch (res) {
+			case -EINVAL:
+				res = AUL_R_EINVAL;
+				break;
+			case -ECOMM:
+				res = AUL_R_ECOMM;
+				break;
+			case -EAGAIN:
+				res = AUL_R_ETIMEOUT;
+				break;
+			case -ELOCALLAUNCH_ID:
+				res = AUL_R_LOCAL;
+				break;
+			case -EILLEGALACCESS:
+				res = AUL_R_EILLACC;
+				break;
+			case -ETERMINATING:
+				res = AUL_R_ETERMINATING;
+				break;
+			case -ENOLAUNCHPAD:
+				res = AUL_R_ENOLAUNCHPAD;
+				break;
+#ifdef _APPFW_FEATURE_APP_CONTROL_LITE
+			case -EUGLOCAL_LAUNCH:
+				res = AUL_R_UG_LOCAL;
+				break;
+#endif
+			case -EREJECTED:
+				res = AUL_R_EREJECTED;
+				break;
+			default:
+				res = AUL_R_ERROR;
+		}
+	}
+	free(kb_data);
+
+	return res;
+}
+
 /**
  * @brief	encode kb and send it to 'pid'
  * @param[in]	pid		receiver's pid
@@ -272,6 +322,50 @@ static int __app_resume_local()
 
 	return 0;
 }
+
+int app_request_to_launchpad_with_fd(int cmd, const char *appid, bundle *kb, int *fd)
+{
+	int must_free = 0;
+	int ret = 0;
+
+	SECURE_LOGD("launch request : %s", appid);
+	if (kb == NULL) {
+		kb = bundle_create();
+		must_free = 1;
+	} else
+		__clear_internal_key(kb);
+
+	ret = app_send_cmd_with_fd(AUL_UTIL_PID, cmd, kb, fd);
+
+	_D("launch request result : %d", ret);
+	if (ret == AUL_R_LOCAL) {
+		_E("app_request_to_launchpad : Same Process Send Local");
+		bundle *b;
+
+		switch (cmd) {
+			case APP_START:
+			case APP_START_RES:
+				b = bundle_dup(kb);
+				ret = __app_launch_local(b);
+				break;
+			case APP_OPEN:
+			case APP_RESUME:
+			case APP_RESUME_BY_PID:
+				ret = __app_resume_local();
+				break;
+			default:
+				_E("no support packet");
+		}
+
+	}
+
+	/* cleanup */
+	if (must_free)
+		bundle_free(kb);
+
+	return ret;
+}
+
 
 /**
  * @brief	start caller with kb
@@ -521,6 +615,13 @@ SLPAPI void aul_finalize()
 	return;
 }
 
+
+SLPAPI int aul_request_socket_pair(bundle *kb, int *fd)
+{
+	int ret;
+	ret = app_request_to_launchpad_with_fd(APP_GET_SOCKET_PAIR, NULL, kb, fd);
+	return ret;
+}
 
 SLPAPI int aul_launch_app(const char *appid, bundle *kb)
 {
