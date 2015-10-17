@@ -780,7 +780,7 @@ SLPAPI int aul_svc_run_service_for_uid(bundle *b, int request_code,
 	SECURE_LOGD("op - %s / mime - %s / scheme - %s\n", info.op, info.origin_mime,
 	            info.scheme);
 
-	ret = _svc_db_check_perm(uid);
+	ret = _svc_db_check_perm(uid, true);
 	if (ret < 0) {
 		_E("permission error : %d", ret);
 		ret = AUL_SVC_RET_EILLACC;
@@ -1065,7 +1065,7 @@ SLPAPI int aul_svc_get_all_defapps_for_uid(aul_svc_info_iter_fn iter_fn,
 	GSList *iter = NULL;
 
 
-	ret = _svc_db_check_perm(uid);
+	ret = _svc_db_check_perm(uid, true);
 	if (ret < 0) {
 		_E("permission error : %d", ret);
 		return AUL_SVC_RET_EILLACC;
@@ -1202,7 +1202,7 @@ SLPAPI int aul_svc_set_defapp_for_uid(const char *op, const char *mime_type,
 	if (op == NULL || defapp == NULL)
 		return AUL_SVC_RET_EINVAL;
 
-	ret = _svc_db_check_perm(uid);
+	ret = _svc_db_check_perm(uid, false);
 	if (ret < 0) {
 		_E("permission error : %d", ret);
 		return AUL_SVC_RET_EILLACC;
@@ -1228,7 +1228,7 @@ SLPAPI int aul_svc_unset_defapp_for_uid(const char *defapp, uid_t uid)
 	if (defapp == NULL)
 		return AUL_SVC_RET_EINVAL;
 
-	ret = _svc_db_check_perm(uid);
+	ret = _svc_db_check_perm(uid, false);
 	if (ret < 0) {
 		_E("permission error : %d", ret);
 		return AUL_SVC_RET_EILLACC;
@@ -1251,7 +1251,7 @@ SLPAPI int aul_svc_unset_all_defapps_for_uid(uid_t uid)
 {
 	int ret;
 
-	ret = _svc_db_check_perm(uid);
+	ret = _svc_db_check_perm(uid, false);
 	if (ret < 0) {
 		_E("permission error : %d", ret);
 		return AUL_SVC_RET_EILLACC;
@@ -1274,7 +1274,7 @@ SLPAPI int aul_svc_is_defapp_for_uid(const char *pkg_name, uid_t uid)
 {
 	int ret;
 
-	ret = _svc_db_check_perm(uid);
+	ret = _svc_db_check_perm(uid, true);
 	if (ret < 0) {
 		_E("permission error : %d", ret);
 		return AUL_SVC_RET_EILLACC;

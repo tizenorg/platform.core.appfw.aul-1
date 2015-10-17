@@ -176,7 +176,7 @@ static char *__get_app_info_db(uid_t uid)
  * db initialize
  */
 
-static int __init(uid_t uid)
+static int __init(uid_t uid, bool readonly)
 {
 	int rc;
 
@@ -185,7 +185,8 @@ static int __init(uid_t uid)
 		return 0;
 	}
 
-	rc = sqlite3_open(__get_svc_db(uid), &svc_db);
+	rc = sqlite3_open_v2(__get_svc_db(uid), &svc_db,
+			readonly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_READWRITE, NULL);
 	if (rc) {
 		_E("Can't open database: %d, %s, extended: %d", rc, sqlite3_errmsg(svc_db),
 				sqlite3_extended_errcode(svc_db));
@@ -326,13 +327,13 @@ static int __fini(void)
 	return 0;
 }
 
-int _svc_db_check_perm(uid_t uid)
+int _svc_db_check_perm(uid_t uid, bool readonly)
 {
 	int ret = 0;
-	if (__init(uid) < 0)
+	if (__init(uid, readonly) < 0)
 		return -1;
 
-	ret = access(__get_svc_db(uid), R_OK | W_OK);
+	ret = access(__get_svc_db(uid), readonly ? R_OK : (R_OK | W_OK));
 	return ret;
 }
 
@@ -346,7 +347,7 @@ int _svc_db_add_app(const char *op, const char *mime_type, const char *uri,
 	sqlite3_stmt* p_statement;
 	int result;
 
-	if (__init(uid) < 0)
+	if (__init(uid, false) < 0)
 		return -1;
 
 	if (op == NULL )
@@ -404,7 +405,7 @@ int _svc_db_delete_with_pkgname(const char *pkg_name, uid_t uid)
 		return -1;
 	}
 
-	if (__init(uid) < 0)
+	if (__init(uid, false) < 0)
 		return -1;
 
 	result = sqlite3_prepare_v2(svc_db, delete_query, strlen(delete_query),
@@ -439,7 +440,7 @@ int _svc_db_delete_all(uid_t uid)
 	char query[QUERY_MAX_LEN];
 	char* error_message = NULL;
 
-	if (__init(uid) < 0)
+	if (__init(uid, false) < 0)
 		return -1;
 
 	snprintf(query, QUERY_MAX_LEN, "delete from appsvc;");
@@ -466,7 +467,7 @@ int _svc_db_is_defapp(const char *pkg_name, uid_t uid)
 		return 0;
 	}
 
-	if (__init(uid) < 0)
+	if (__init(uid, true) < 0)
 		return 0;
 
 	snprintf(query, QUERY_MAX_LEN,
@@ -516,7 +517,7 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri,
 	else
 		strncpy(u, uri, URI_MAX_LEN - 1);
 
-	if (__init(uid) < 0)
+	if (__init(uid, true) < 0)
 		return NULL;
 
 
@@ -733,7 +734,7 @@ int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid)
 	char *pkgname = NULL;
 	int found;
 
-	if (__init(uid) < 0)
+	if (__init(uid, true) < 0)
 		return -1;
 
 	snprintf(query, QUERY_MAX_LEN, "select pkg_name from appsvc");

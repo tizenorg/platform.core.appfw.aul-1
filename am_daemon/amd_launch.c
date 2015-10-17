@@ -528,7 +528,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	const char *hwacc;
 	const char *permission;
 	const char *preload;
-	char caller_appid[256];
+	char *caller_appid;
 	pkgmgrinfo_cert_compare_result_type_e compare_result;
 	int delay_reply = 0;
 	int pad_pid = LAUNCHPAD_PID;
@@ -545,13 +545,15 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	if (cmd == APP_START_RES)
 		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
 
-	/* FIXME: get caller appid by process label */
-#if 0
-	ret = aul_app_get_appid_bypid(caller_pid, caller_appid, sizeof(caller_appid));
-	if(ret == 0) {
+	caller_appid = _status_app_get_appid_bypid(caller_pid);
+	if (caller_appid != NULL) {
 		bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
+	} else {
+		caller_appid = _status_app_get_appid_bypid(getpgid(caller_pid));
+		if (caller_appid != NULL) {
+			bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
+		}
 	}
-#endif
 
 	ai = appinfo_find(caller_uid, appid);
 	if (ai == NULL) {

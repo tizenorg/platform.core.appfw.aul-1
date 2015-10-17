@@ -19,6 +19,7 @@
 #define __AUL_SVC_DB_H__
 
 #include <sqlite3.h>
+#include <stdbool.h>
 #include <time.h>
 #include <sys/types.h>
 #include <glib.h>
@@ -36,7 +37,7 @@ extern "C"
 {
 #endif
 
-int _svc_db_check_perm(uid_t uid);
+int _svc_db_check_perm(uid_t uid, bool readonly);
 int _svc_db_add_app(const char *op, const char *mime_type, const char *uri, const char *pkg_name, uid_t uid);
 int _svc_db_delete_with_pkgname(const char *pkg_name, uid_t uid);
 char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri, uid_t uid);
