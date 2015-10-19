@@ -20,6 +20,7 @@ Requires(post):   /usr/bin/systemctl
 Requires(postun): /sbin/ldconfig
 Requires(postun): /usr/bin/systemctl
 Requires(preun):  /usr/bin/systemctl
+Requires:   tizen-platform-config
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
@@ -87,6 +88,8 @@ MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
 
 %__make %{?_smp_mflags}
 
+sqlite3 .appsvc.db < ./data/appsvc_db.sql
+
 %install
 rm -rf %{buildroot}
 %make_install
@@ -94,6 +97,8 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
 mkdir -p %{buildroot}%{_unitdir_user}/sockets.target.wants
+mkdir -p %{buildroot}%{_sysconfdir}/skel/.applications/dbspace
+install -m 0644 .appsvc.db %{buildroot}%{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
 install -m 0644 %SOURCE100 %{buildroot}%{_tmpfilesdir}/ac.conf
 install -m 0644 %SOURCE101 %{buildroot}%{_unitdir_user}/ac.service
 install -m 0644 %SOURCE102 %{buildroot}%{_unitdir_user}/ac.socket
@@ -106,6 +111,7 @@ ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.w
 mkdir -p %{buildroot}%{_datadir}/appsvc
 cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
 
+
 %preun
 if [ $1 == 0 ]; then
     systemctl stop ac.service
@@ -115,6 +121,9 @@ fi
 
 %post
 /sbin/ldconfig
+
+chsmack -a 'User::Home' %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
+
 systemctl daemon-reload
 if [ $1 == 1 ]; then
     systemctl restart ac.service
@@ -146,6 +155,7 @@ systemctl daemon-reload
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent
+%{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
 
 
 %files test
