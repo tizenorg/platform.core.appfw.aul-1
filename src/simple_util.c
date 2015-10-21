@@ -45,7 +45,7 @@
 #define MAX_CMD_BUFSZ 1024
 
 static inline int __read_proc(const char *path, char *buf, int size);
-static inline int __find_pid_by_cmdline(const char *dname, const char *cmdline,
+static inline int __find_pid_by_appid(const char *dname, const char *appid,
 		void *priv, uid_t uid);
 static inline int __get_pgid_from_stat(int pid);
 
@@ -74,14 +74,12 @@ static inline int __read_proc(const char *path, char *buf, int size)
 	return ret;
 }
 
-static inline int __find_pid_by_cmdline(const char *dname, const char *cmdline,
+static inline int __find_pid_by_appid(const char *dname, const char *appid,
 		void *priv, uid_t uid)
 {
-	char *apppath;
 	int pid = 0;
 
-	apppath = (char *)priv;
-	if (strncmp(cmdline, apppath, MAX_LOCAL_BUFSZ-1) == 0) {
+	if (strncmp(appid, (char *)priv, MAX_LOCAL_BUFSZ-1) == 0) {
 		pid = atoi(dname);
 		if (pid != getpgid(pid))
 			pid = 0;
@@ -90,8 +88,8 @@ static inline int __find_pid_by_cmdline(const char *dname, const char *cmdline,
 	return pid;
 }
 
-int __proc_iter_cmdline(
-	int (*iterfunc)(const char *dname, const char *cmdline, void *priv, uid_t uid),
+int __proc_iter_appid(
+	int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid),
 		    void *priv)
 {
 	DIR *dp;
@@ -99,16 +97,15 @@ int __proc_iter_cmdline(
 	int pid;
 	int ret;
 	char buf[MAX_LOCAL_BUFSZ];
-	char *cmdline;
+	char *p;
 	uid_t uid;
-	dp = opendir("/proc");
 
-	if (dp == NULL) {
+	dp = opendir("/proc");
+	if (dp == NULL)
 		return -1;
-	}
 
 	if (iterfunc == NULL)
-		iterfunc = __find_pid_by_cmdline;
+		iterfunc = __find_pid_by_appid;
 
 	while ((dentry = readdir(dp)) != NULL) {
 		if (!isdigit(dentry->d_name[0]))
@@ -116,23 +113,15 @@ int __proc_iter_cmdline(
 
 		uid = __proc_get_usr_bypid(atoi(dentry->d_name));
 
-		snprintf(buf, sizeof(buf), "/proc/%s/cmdline", dentry->d_name);
+		snprintf(buf, sizeof(buf), "/proc/%s/attr/current", dentry->d_name);
 		ret = __read_proc(buf, buf, sizeof(buf));
 		if (ret <= 0)
 			continue;
 
-		/* support app launched by shell script*/
-		cmdline = buf;
-		if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0) {
-			cmdline = &buf[BINSH_SIZE + 1];
-		} else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
-			if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
-				if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0) {
-					cmdline = &buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3];
-				}
-			}
-		}
-		pid = iterfunc(dentry->d_name, cmdline, priv, uid);
+		p = strrchr(buf, ':');
+		if (p != NULL)
+			p = p + 1;
+		pid = iterfunc(dentry->d_name, p, priv, uid);
 
 		if (pid > 0) {
 			closedir(dp);
@@ -160,9 +149,24 @@ uid_t __proc_get_usr_bypid(int pid)
 	return uid;
 }
 
+char *__proc_get_appid_bypid(int pid)
+{
+	char buf[MAX_CMD_BUFSZ];
+	char *p;
+	int ret;
 
+	snprintf(buf, sizeof(buf), "/proc/%d/attr/current", pid);
+	ret = __read_proc(buf, buf, sizeof(buf));
+	if (ret <= 0)
+		return NULL;
 
+	p = strrchr(buf, ':');
+	/* not an app */
+	if (p == NULL)
+		return NULL;
 
+	return strdup(p + 1);
+}
 
 char *__proc_get_cmdline_bypid(int pid)
 {
