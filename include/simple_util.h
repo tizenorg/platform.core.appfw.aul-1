@@ -71,11 +71,12 @@
 	} \
 } while (0)
 
-int __proc_iter_cmdline(int (*iterfunc)
-			 (const char *dname, const char *cmdline, void *priv, uid_t uid),
+int __proc_iter_appid(int (*iterfunc)
+			 (const char *dname, const char *appid, void *priv, uid_t uid),
 			void *priv);
-int __proc_iter_pgid(int pgid, int (*iterfunc) (int pid, void *priv,uid_t uid),
+int __proc_iter_pgid(int pgid, int (*iterfunc) (int pid, void *priv, uid_t uid),
 		     void *priv);
+char *__proc_get_appid_bypid(int pid);
 char *__proc_get_cmdline_bypid(int pid);
 char *__proc_get_exe_bypid(int pid);
 uid_t __proc_get_usr_bypid(int pid);
