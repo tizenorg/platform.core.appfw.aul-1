@@ -360,28 +360,20 @@ int _status_send_running_appinfo_v2(int fd)
 
 static int __get_appid_bypid(int pid, char *appid, int len)
 {
-	char *cmdline;
-	app_info_from_db *menu_info;
-	uid_t uid;
-	cmdline = __proc_get_cmdline_bypid(pid);
-	if (cmdline == NULL)
+	char *label;
+	char *p;
+
+	label = __proc_get_smacklabel_bypid(pid);
+	if (label == NULL)
 		return -1;
 
-	uid = __proc_get_usr_bypid(pid);
-	if (uid == -1) {
-		free(cmdline);
+	p = strrchr(label, ':');
+	/* not an app */
+	if (p == NULL)
 		return -1;
-	}
 
-	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
-		free(cmdline);
-		return -1;
-	} else {
-		snprintf(appid, len, "%s", _get_appid(menu_info));
-	}
-
-	free(cmdline);
-	_free_app_info_from_db(menu_info);
+	snprintf(appid, len, "%s", p + 1);
+	free(label);
 
 	return 0;
 }

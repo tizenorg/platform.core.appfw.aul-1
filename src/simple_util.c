@@ -160,9 +160,18 @@ uid_t __proc_get_usr_bypid(int pid)
 	return uid;
 }
 
+char *__proc_get_smacklabel_bypid(int pid)
+{
+	char buf[MAX_CMD_BUFSZ];
+	int ret;
 
+	snprintf(buf, sizeof(buf), "/proc/%d/attr/current", pid);
+	ret = __read_proc(buf, buf, sizeof(buf));
+	if (ret <= 0)
+		return NULL;
 
-
+	return strdup(buf);
+}
 
 char *__proc_get_cmdline_bypid(int pid)
 {
