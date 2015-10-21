@@ -118,46 +118,58 @@ SLPAPI int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
 	return aul_app_get_appid_bypid(pid, pkgname, len);
 }
 
+static int __get_appid_bypid(int pid, char *appid, int len)
+{
+	char *label;
+	char *p;
+
+	label = __proc_get_smacklabel_bypid(pid);
+	if (label == NULL)
+		return -1;
+
+	p = strrchr(label, ':');
+	/* not an app */
+	if (p == NULL)
+		return -1;
+
+	snprintf(appid, len, "%s", p + 1);
+	free(label);
+
+	return 0;
+}
+
 SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 {
-	app_pkt_t *pkt = NULL;
+	app_pkt_t *pkt;
 	int pgid;
-	int cmd = APP_GET_APPID_BYPID;
+	int ret;
 
-	if (pid == getpid() || getuid()==0 || geteuid()==0) {
-		if (__get_info_bypid(pid, appid, len, cmd) == 0) {
-			SECURE_LOGD("appid for %d is %s", pid, appid);
-			return AUL_R_OK;
+	if (pid != getpid()) {
+		pkt = __app_send_cmd_with_result(AUL_UTIL_PID,
+				APP_GET_APPID_BYPID, (unsigned char *)&pid,
+				sizeof(pid));
+		if (pkt == NULL)
+			return AUL_R_ERROR;
+		if (pkt->cmd == APP_GET_INFO_ERROR) {
+			free(pkt);
+			return AUL_R_ERROR;
 		}
-		/* support app launched by shell script*/
+
+		snprintf(appid, len, "%s", pkt->data);
+		free(pkt);
+		return AUL_R_OK;
+	} else {
+		ret = __get_appid_bypid(pid, appid, len);
+		if (ret == 0)
+			return AUL_R_OK;
 
 		pgid = getpgid(pid);
 		if (pgid <= 1)
 			return AUL_R_ERROR;
-
-		_D("second change pgid = %d, pid = %d", pgid, pid);
-		if (__get_info_bypid(pgid, appid, len, cmd) == 0)
-			return AUL_R_OK;
-
-		return AUL_R_ERROR;
+		return __get_appid_bypid(pid, appid, len);
 	}
 
-	if (appid == NULL)
-		return AUL_R_EINVAL;
-
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, cmd,
-			(unsigned char *)&pid, sizeof(pid));
-
-	if (pkt == NULL)
-		return AUL_R_ERROR;
-	if (pkt->cmd == APP_GET_INFO_ERROR) {
-		free(pkt);
-		return AUL_R_ERROR;
-	}
-
-	snprintf(appid, len, "%s", pkt->data);
-	free(pkt);
-	return AUL_R_OK;
+	return AUL_R_ERROR;
 }
 
 SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
