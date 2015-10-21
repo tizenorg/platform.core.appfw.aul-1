@@ -172,8 +172,12 @@ static bool __get_screen_large(void)
 			screen_large = false;
 		} else
 			screen_large = atoi(tmp);
-	} else
-		system_info_get_platform_bool("http://tizen.org/feature/screen.size.large", &screen_large);
+	} else {
+		if (system_info_get_platform_bool("http://tizen.org/feature/screen.size.large", &screen_large) != SYSTEM_INFO_ERROR_NONE) {
+			LOGE("Failed to get info of screen.size.large");
+			screen_large = false;
+		}
+	}
 
 	return screen_large;
 }
@@ -299,9 +303,6 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 			if (strncmp(cur_language, val, strlen(val)))
 				*invalid = true;
 			break;
-
-		default:
-			break;
 	}
 }
 
@@ -346,9 +347,6 @@ static void __bundle_iterator_get_best_node(const char *key, const char *val,
 		case NODE_ATTR_LANGUAGE:
 			*weight += WEIGHT_LANGUAGE;
 			break;
-
-		default:
-			break;
 	}
 }
 
@@ -390,9 +388,6 @@ static const char *__get_cache(aul_resource_e type,
 			case AUL_RESOURCE_TYPE_BIN:
 				rsc_type = RSC_GROUP_TYPE_BIN;
 				break;
-
-			default:
-				rsc_type = "NULL";
 		}
 	}
 
@@ -518,9 +513,6 @@ static void __put_cache(aul_resource_e type, const char *id,
 			case AUL_RESOURCE_TYPE_BIN:
 				rsc_type = RSC_GROUP_TYPE_BIN;
 				break;
-
-			default:
-				rsc_type = "NULL";
 		}
 	}
 
@@ -588,9 +580,6 @@ static resource_group_t *__find_group(resource_data_t *data,
 			case AUL_RESOURCE_TYPE_BIN:
 				rsc_type = RSC_GROUP_TYPE_BIN;
 				break;
-
-			default:
-				rsc_type = "NULL";
 		}
 	}
 
@@ -880,7 +869,7 @@ static int __set_valid_filelist(bundle *b)
 			if (retval == AUL_RESOURCE_ERROR_NONE)
 				g_hash_table_add(valid_path_list, path);
 			else
-				LOGD("failed to get value with given type[%d], key[%s]", rsc_type, id_key);
+				LOGE("failed to get value with given type[%d], key[%s]", rsc_type, id_key);
 
 			if (cur_language) {
 				free(cur_language);
