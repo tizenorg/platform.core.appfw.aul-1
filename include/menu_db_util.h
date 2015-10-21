@@ -185,16 +185,16 @@ static inline int __appinfo_func(const pkgmgrinfo_appinfo_h appinfo,
 		void *user_data)
 {
 	app_info_from_db *menu_info = (app_info_from_db *)user_data;
-	char *appid;
+	char *apppath;
 	char *pkgid;
 	int ret = PMINFO_R_OK;
 
 	if (!menu_info)
 		return ret;
 
-	ret = pkgmgrinfo_appinfo_get_appid(appinfo, &appid);
-	if (ret == PMINFO_R_OK && appid) {
-		menu_info->appid = strdup(appid);
+	ret = pkgmgrinfo_appinfo_get_exec(appinfo, &apppath);
+	if (ret == PMINFO_R_OK && apppath) {
+		menu_info->app_path = strdup(apppath);
 		ret = PMINFO_R_ERROR;
 	}
 
@@ -205,8 +205,8 @@ static inline int __appinfo_func(const pkgmgrinfo_appinfo_h appinfo,
 	return ret;
 }
 
-static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
-		const char *apppath, uid_t uid)
+static inline app_info_from_db *_get_app_info_from_db_by_appid_user(
+		const char *appid, uid_t uid)
 {
 	app_info_from_db *menu_info;
 	pkgmgrinfo_appinfo_filter_h filter;
@@ -217,7 +217,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 		uid = GLOBAL_USER;
 	}
 
-	if (apppath == NULL)
+	if (appid == NULL)
 		return NULL;
 
 	menu_info = calloc(1, sizeof(app_info_from_db));
@@ -231,7 +231,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 	}
 
 	ret = pkgmgrinfo_appinfo_filter_add_string(filter,
-			PMINFO_APPINFO_PROP_APP_EXEC, apppath);
+			PMINFO_APPINFO_PROP_APP_ID, appid);
 	if (ret != PMINFO_R_OK) {
 		pkgmgrinfo_appinfo_filter_destroy(filter);
 		_free_app_info_from_db(menu_info);
@@ -253,17 +253,17 @@ static inline app_info_from_db *_get_app_info_from_db_by_apppath_user(
 
 	pkgmgrinfo_appinfo_filter_destroy(filter);
 
-	menu_info->app_path = strdup(apppath);
-	menu_info->original_app_path = strdup(apppath);
+	menu_info->appid = strdup(appid);
+	menu_info->original_app_path = menu_info->app_path;
 
 	return menu_info;
 
 }
 
-static inline app_info_from_db *_get_app_info_from_db_by_apppath(
-							const char *apppath)
+static inline app_info_from_db *_get_app_info_from_db_by_appid(
+							const char *appid)
 {
-	return _get_app_info_from_db_by_apppath_user(apppath, GLOBAL_USER);
+	return _get_app_info_from_db_by_appid_user(appid, GLOBAL_USER);
 }
 
 #endif

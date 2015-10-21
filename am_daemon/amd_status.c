@@ -251,10 +251,7 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 
 int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 {
-	const char *app_exec;
-	char *apppath;
 	int ret;
-	int i = 0;
 	struct appinfo *ai;
 
 	if (appid == NULL)
@@ -264,48 +261,24 @@ int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 	if (ai == NULL)
 		return -1;
 
-	app_exec = appinfo_get_value(ai, AIT_EXEC);
-	if (app_exec == NULL) {
-		_E("invalid appinfo");
-		return -1;
-	}
-	apppath = strdup(app_exec);
-	if (apppath == NULL) {
-		_E("out of memory");
-		return -1;
-	}
-
-	/*truncate apppath if it includes default bundles */
-	while (apppath[i] != 0) {
-		if (apppath[i] == ' ' || apppath[i] == '\t') {
-			apppath[i]='\0';
-			break;
-		}
-		i++;
-	}
-
-	ret = __proc_iter_cmdline(NULL, apppath);
-
-	free(apppath);
+	ret = __proc_iter_appid(NULL, (void *)appid);
 
 	return ret;
 }
 
-static int __get_pkginfo(const char *dname, const char *cmdline, void *priv,uid_t uid)
+static int __get_pkginfo(const char *dname, const char *appid, void *priv, uid_t uid)
 {
-	app_info_from_db *menu_info;
+	app_info_from_db *menu_info = NULL;
 	char *r_info;
-	char *appid;
 	char *app_path;
 
 	r_info = (char *)priv;
+	if (appid == NULL)
+		goto out;
 
-	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL)
+	if ((menu_info = _get_app_info_from_db_by_appid_user(appid, uid)) == NULL)
 		goto out;
 	else {
-		appid = _get_appid(menu_info);
-		if (appid == NULL)
-			goto out;
 		app_path = _get_app_path(menu_info);
 		if (app_path == NULL)
 			goto out;
@@ -329,7 +302,7 @@ int _status_send_running_appinfo_v2(int fd)
 	int len;
 	char buf[AUL_SOCK_MAXBUFF] = {0 ,};
 
-	__proc_iter_cmdline(__get_pkginfo, buf);
+	__proc_iter_appid(__get_pkginfo, buf);
 	len = strlen(buf);
 
 	pkt = (app_pkt_t *)malloc(AUL_PKT_HEADER_SIZE + len);
@@ -360,28 +333,14 @@ int _status_send_running_appinfo_v2(int fd)
 
 static int __get_appid_bypid(int pid, char *appid, int len)
 {
-	char *cmdline;
-	app_info_from_db *menu_info;
-	uid_t uid;
-	cmdline = __proc_get_cmdline_bypid(pid);
-	if (cmdline == NULL)
+	char *result;
+
+	result = __proc_get_appid_bypid(pid);
+	if (result == NULL)
 		return -1;
 
-	uid = __proc_get_usr_bypid(pid);
-	if (uid == -1) {
-		free(cmdline);
-		return -1;
-	}
-
-	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
-		free(cmdline);
-		return -1;
-	} else {
-		snprintf(appid, len, "%s", _get_appid(menu_info));
-	}
-
-	free(cmdline);
-	_free_app_info_from_db(menu_info);
+	snprintf(appid, len, "%s", result);
+	free(result);
 
 	return 0;
 }
@@ -444,27 +403,27 @@ int _status_get_appid_bypid(int fd, int pid)
 
 static int __get_pkgid_bypid(int pid, char *pkgid, int len)
 {
-	char *cmdline;
+	char *appid;
 	app_info_from_db *menu_info;
 	uid_t uid;
-	cmdline = __proc_get_cmdline_bypid(pid);
-	if (cmdline == NULL)
+	appid = __proc_get_appid_bypid(pid);
+	if (appid == NULL)
 		return -1;
 
 	uid = __proc_get_usr_bypid(pid);
 	if (uid == -1) {
-		free(cmdline);
+		free(appid);
 		return -1;
 	}
 
-	if ((menu_info = _get_app_info_from_db_by_apppath_user(cmdline,uid)) == NULL) {
-		free(cmdline);
+	if ((menu_info = _get_app_info_from_db_by_appid_user(appid, uid)) == NULL) {
+		free(appid);
 		return -1;
 	} else {
 		snprintf(pkgid, len, "%s", _get_pkgid(menu_info));
 	}
 
-	free(cmdline);
+	free(appid);
 	_free_app_info_from_db(menu_info);
 
 	return 0;
