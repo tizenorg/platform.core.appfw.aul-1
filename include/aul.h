@@ -1482,6 +1482,11 @@ int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
  */
 int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
 
+int aul_listen_booting_done_signal(int (*func) (int, void *), void *data);
+
+int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data);
+
+int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data);
 
 const char *aul_get_app_external_root_path(void);
 const char *aul_get_app_root_path(void);
@@ -1516,6 +1521,15 @@ int aul_kill_pid(int pid);
 int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
 int aul_remove_caller_cb(int pid);
 int aul_invoke_caller_cb(int pid);
+
+int aul_update_freezer_status(int pid, const char* type);
+
+int aul_send_app_launch_request_signal(int pid, const char* appid, const char* pkgid, const char* type);
+int aul_send_app_resume_request_signal(int pid, const char* appid, const char* pkgid, const char *type);
+int aul_send_app_terminate_request_signal(int pid, const char* appid, const char* pkgid, const char *type);
+int aul_send_app_status_change_signal(int pid, const char* appid, const char* pkgid, const char* status, const char *type);
+int aul_send_app_terminated_signal(int pid);
+int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pkgid);
 
 /**
  * @par Description:
