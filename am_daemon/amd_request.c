@@ -55,6 +55,10 @@
 #define PRIVILEGE_APPMANAGER_KILL "http://tizen.org/privilege/appmanager.kill"
 #define PRIVILEGE_APPMANAGER_KILL_BGAPP "http://tizen.org/privilege/appmanager.kill.bgapp"
 
+typedef struct _dispatch_s {
+	gboolean (*callback)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
+} dispatch_s;
+
 static cynara *r_cynara = NULL;
 
 static int __send_result_to_client(int fd, int res);
@@ -258,7 +262,7 @@ static void __handle_agent_dead_signal(struct ucred *pcr)
 	__agent_dead_handler(pcr->uid);
 }
 
-static void __dispatch_app_group_add(int clifd, const app_pkt_t *pkt)
+static gboolean __dispatch_app_group_add(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	bundle *b;
 	char *buf;
@@ -274,9 +278,11 @@ static void __dispatch_app_group_add(int clifd, const app_pkt_t *pkt)
 	bundle_free(b);
 	app_group_add(leader_pid, pid, wid);
 	__real_send(clifd, 0);
+
+	return TRUE;
 }
 
-static void __dispatch_app_group_remove(int clifd, const app_pkt_t *pkt)
+static gboolean __dispatch_app_group_remove(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	bundle *b;
 	char *buf;
@@ -288,9 +294,11 @@ static void __dispatch_app_group_remove(int clifd, const app_pkt_t *pkt)
 	bundle_free(b);
 	app_group_remove(pid);
 	__real_send(clifd, 0);
+
+	return TRUE;
 }
 
-static void __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt)
+static gboolean __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	bundle *b;
 	char *buf;
@@ -303,16 +311,19 @@ static void __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt)
 	bundle_free(b);
 	wid = app_group_get_window(pid);
 	__real_send(clifd, wid);
+
+	return TRUE;
 }
 
-static void __dispatch_app_group_resume(int clifd, int pid)
+static gboolean __dispatch_app_group_resume(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
-	app_group_resume(pid);
+	app_group_resume(cr->pid);
 	__real_send(clifd, 0);
+
+	return TRUE;
 }
 
-static void __dispatch_app_group_get_leader_pid(int clifd,
-		const app_pkt_t *pkt)
+static gboolean __dispatch_app_group_get_leader_pid(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	bundle *b;
 	char *buf;
@@ -325,10 +336,11 @@ static void __dispatch_app_group_get_leader_pid(int clifd,
 	bundle_free(b);
 	lpid = app_group_get_leader_pid(pid);
 	__real_send(clifd, lpid);
+
+	return TRUE;
 }
 
-static void __dispatch_app_group_get_leader_pids(int clifd,
-		const app_pkt_t *pkt)
+static gboolean __dispatch_app_group_get_leader_pids(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	int cnt;
 	int *pids;
@@ -345,9 +357,11 @@ static void __dispatch_app_group_get_leader_pids(int clifd,
 	}
 	if (pids != NULL)
 		free(pids);
+
+	return TRUE;
 }
 
-static void __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt)
+static gboolean __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	bundle *b;
 	char *buf;
@@ -371,6 +385,292 @@ static void __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt)
 	}
 	if (pids != NULL)
 		free(pids);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	const char *appid;
+	const char *target_uid;
+	bundle *kb;
+	int ret = -1;
+	int t_uid;
+	char *state;
+	item_pkt_t *item;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb) {
+		appid = bundle_get_val(kb, AUL_K_APPID);
+		if (cr->uid < REGULAR_UID_MIN) {
+			target_uid = bundle_get_val(kb, AUL_K_TARGET_UID);
+			if (target_uid != NULL) {
+				t_uid = atoi(target_uid);
+				sd_uid_get_state(t_uid, &state);
+				if (strcmp(state, "offline") &&
+				    strcmp(state, "closing")) {
+					ret = _start_app(appid, kb, pkt->cmd, cr->pid,
+					                 t_uid, clifd);
+				} else {
+					_E("uid:%d session is %s", t_uid, state);
+					__real_send(clifd, AUL_R_ERROR);
+					return FALSE;
+				}
+			} else {
+				_E("request from root, treat as global user");
+				ret = _start_app(appid, kb, pkt->cmd, cr->pid,
+				                 GLOBAL_USER, clifd);
+			}
+		} else {
+			ret = _start_app(appid, kb, pkt->cmd, cr->pid, cr->uid, clifd);
+		}
+		if (ret > 0) {
+			item = calloc(1, sizeof(item_pkt_t));
+			if (item == NULL) {
+				_E("out of memory");
+				return FALSE;
+			}
+			item->pid = ret;
+			item->uid = cr->uid;
+			strncpy(item->appid, appid, 511);
+
+			g_timeout_add(1200, __add_item_running_list, item);
+		}
+		bundle_free(kb);
+
+		return TRUE;
+	}
+	close(clifd);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_app_result(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	bundle *kb;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb) {
+		__foward_cmd(pkt->cmd, kb, cr->pid);
+		close(clifd);
+		bundle_free(kb);
+
+		return TRUE;
+	}
+	close(clifd);
+
+	return FALSE;
+}
+
+static gboolean __dispatch_app_pause(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	char *appid;
+	bundle *kb;
+	int ret;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb) {
+		appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+		ret = _status_app_is_running_v2(appid, cr->uid);
+		if (ret > 0) {
+			ret = _pause_app(ret, clifd);
+		} else {
+			_E("%s is not running", appid);
+			close(clifd);
+		}
+		bundle_free(kb);
+
+		return TRUE;
+	}
+	close(clifd);
+
+	return FALSE;
+}
+
+static gboolean __dispatch_app_process_by_pid(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	char *appid;
+	bundle *kb;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+
+	if (kb) {
+		appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+		__app_process_by_pid(pkt->cmd, appid, cr, clifd);
+		bundle_free(kb);
+
+		return TRUE;
+	}
+	close(clifd);
+
+	return FALSE;
+}
+
+static gboolean __dispatch_app_term_async(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	char *appid;
+	bundle *kb;
+	char *term_pid;
+	struct appinfo *ai;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb) {
+		term_pid = (char *)bundle_get_val(kb, AUL_K_APPID);
+		appid = _status_app_get_appid_bypid(atoi(term_pid));
+		ai = appinfo_find(cr->uid, appid);
+		if (ai) {
+			appinfo_set_value(ai, AIT_STATUS, "norestart");
+			__app_process_by_pid(pkt->cmd, term_pid, cr, clifd);
+		} else {
+			close(clifd);
+		}
+		bundle_free(kb);
+
+		return TRUE;
+	}
+	close(clifd);
+
+	return FALSE;
+}
+
+static gboolean __dispatch_app_term(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	char *appid;
+	bundle *kb;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb) {
+		appid = (char *)bundle_get_val(kb, AUL_K_APPID);
+		__app_process_by_pid(pkt->cmd, appid, cr, clifd);
+		bundle_free(kb);
+
+		return TRUE;
+	}
+	close(clifd);
+
+	return FALSE;
+}
+
+static gboolean __dispatch_app_running_info(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	_status_send_running_appinfo(clifd, cr->uid);
+	return TRUE;
+}
+
+static gboolean __dispatch_app_is_running(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	char *appid = NULL;
+	int ret;
+
+	appid = malloc(MAX_PACKAGE_STR_SIZE);
+	if (appid == NULL) {
+		_E("out of memory");
+		__send_result_to_client(clifd, -1);
+		return FALSE;
+	}
+	strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
+	ret = _status_app_is_running(appid, cr->uid);
+	SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
+	__send_result_to_client(clifd, ret);
+	free(appid);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_app_get_appid_by_pid(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	int pid;
+	int ret;
+
+	memcpy(&pid, pkt->data, pkt->len);
+	ret = _status_get_appid_bypid(clifd, pid);
+	_D("app_get_appid_bypid : %d : %d", pid, ret);
+	return TRUE;
+}
+
+static gboolean __dispatch_app_get_pkgid_by_pid(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	int pid;
+	int ret;
+
+	memcpy(&pid, pkt->data, sizeof(int));
+	ret = _status_get_pkgid_bypid(clifd, pid);
+	_D("APP_GET_PKGID_BYPID : %d : %d", pid, ret);
+	return TRUE;
+}
+
+static gboolean __dispatch_legacy_command(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	__send_result_to_client(clifd, 0);
+	return TRUE;
+}
+
+static gboolean __dispatch_app_status_update(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	int *status;
+	char *appid;
+	struct appinfo *ai;
+
+	status = (int *)pkt->data;
+	if (*status == STATUS_NORESTART) {
+		appid = _status_app_get_appid_bypid(cr->pid);
+		ai = appinfo_find(cr->uid, appid);
+		appinfo_set_value((struct appinfo *)ai, AIT_STATUS, "norestart");
+	} else {
+		_status_update_app_info_list(cr->pid, *status, cr->uid);
+	}
+	close(clifd);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_app_get_status(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	int pid;
+	int ret;
+
+	memcpy(&pid, pkt->data, sizeof(int));
+	ret = _status_get_app_info_status(pid, 0);
+	__send_result_to_client(clifd, ret);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_app_released(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	char *appid;
+	int ret;
+
+	appid = malloc(MAX_PACKAGE_STR_SIZE);
+	if (appid == NULL) {
+		_E("out of memory");
+		__send_result_to_client(clifd, -1);
+		return FALSE;
+	}
+	strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
+	ret = __release_srv(cr->uid, appid);
+	__send_result_to_client(clifd, ret);
+	free(appid);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_agent_dead_signal(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	_D("AMD_AGENT_DEAD_SIGNAL");
+	__handle_agent_dead_signal(cr);
+	close(clifd);
+
+	return TRUE;
+}
+
+static gboolean __dispatch_amd_reload_appinfo(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	_D("AMD_RELOAD_APPINFO");
+	appinfo_reload();
+	__send_result_to_client(clifd, 0);
+
+	return TRUE;
 }
 
 static int __get_caller_info_from_cynara(int sockfd, char **client, char **user, char **session)
@@ -469,24 +769,56 @@ end:
 	return ret;
 }
 
+static dispatch_s dispatch_table[CMD_MAX] = {
+	[APP_START] =  { __dispatch_app_start },
+	[APP_OPEN] = { __dispatch_app_start },
+	[APP_RESUME] = { __dispatch_app_start },
+	[APP_RESUME_BY_PID] = { __dispatch_app_process_by_pid },
+	[APP_TERM_BY_PID] = { __dispatch_app_term },
+	[APP_TERM_BY_PID_WITHOUT_RESTART] = { __dispatch_app_term_async },
+	[APP_RESULT] = { __dispatch_app_result },
+	[APP_START_RES] = { __dispatch_app_start },
+	[APP_CANCEL] = { __dispatch_app_result },
+	[APP_KILL_BY_PID] = { __dispatch_app_term },
+	[APP_ADD_HISTORY] = { NULL },
+	[APP_RUNNING_INFO] = { __dispatch_app_running_info },
+	[APP_RUNNING_INFO_RESULT] = { NULL },
+	[APP_IS_RUNNING] = { __dispatch_app_is_running },
+	[APP_GET_APPID_BYPID] = { __dispatch_app_get_appid_by_pid },
+	[APP_GET_PKGID_BYPID] = { __dispatch_app_get_pkgid_by_pid },
+	[APP_GET_INFO_OK] = { NULL },
+	[APP_GET_INFO_ERROR] = { NULL },
+	[APP_KEY_EVENT] = { NULL },
+	[APP_KEY_RESERVE] = { __dispatch_legacy_command },
+	[APP_KEY_RELEASE] = { __dispatch_legacy_command },
+	[APP_STATUS_UPDATE] = { __dispatch_app_status_update },
+	[APP_RELEASED] = { __dispatch_app_released },
+	[APP_RUNNING_LIST_UPDATE] = { __dispatch_legacy_command },
+	[APP_TERM_REQ_BY_PID] = { __dispatch_app_process_by_pid },
+	[APP_TERM_BY_PID_ASYNC] = { __dispatch_app_term_async },
+	[APP_TERM_BGAPP_BY_PID] = { __dispatch_app_term },
+	[APP_PAUSE] = { __dispatch_app_pause },
+	[APP_PAUSE_BY_PID] = { __dispatch_app_process_by_pid },
+	[APP_GROUP_ADD] = { __dispatch_app_group_add },
+	[APP_GROUP_REMOVE] = { __dispatch_app_group_remove },
+	[APP_GROUP_GET_WINDOW] = { __dispatch_app_group_get_window },
+	[APP_GROUP_GET_LEADER_PIDS] = { __dispatch_app_group_get_leader_pids },
+	[APP_GROUP_GET_GROUP_PIDS] = { __dispatch_app_group_get_group_pids },
+	[APP_GROUP_RESUME] = { __dispatch_app_group_resume },
+	[APP_GROUP_GET_LEADER_PID] = { __dispatch_app_group_get_leader_pid },
+	[APP_GET_STATUS] = { __dispatch_app_get_status },
+	[AMD_RELOAD_APPINFO] = { __dispatch_amd_reload_appinfo },
+	[AGENT_DEAD_SIGNAL] = { __dispatch_agent_dead_signal },
+};
+
 static gboolean __request_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
 	int fd = gpollfd->fd;
 	app_pkt_t *pkt;
+	int ret;
 	int clifd;
 	struct ucred cr;
-	int *status;
-	int ret = -1;
-	char *appid;
-	char *term_pid;
-	char *target_uid;
-	char *state;
-	int pid;
-	int t_uid;
-	bundle *kb = NULL;
-	item_pkt_t *item;
-	struct appinfo *ai;
 	const char *privilege;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
@@ -508,221 +840,16 @@ static gboolean __request_handler(gpointer data)
 		}
 	}
 
-	switch (pkt->cmd) {
-		case APP_OPEN:
-		case APP_RESUME:
-		case APP_START:
-		case APP_START_RES:
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			if (cr.uid < REGULAR_UID_MIN) {
-				target_uid = bundle_get_val(kb, AUL_K_TARGET_UID);
-				if (target_uid != NULL) {
-					t_uid = atoi(target_uid);
-					sd_uid_get_state(t_uid, &state);
-					if (strcmp(state, "offline") &&
-							strcmp(state, "closing")) {
-						ret = _start_app(appid, kb, pkt->cmd, cr.pid,
-								t_uid, clifd);
-					} else {
-						_E("uid:%d session is %s", t_uid, state);
-						__real_send(clifd, AUL_R_ERROR);
-						return FALSE;
-					}
-				} else {
-					_E("request from root, treat as global user");
-					ret = _start_app(appid, kb, pkt->cmd, cr.pid,
-							GLOBAL_USER, clifd);
-				}
-			} else {
-				ret = _start_app(appid, kb, pkt->cmd, cr.pid, cr.uid, clifd);
-			}
-			if (ret > 0) {
-				item = calloc(1, sizeof(item_pkt_t));
-				if (item == NULL) {
-					_E("out of memory");
-					return FALSE;
-				}
-				item->pid = ret;
-				item->uid = cr.uid;
-				strncpy(item->appid, appid, 511);
-
-				g_timeout_add(1200, __add_item_running_list, item);
-			}
-
-			if (kb != NULL)
-				bundle_free(kb), kb = NULL;
-			break;
-		case APP_RESULT:
-		case APP_CANCEL:
-			kb = bundle_decode(pkt->data, pkt->len);
-			ret = __foward_cmd(pkt->cmd, kb, cr.pid);
-			//__real_send(clifd, ret);
-			close(clifd);
-			break;
-		case APP_PAUSE:
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
-			ret = _status_app_is_running_v2(appid, cr.uid);
-			if (ret > 0) {
-				ret = _pause_app(ret, clifd);
-			} else {
-				_E("%s is not running", appid);
-				close(clifd);
-			}
-			break;
-		case APP_RESUME_BY_PID:
-		case APP_PAUSE_BY_PID:
-		case APP_TERM_REQ_BY_PID:
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
-			break;
-		case APP_TERM_BY_PID_WITHOUT_RESTART:
-		case APP_TERM_BY_PID_ASYNC:
-			kb = bundle_decode(pkt->data, pkt->len);
-			term_pid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			appid = _status_app_get_appid_bypid(atoi(term_pid));
-			ai = appinfo_find(cr.uid, appid);
-			if (ai) {
-				appinfo_set_value(ai, AIT_STATUS, "norestart");
-				ret = __app_process_by_pid(pkt->cmd, term_pid, &cr, clifd);
-			} else {
-				ret = -1;
-				close(clifd);
-			}
-			break;
-		case APP_TERM_BY_PID:
-		case APP_KILL_BY_PID:
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
-			break;
-		case APP_TERM_BGAPP_BY_PID:
-			kb = bundle_decode(pkt->data, pkt->len);
-			appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			ret = __app_process_by_pid(pkt->cmd, appid, &cr, clifd);
-			break;
-		case APP_RUNNING_INFO:
-			_status_send_running_appinfo(clifd, cr.uid);
-			break;
-		case APP_IS_RUNNING:
-			appid = malloc(MAX_PACKAGE_STR_SIZE);
-			if (appid == NULL) {
-				_E("out of memory");
-				__send_result_to_client(clifd, -1);
-				break;
-			}
-			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-			ret = _status_app_is_running(appid, cr.uid);
-			SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
-			__send_result_to_client(clifd, ret);
-			free(appid);
-			break;
-		case APP_GET_APPID_BYPID:
-			memcpy(&pid, pkt->data, pkt->len);
-			ret = _status_get_appid_bypid(clifd, pid);
-			_D("APP_GET_APPID_BYPID : %d : %d", pid, ret);
-			break;
-		case APP_GET_PKGID_BYPID:
-			memcpy(&pid, pkt->data, sizeof(int));
-			ret = _status_get_pkgid_bypid(clifd, pid);
-			_D("APP_GET_PKGID_BYPID : %d : %d", pid, ret);
-			break;
-		case APP_KEY_RESERVE:
-			// support for key events has been removed (sdx-20140813)
-			__send_result_to_client(clifd, 0);
-			break;
-		case APP_KEY_RELEASE:
-			// support for key events has been removed (sdx-20140813)
-			__send_result_to_client(clifd, 0);
-			break;
-		case APP_STATUS_UPDATE:
-			status = (int *)pkt->data;
-			if (*status == STATUS_NORESTART) {
-				appid = _status_app_get_appid_bypid(cr.pid);
-				ai = appinfo_find(cr.uid, appid);
-				appinfo_set_value((struct appinfo *)ai, AIT_STATUS, "norestart");
-			} else {
-				ret = _status_update_app_info_list(cr.pid, *status, cr.uid);
-			}
-			//__send_result_to_client(clifd, ret);
-			close(clifd);
-			break;
-		case APP_GET_STATUS:
-			memcpy(&pid, pkt->data, sizeof(int));
-			ret = _status_get_app_info_status(pid, 0);
-			__send_result_to_client(clifd, ret);
-			break;
-		case APP_RELEASED:
-			appid = malloc(MAX_PACKAGE_STR_SIZE);
-			if (appid == NULL) {
-				_E("out of memory");
-				__send_result_to_client(clifd, -1);
-				break;
-			}
-			strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-			ret = __release_srv(cr.uid, appid);
-			__send_result_to_client(clifd, ret);
-			free(appid);
-			break;
-		case APP_RUNNING_LIST_UPDATE:
-			/*kb = bundle_decode(pkt->data, pkt->len);
-			  appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-			  app_path = (char *)bundle_get_val(kb, AUL_K_EXEC);
-			  tmp_pid = (char *)bundle_get_val(kb, AUL_K_PID);
-			  pid = atoi(tmp_pid);
-			  ret = _status_add_app_info_list(appid, app_path, pid);*/
-			ret = 0;
-			__send_result_to_client(clifd, ret);
-			break;
-		case AGENT_DEAD_SIGNAL:
-			_D("AMD_AGENT_DEAD_SIGNAL");
-			__handle_agent_dead_signal(&cr);
-			close(clifd);
-			break;
-		case AMD_RELOAD_APPINFO:
-			_D("AMD_RELOAD_APPINFO");
-			appinfo_reload();
-			__send_result_to_client(clifd, 0);
-			break;
-
-		case APP_GROUP_ADD:
-			__dispatch_app_group_add(clifd, pkt);
-			break;
-
-		case APP_GROUP_REMOVE:
-			__dispatch_app_group_remove(clifd, pkt);
-			break;
-
-		case APP_GROUP_GET_WINDOW:
-			__dispatch_app_group_get_window(clifd, pkt);
-			break;
-
-		case APP_GROUP_GET_LEADER_PIDS:
-			__dispatch_app_group_get_leader_pids(clifd, pkt);
-			break;
-
-		case APP_GROUP_GET_GROUP_PIDS:
-			__dispatch_app_group_get_group_pids(clifd, pkt);
-			break;
-
-		case APP_GROUP_RESUME:
-			__dispatch_app_group_resume(clifd, cr.pid);
-			break;
-
-		case APP_GROUP_GET_LEADER_PID:
-			__dispatch_app_group_get_leader_pid(clifd, pkt);
-			break;
-		default:
-			_E("no support packet");
-			close(clifd);
+	if (pkt->cmd >= 0 && pkt->cmd < CMD_MAX) {
+		if (dispatch_table[pkt->cmd].callback) {
+			if (dispatch_table[pkt->cmd].callback(clifd, pkt, &cr) == FALSE)
+				_E("callback returns FALSE : %d", pkt->cmd);
+		}
+	} else {
+		_E("no support packet");
+		close(clifd);
 	}
-
 	free(pkt);
-
-	if (kb != NULL)
-		bundle_free(kb), kb = NULL;
 
 	return TRUE;
 }

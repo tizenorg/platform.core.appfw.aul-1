@@ -29,7 +29,7 @@
 #include <linux/un.h>
 
 enum app_cmd {
-	APP_START,
+	APP_START = 0,
 	APP_OPEN,
 	APP_RESUME,
 	APP_RESUME_BY_PID,
@@ -70,7 +70,8 @@ enum app_cmd {
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */
-	AGENT_DEAD_SIGNAL
+	AGENT_DEAD_SIGNAL,
+	CMD_MAX
 };
 
 #define AUL_SOCK_PREFIX "/tmp/alaunch"
