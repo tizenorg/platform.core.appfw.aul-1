@@ -50,7 +50,7 @@
 #define TERM_WAIT_SEC 3
 #define INIT_PID 1
 
-#define AUL_PR_NAME			16
+#define AUL_PR_NAME         16
 
 // SDK related defines
 #define PATH_APP_ROOT tzplatform_getenv(TZ_USER_APP)
@@ -61,10 +61,10 @@
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
 typedef struct {
-	char *pkg_name;		/* package */
-	char *app_path;		/* exec */
-	char *original_app_path;	/* exec */
-	int multiple;		/* x_slp_multiple */
+	char *pkg_name;     /* package */
+	char *app_path;     /* exec */
+	char *original_app_path;    /* exec */
+	int multiple;       /* x_slp_multiple */
 	char *pkg_type;
 } app_info_from_pkgmgr;
 
@@ -127,8 +127,7 @@ int _start_app_local(uid_t uid, const char *appid)
 	bundle_free(kb);
 
 	if (pid > 0)
-		_status_add_app_info_list(
-				appid, app_path, pid, LAUNCHPAD_PID, uid);
+		_status_add_app_info_list(appid, app_path, pid, LAUNCHPAD_PID, uid);
 
 	return pid;
 }
@@ -151,9 +150,9 @@ int _resume_app(int pid, int clifd)
 {
 	int dummy;
 	int ret;
-	if ((ret =
-	     __app_send_raw_with_delay_reply(pid, APP_RESUME_BY_PID,
-		     (unsigned char *)&dummy, 0)) < 0) {
+
+	if ((ret = __app_send_raw_with_delay_reply(pid, APP_RESUME_BY_PID,
+			(unsigned char *)&dummy, 0)) < 0) {
 		if (ret == -EAGAIN)
 			_E("resume packet timeout error");
 		else {
@@ -176,9 +175,9 @@ int _pause_app(int pid, int clifd)
 {
 	int dummy;
 	int ret;
-	if ((ret =
-	    __app_send_raw_with_delay_reply(pid, APP_PAUSE_BY_PID,
-		    (unsigned char *)&dummy, 0)) < 0) {
+
+	if ((ret = __app_send_raw_with_delay_reply(pid, APP_PAUSE_BY_PID,
+			(unsigned char *)&dummy, 0)) < 0) {
 		if (ret == -EAGAIN)
 			_E("pause packet timeout error");
 		else {
@@ -201,8 +200,8 @@ int _term_sub_app(int pid)
 	int dummy;
 	int ret;
 
-	if ( (ret = __app_send_raw_with_noreply(pid, APP_TERM_BY_PID_ASYNC,
-					(unsigned char *)&dummy, 0)) < 0) {
+	if ((ret = __app_send_raw_with_noreply(pid, APP_TERM_BY_PID_ASYNC,
+			(unsigned char *)&dummy, 0)) < 0) {
 		_E("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
 			_E("fail to killing - %d\n", pid);
@@ -225,7 +224,7 @@ int _term_app(int pid, int clifd)
 
 		app_group_get_group_pids(pid, &cnt, &pids);
 		if (cnt > 0) {
-			for (i = cnt-1 ; i>=0; i--) {
+			for (i = cnt - 1 ; i >= 0; i--) {
 				if (i != 0)
 					_term_sub_app(pids[i]);
 				app_group_remove(pids[i]);
@@ -235,8 +234,8 @@ int _term_app(int pid, int clifd)
 		}
 	}
 
-	if ( (ret = __app_send_raw_with_delay_reply
-	    (pid, APP_TERM_BY_PID, (unsigned char *)&dummy, 0)) < 0) {
+	if ( (ret = __app_send_raw_with_delay_reply(pid, APP_TERM_BY_PID,
+			(unsigned char *)&dummy, 0)) < 0) {
 		_D("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
 			_E("fail to killing - %d\n", pid);
@@ -257,8 +256,8 @@ int _term_req_app(int pid, int clifd)
 	int dummy;
 	int ret;
 
-	if ( (ret = __app_send_raw_with_delay_reply
-		(pid, APP_TERM_REQ_BY_PID, (unsigned char *)&dummy, 0)) < 0) {
+	if ( (ret = __app_send_raw_with_delay_reply(pid, APP_TERM_REQ_BY_PID,
+			(unsigned char *)&dummy, 0)) < 0) {
 		_D("terminate req send error");
 		__real_send(clifd, ret);
 	}
@@ -284,9 +283,9 @@ int _term_bgapp(int pid, int clifd)
 	if (app_group_is_leader_pid(pid)) {
 		app_group_get_group_pids(pid, &cnt, &pids);
 		if (cnt > 0) {
-			status = _status_get_app_info_status(pids[cnt-1]);
-			if(status == STATUS_BG) {
-				for (i = cnt-1 ; i>=0; i--) {
+			status = _status_get_app_info_status(pids[cnt - 1]);
+			if (status == STATUS_BG) {
+				for (i = cnt - 1 ; i >= 0; i--) {
 					if (i != 0)
 						_term_sub_app(pids[i]);
 					app_group_remove(pids[i]);
@@ -296,10 +295,8 @@ int _term_bgapp(int pid, int clifd)
 		free(pids);
 	}
 
-	if ((fd = __app_send_raw_with_delay_reply(
-					pid, APP_TERM_BGAPP_BY_PID,
-					(unsigned char *)&dummy,
-					sizeof(int))) < 0) {
+	if ((fd = __app_send_raw_with_delay_reply(pid, APP_TERM_BGAPP_BY_PID,
+			(unsigned char *)&dummy, sizeof(int))) < 0) {
 		_D("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
 			_E("fail to killing - %d", pid);
@@ -367,7 +364,7 @@ static gboolean __au_glib_check(GSource *src)
 }
 
 static gboolean __au_glib_dispatch(GSource *src, GSourceFunc callback,
-		gpointer data)
+					gpointer data)
 {
 	callback(data);
 	return TRUE;
@@ -415,7 +412,7 @@ static gboolean __reply_handler(gpointer data)
 	}
 	close(fd);
 
-	if(res < 0) {
+	if (res < 0) {
 		__real_send(clifd, res);
 	} else {
 		__real_send(clifd, pid);
@@ -477,10 +474,11 @@ static void __set_reply_handler(int fd, int pid, int clifd, int cmd)
 	r_info->cmd = cmd;
 
 
-	r_info->timer_id = g_timeout_add(5000, __recv_timeout_handler, (gpointer) r_info);
+	r_info->timer_id = g_timeout_add(5000, __recv_timeout_handler,
+						(gpointer) r_info);
 	g_source_add_poll(src, gpollfd);
 	g_source_set_callback(src, (GSourceFunc) __reply_handler,
-			(gpointer) r_info, NULL);
+				(gpointer) r_info, NULL);
 	g_source_set_priority(src, G_PRIORITY_DEFAULT);
 	g_source_attach(src, NULL);
 
@@ -515,7 +513,43 @@ static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 	return ret;
 }
 
-int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
+static int __compare_signature(const struct appinfo *ai, int cmd,
+				uid_t caller_uid, const char* appid, char *caller_appid, int fd)
+{
+	const char *permission;
+	int ret;
+
+	permission = appinfo_get_value(ai, AIT_PERM);
+	if (permission && strncmp(permission, "signature", 9) == 0 ) {
+		if (caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)) {
+			const struct appinfo *caller_ai;
+			const char *preload;
+			pkgmgrinfo_cert_compare_result_type_e compare_result;
+
+			caller_ai = appinfo_find(caller_uid, caller_appid);
+			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
+			if (preload && strncmp(preload, "true", 4) != 0 ) {
+				//is admin is global
+				if (caller_uid != GLOBAL_USER)
+					pkgmgrinfo_pkginfo_compare_usr_app_cert_info(caller_appid,
+						appid, caller_uid, &compare_result);
+				else
+					pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid,
+						appid, &compare_result);
+				if (compare_result != PMINFO_CERT_COMPARE_MATCH) {
+					ret = -EILLEGALACCESS;
+					__real_send(fd, ret);
+					return ret;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
+		uid_t caller_uid, int fd)
 {
 	const struct appinfo *ai;
 	int ret = -1;
@@ -526,10 +560,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	int pid = -1;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
-	const char *permission;
-	const char *preload;
 	char *caller_appid;
-	pkgmgrinfo_cert_compare_result_type_e compare_result;
 	int delay_reply = 0;
 	int pad_pid = LAUNCHPAD_PID;
 	gboolean is_group_app = FALSE;
@@ -540,7 +571,7 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_uid);
 	bundle_add(kb, AUL_K_CALLER_UID, tmpbuf);
 
-	_D("_start_app: caller pid=%d uid=%d",caller_pid,caller_uid);
+	_D("_start_app: caller pid=%d uid=%d", caller_pid, caller_uid);
 
 	if (cmd == APP_START_RES)
 		bundle_add(kb, AUL_K_WAIT_RESULT, "1");
@@ -574,27 +605,9 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
-	permission = appinfo_get_value(ai, AIT_PERM);
 
-	if(permission && strncmp(permission, "signature", 9) == 0 ) {
-		if(caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)){
-			const struct appinfo *caller_ai;
-			caller_ai = appinfo_find(caller_uid, caller_appid);
-			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
-			if( preload && strncmp(preload, "true", 4) != 0 ) {
-				//is admin is global
-				if(caller_uid != GLOBAL_USER)
-					pkgmgrinfo_pkginfo_compare_usr_app_cert_info(caller_appid, appid, caller_uid, &compare_result);
-				else
-					pkgmgrinfo_pkginfo_compare_app_cert_info(caller_appid, appid, &compare_result);
-				if(compare_result != PMINFO_CERT_COMPARE_MATCH) {
-					pid = -EILLEGALACCESS;
-					__real_send(fd, pid);
-					return pid;
-				}
-			}
-		}
-	}
+	if ((ret = __compare_signature(ai, cmd, caller_uid, appid, caller_appid, fd)) != 0)
+		return ret;
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
 	if (!multiple || strncmp(multiple, "false", 5) == 0) {
@@ -629,10 +642,10 @@ int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_ui
 		pid = app_agent_send_cmd(caller_uid, cmd, kb);
 	}
 
-	if(!delay_reply)
+	if (!delay_reply)
 		__real_send(fd, pid);
 
-	if(pid > 0) {
+	if (pid > 0) {
 		if (!is_group_app)
 			_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
 	}
