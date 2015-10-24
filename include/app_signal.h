@@ -30,6 +30,7 @@
 #define AUL_DBUS_APPDEAD_SIGNAL	"app_dead"
 #define AUL_DBUS_APPLAUNCH_SIGNAL	"app_launch"
 #define AUL_DBUS_HOMELAUNCH_SIGNAL	"home_launch"
+#define AUL_DBUS_SYSPOPUPLAUNCHREQUEST_SIGNAL "syspopup_launch_reuqest"
 
 #define AUL_APP_STATUS_DBUS_PATH "/Org/Tizen/Aul/AppStatus"
 #define AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE "org.tizen.aul.AppStatus"

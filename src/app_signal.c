@@ -22,29 +22,35 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <dbus/dbus-glib-lowlevel.h>
+#include <bundle.h>
 
 #include "app_signal.h"
 #include "aul_api.h"
 #include "simple_util.h"
 #include "aul.h"
 
-static int (*_app_dead_handler) (int pid, void *data);
+static int (*_app_dead_handler)(int pid, void *data);
 static void *_app_dead_data;
 
-static int (*_app_launch_handler) (int pid, void *data);
+static int (*_app_launch_handler)(int pid, void *data);
 static void *_app_launch_data;
 
-static int (*_booting_done_handler) (int pid, void *data);
+static int (*_booting_done_handler)(int pid, void *data);
 static void *_booting_done_data;
 
-static int (*_status_handler) (int pid, int status, void *data);
+static int (*_status_handler)(int pid, int status, void *data);
 static void *_status_data;
 
-static int (*_cooldown_handler) (const char *cooldown_status, void *data);
+static int (*_cooldown_handler)(const char *cooldown_status, void *data);
 static void *_cooldown_data;
+
+static int (*_syspopup_launch_request_handler)(const char *appid,
+					const bundle_raw *b_raw, void *data);
+static void *_syspopup_launch_request_data;
 
 static DBusConnection *bus;
 static int app_dbus_signal_handler_initialized;
+static int syspopup_dbus_signal_handler_initialized;
 
 static DBusError err;
 static DBusConnection *conn;
@@ -55,6 +61,8 @@ __app_dbus_signal_filter(DBusConnection *conn, DBusMessage *message,
 {
 	const char *interface;
 	const char *cooldown_status;
+	const char *appid;
+	const char *b_raw;
 	int pid = -1;
 	int status;
 
@@ -111,6 +119,17 @@ __app_dbus_signal_filter(DBusConnection *conn, DBusMessage *message,
 		}
 		if (_cooldown_handler)
 			_cooldown_handler(cooldown_status, _cooldown_data);
+	} else if (dbus_message_is_signal(
+	  message, interface, AUL_DBUS_SYSPOPUPLAUNCHREQUEST_SIGNAL)) {
+		if (dbus_message_get_args(message, &error, DBUS_TYPE_STRING, &appid,
+			DBUS_TYPE_STRING, &b_raw, DBUS_TYPE_INVALID) == FALSE) {
+			_E("Failed to get data: %s", error.message);
+			dbus_error_free(&error);
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		}
+		if (_syspopup_launch_request_handler)
+			_syspopup_launch_request_handler((const char *)appid,
+					(const bundle_raw *)b_raw, _syspopup_launch_request_data);
 	}
 
 	return DBUS_HANDLER_RESULT_HANDLED;
@@ -213,7 +232,8 @@ SLPAPI int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
-	} else if (_app_launch_handler == NULL) {
+	} else if (_app_launch_handler == NULL
+			|| _syspopup_launch_request_handler == NULL) {
 		if (__app_dbus_signal_handler_fini() < 0) {
 			_E("error app signal fini");
 			return AUL_R_ERROR;
@@ -232,7 +252,8 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
-	} else if (_app_dead_handler == NULL) {
+	} else if (_app_dead_handler == NULL
+			|| _syspopup_launch_request_handler == NULL) {
 		if (__app_dbus_signal_handler_fini() < 0) {
 			_E("error app signal fini");
 			return AUL_R_ERROR;
@@ -240,6 +261,26 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 	}
 	_app_launch_handler = func;
 	_app_launch_data = data;
+
+	return AUL_R_OK;
+}
+
+SLPAPI int aul_listen_syspopup_launch_request_signal(int (*func)(const char *, const bundle_raw *, void *), void *data)
+{
+	if (func) {
+		if (__app_dbus_signal_handler_init() < 0) {
+			_E("error app signal init");
+			return AUL_R_ERROR;
+		}
+	} else if (_app_launch_handler == NULL
+			|| _app_dead_handler == NULL) {
+		if (__app_dbus_signal_handler_fini() < 0) {
+			_E("errro app signal fini");
+			return AUL_R_ERROR;
+		}
+	}
+	_syspopup_launch_request_handler = func;
+	_syspopup_launch_request_data = data;
 
 	return AUL_R_OK;
 }

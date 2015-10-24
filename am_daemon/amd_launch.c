@@ -82,18 +82,16 @@ static void __set_stime(bundle *kb)
 	bundle_add(kb, AUL_K_STARTTIME, tmp);
 }
 
-int _start_app_local(uid_t uid, const char *appid)
+int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 {
 	int ret;
 	int pid;
 	const struct appinfo *ai;
-	bundle *kb;
 	const char *app_path;
 	const char *pkg_type;
 	const char *hwacc;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 
-	kb = bundle_create();
 	snprintf(tmpbuf, sizeof(tmpbuf), "%d", getpid());
 	bundle_add_str(kb, AUL_K_CALLER_PID, tmpbuf);
 	snprintf(tmpbuf, sizeof(tmpbuf), "%d", uid);
@@ -103,7 +101,6 @@ int _start_app_local(uid_t uid, const char *appid)
 	pid = _status_app_is_running(appid, uid);
 	if (pid > 0) {
 		ret = __nofork_processing(APP_START, pid, kb, -1);
-		bundle_free(kb);
 		return ret;
 	}
 
@@ -123,12 +120,23 @@ int _start_app_local(uid_t uid, const char *appid)
 	bundle_add_str(kb, AUL_K_PACKAGETYPE, pkg_type);
 
 	pid = app_agent_send_cmd(uid, APP_START, kb);
-
-	bundle_free(kb);
-
 	if (pid > 0)
 		_status_add_app_info_list(
 				appid, app_path, pid, LAUNCHPAD_PID, uid);
+
+	return pid;
+}
+
+int _start_app_local(uid_t uid, const char *appid)
+{
+	int pid;
+	bundle *kb;
+
+	kb = bundle_create();
+
+	pid = _start_app_local_with_bundle(uid, appid, kb);
+
+	bundle_free(kb);
 
 	return pid;
 }
@@ -515,7 +523,7 @@ static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd)
 	return ret;
 }
 
-int _start_app(char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
+int _start_app(const char *appid, bundle *kb, int cmd, int caller_pid, uid_t caller_uid, int fd)
 {
 	const struct appinfo *ai;
 	int ret = -1;
