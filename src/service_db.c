@@ -118,7 +118,7 @@ static void __mkdir_for_user(const char* dir, uid_t uid, gid_t gid) {
 	}
 }
 
-static char *__get_svc_db(uid_t uid)
+static const char *__get_svc_db(uid_t uid)
 {
 	const char *appsvc_db = NULL;
 	const char *db_path = NULL;
@@ -143,7 +143,7 @@ static char *__get_svc_db(uid_t uid)
 }
 
 
-static char *__get_app_info_db(uid_t uid)
+static const char *__get_app_info_db(uid_t uid)
 {
 	const char *app_info_db = NULL;
 	const char *db_path = NULL;

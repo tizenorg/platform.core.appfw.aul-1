@@ -110,7 +110,6 @@ __dbus_signal_filter_session(DBusConnection *conn, DBusMessage *message,
 	const char *interface;
 	const char *cooldown_status;
 	int pid = -1;
-	int status;
 
 	DBusError error;
 	dbus_error_init(&error);
@@ -324,7 +323,7 @@ SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
-	} else {
+	} else if (!_booting_done_handler) {
 		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE) != 0)
 			return AUL_R_ERROR;
 	}
@@ -354,7 +353,7 @@ SLPAPI int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
-	} else {
+	} else if (!_cooldown_handler) {
 		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI) != 0)
 			return AUL_R_ERROR;
 	}
