@@ -55,12 +55,67 @@
 #define PRIVILEGE_APPMANAGER_KILL "http://tizen.org/privilege/appmanager.kill"
 #define PRIVILEGE_APPMANAGER_KILL_BGAPP "http://tizen.org/privilege/appmanager.kill.bgapp"
 
+#define MAX_NR_OF_DESCRIPTORS 2
+static GHashTable *__socket_pair_hash = NULL;
+
 typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
 
 static cynara *r_cynara = NULL;
 
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
+
+int __send_message(int sock, const struct iovec *vec, int vec_size, const int *desc, int nr_desc)
+{
+	struct msghdr msg = {0};
+	int sndret;
+
+	if (vec == NULL || vec_size < 1)
+		return -EINVAL;
+	if (nr_desc < 0 || nr_desc > MAX_NR_OF_DESCRIPTORS)
+		return -EINVAL;
+	if (desc == NULL)
+		nr_desc = 0;
+
+	msg.msg_iov = (struct iovec *)vec;
+	msg.msg_iovlen = vec_size;
+
+	/* sending ancillary data */
+	if (nr_desc > 0) {
+		int desclen = 0;
+		struct cmsghdr *cmsg = NULL;
+		char buff[CMSG_SPACE(sizeof(int) * MAX_NR_OF_DESCRIPTORS)] = {0};
+
+		msg.msg_control = buff;
+		msg.msg_controllen = sizeof(buff);
+		cmsg = CMSG_FIRSTHDR(&msg);
+		if (cmsg == NULL)
+			return -EINVAL;
+
+		/* packing files descriptors */
+		if (nr_desc > 0) {
+			cmsg->cmsg_level = SOL_SOCKET;
+			cmsg->cmsg_type = SCM_RIGHTS;
+			desclen = cmsg->cmsg_len = CMSG_LEN(sizeof(int) * nr_desc);
+			memcpy((int *)CMSG_DATA(cmsg), desc, sizeof(int) * nr_desc);
+			cmsg = CMSG_NXTHDR(&msg, cmsg);
+
+			_D("packing file descriptors done");
+		}
+
+		/* finished packing updating the corect length */
+		msg.msg_controllen = desclen;
+	} else {
+		msg.msg_control = NULL;
+		msg.msg_controllen = 0;
+	}
+
+	sndret = sendmsg(sock, &msg, 0);
+
+	_D("sendmsg ret : %d", sndret);
+	if(sndret < 0) return -errno;
+	else return sndret;
+}
 
 static int __send_result_data(int fd, int cmd, unsigned char *kb_data, int datalen)
 {
@@ -258,6 +313,114 @@ static void __handle_agent_dead_signal(struct ucred *pcr)
 
 	_D("AGENT_DEAD_SIGNAL : %d", pcr->uid);
 	__agent_dead_handler(pcr->uid);
+}
+
+gboolean __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+
+	char *caller;
+	char *callee;
+	char *socket_pair_key;
+	int socket_pair_key_len;
+	int *handles;
+	struct iovec vec[3];
+	int msglen;
+	char buffer[1024];
+	struct sockaddr_un saddr;
+	char *datacontrol_type;
+	bundle *kb;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	caller = (char *)bundle_get_val(kb, AUL_K_CALLER_APPID);
+	callee = (char *)bundle_get_val(kb, AUL_K_CALLEE_APPID);
+	datacontrol_type = (char *)bundle_get_val(kb, "DATA_CONTOL_TYPE");
+
+	socket_pair_key_len = strlen(caller) + strlen(callee) + 2;
+
+	socket_pair_key = (char *)calloc(socket_pair_key_len, sizeof(char));
+
+	if (socket_pair_key == NULL) {
+		_E("calloc fail");
+		goto err_out;
+	}
+
+	snprintf(socket_pair_key, socket_pair_key_len, "%s_%s", caller, callee);
+	_E("socket pair key : %s", socket_pair_key);
+
+	handles = g_hash_table_lookup(__socket_pair_hash, socket_pair_key);
+
+	if (handles == NULL) {
+
+		handles = (int *)calloc(2, sizeof(int));
+		if (socketpair(AF_UNIX, SOCK_STREAM, 0, handles) != 0) {
+			_E("error create socket pair");
+			__send_result_to_client(clifd, -1);
+			goto err_out;
+		}
+
+		if(handles[0] == -1) {
+			_E("error socket open");
+			__send_result_to_client(clifd, -1);
+			goto err_out;
+		}
+		g_hash_table_insert(__socket_pair_hash, strdup(socket_pair_key),
+				handles);
+
+		_E("New socket pair insert done.");
+	}
+
+
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+
+	SECURE_LOGD("amd send fd : [%d, %d]", handles[0], handles[1]);
+	vec[0].iov_base = buffer;
+	vec[0].iov_len = strlen(buffer) + 1;
+
+	if (datacontrol_type != NULL) {
+		_E("datacontrol_type : %s", datacontrol_type);
+		if (strcmp(datacontrol_type, "consumer") == 0) {
+
+			msglen = __send_message(clifd, vec, 1, &handles[0], 1);
+			if(msglen < 0) {
+				_E("Error[%d]: while sending message\n", -msglen);
+				__send_result_to_client(clifd, -1);
+				goto err_out;
+			}
+			close(handles[0]);
+			handles[0] = -1;
+			if (handles[1] == -1) {
+				_E("remove from hash : %s", socket_pair_key);
+				g_hash_table_remove(__socket_pair_hash, socket_pair_key);
+			}
+
+		}
+		else {
+			msglen = __send_message(clifd, vec, 1, &handles[1], 1);
+			if(msglen < 0) {
+				_E("Error[%d]: while sending message\n", -msglen);
+				__send_result_to_client(clifd, -1);
+				goto err_out;
+			}
+			close(handles[1]);
+			handles[1] = -1;
+			if (handles[0] == -1) {
+				_E("remove from hash : %s", socket_pair_key);
+				g_hash_table_remove(__socket_pair_hash, socket_pair_key);
+			}
+		}
+	}
+	SECURE_LOGD("send_message msglen : [%d]\n", msglen);
+
+	return TRUE;
+
+err_out:
+	if (handles)
+		free(handles);
+	if (socket_pair_key)
+		free(socket_pair_key);
+
+	return FALSE;
 }
 
 static int __dispatch_app_group_add(int clifd, const app_pkt_t *pkt, struct ucred *cr)
@@ -767,6 +930,7 @@ end:
 }
 
 static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
+	[APP_GET_SOCKET_PAIR] =  __dispatch_get_socket_pair,
 	[APP_START] =  __dispatch_app_start,
 	[APP_OPEN] = __dispatch_app_start,
 	[APP_RESUME] = __dispatch_app_start,
@@ -884,12 +1048,14 @@ static GSourceFuncs funcs = {
 	.finalize = NULL
 };
 
-int _requset_init(void)
+int _request_init(void)
 {
 	int fd;
 	int r;
 	GPollFD *gpollfd;
 	GSource *src;
+
+	__socket_pair_hash = g_hash_table_new_full(g_str_hash,  g_str_equal, NULL, g_free);
 
 	fd = __create_sock_activation();
 	if (fd == -1) {
