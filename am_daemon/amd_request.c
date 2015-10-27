@@ -670,6 +670,27 @@ static int __dispatch_amd_reload_appinfo(int clifd, const app_pkt_t *pkt, struct
 	return 0;
 }
 
+static int _syspopup_launch_request_handler(const char *appid, const bundle_raw *b_raw, void *data)
+{
+	uid_t uid = (uid_t)data;
+	bundle *kb;
+
+	if (appid == NULL || b_raw == NULL)
+		return -1;
+
+	_D("syspopup launch request: %s", appid);
+
+	kb = bundle_decode(b_raw, strlen((const char *)b_raw));
+	if (kb) {
+		if (_start_app_local_with_bundle(uid, appid, kb) < 0)
+			_E("syspopup launch request failed: %s", appid);
+
+		bundle_free(kb);
+	}
+
+	return 0;
+}
+
 static int __get_caller_info_from_cynara(int sockfd, char **client, char **user, char **session)
 {
 	pid_t pid;
@@ -941,6 +962,9 @@ int _requset_init(void)
 		close(fd);
 		return -1;
 	}
+
+	if (aul_listen_syspopup_launch_request_signal(_syspopup_launch_request_handler, (void *)tzplatform_getuid(TZ_USER_NAME)) < 0)
+		_E("aul_listen_syspopup_launch_request_signal failed");
 
 	return 0;
 }

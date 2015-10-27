@@ -44,6 +44,9 @@ static void *_status_data;
 static int (*_cooldown_handler) (const char *cooldown_status, void *data);
 static void *_cooldown_data;
 
+static int (*_syspopup_launch_request_handler) (const char *appid, const bundle_raw *, void *data);
+static void *_syspopup_launch_request_data;
+
 static DBusConnection *system_conn;
 static DBusConnection *session_conn;
 
@@ -62,6 +65,8 @@ __dbus_signal_filter_system(DBusConnection *conn, DBusMessage *message,
 {
 	const char *interface;
 	const char *cooldown_status;
+	const char *appid;
+	const char *b_raw;
 	int pid = -1;
 	int status;
 
@@ -98,6 +103,17 @@ __dbus_signal_filter_system(DBusConnection *conn, DBusMessage *message,
 		}
 		if (_cooldown_handler)
 			_cooldown_handler(cooldown_status, _cooldown_data);
+	} else if (dbus_message_is_signal(
+	  message, interface, AUL_SP_DBUS_LAUNCH_REQUEST_SIGNAL)) {
+		if (dbus_message_get_args(message, &error, DBUS_TYPE_STRING, &appid,
+			DBUS_TYPE_STRING, &b_raw, DBUS_TYPE_INVALID) == FALSE) {
+			_E("Failed to get data: %s", error.message);
+			dbus_error_free(&error);
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		}
+		if (_syspopup_launch_request_handler)
+			_syspopup_launch_request_handler((const char *)appid,
+					(const bundle_raw *)b_raw, _syspopup_launch_request_data);
 	}
 
 	return DBUS_HANDLER_RESULT_HANDLED;
@@ -110,7 +126,6 @@ __dbus_signal_filter_session(DBusConnection *conn, DBusMessage *message,
 	const char *interface;
 	const char *cooldown_status;
 	int pid = -1;
-	int status;
 
 	DBusError error;
 	dbus_error_init(&error);
@@ -301,6 +316,37 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 	return AUL_R_OK;
 }
 
+SLPAPI int aul_listen_syspopup_launch_request_signal(int (*func)(const char *, const bundle_raw *, void *), void *data)
+{
+	if (func) {
+		if (__app_dbus_signal_handler_init(AUL_SP_DBUS_PATH, AUL_SP_DBUS_SIGNAL_INTERFACE, true) < 0) {
+			_E("error app signal init");
+			return AUL_R_ERROR;
+		}
+		system_bus_ref++;
+	} else if (!func && _syspopup_launch_request_handler) {
+		system_bus_ref--;
+
+	} else {
+		_E("alaready finished or initialized twice");
+		return AUL_R_ERROR;
+	}
+
+	_syspopup_launch_request_handler = func;
+	_syspopup_launch_request_data = data;
+
+	if (!system_bus_ref) {
+		if (__app_dbus_signal_handler_fini(AUL_SP_DBUS_PATH, AUL_SP_DBUS_SIGNAL_INTERFACE, true) < 0) {
+			_E("error app signal fini");
+			return AUL_R_ERROR;
+		}
+	} else if (!_syspopup_launch_request_handler) {
+		if (__app_dbus_signal_remove_rule(system_conn, AUL_SP_DBUS_PATH, AUL_SP_DBUS_SIGNAL_INTERFACE) != 0)
+			return AUL_R_ERROR;
+	}
+	return AUL_R_OK;
+}
+
 SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 {
 	if (func && !_booting_done_handler) {
@@ -324,7 +370,7 @@ SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
-	} else {
+	} else if (!_booting_done_handler) {
 		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE) != 0)
 			return AUL_R_ERROR;
 	}
@@ -354,7 +400,7 @@ SLPAPI int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
-	} else {
+	} else if (!_cooldown_handler) {
 		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI) != 0)
 			return AUL_R_ERROR;
 	}

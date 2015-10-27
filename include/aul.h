@@ -1488,6 +1488,8 @@ int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data);
 
 int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data);
 
+int aul_listen_syspopup_launch_request_signal(int (*func)(const char *, const bundle_raw *, void *), void *data);
+
 const char *aul_get_app_external_root_path(void);
 const char *aul_get_app_root_path(void);
 const char *aul_get_app_data_path(void);
@@ -1696,7 +1698,6 @@ void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids);
 int aul_app_group_get_leader_pid(int pid);
 int aul_app_group_clear_top(void);
 int aul_app_group_is_top(void);
-
 
 /** @} */
 
