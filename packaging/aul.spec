@@ -111,7 +111,6 @@ ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.w
 mkdir -p %{buildroot}%{_datadir}/appsvc
 cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
 
-
 %preun
 if [ $1 == 0 ]; then
     systemctl stop ac.service
