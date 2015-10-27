@@ -36,5 +36,6 @@ int _term_sub_app(int pid);
 int _fake_launch_app(int cmd, int pid, bundle * kb, int clifd);
 int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid, uid_t caller_uid, int fd);
 int _start_app_local(uid_t uid, const char *appid);
+int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb);
 
 #endif /* __AUL_AMD_LAUNCH_H_ */
