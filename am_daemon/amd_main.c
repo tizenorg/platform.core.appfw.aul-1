@@ -31,6 +31,9 @@
 #include <glib.h>
 #include <stdlib.h>
 #include <tzplatform_config.h>
+#include <dbus/dbus.h>
+#include <dbus/dbus-glib-lowlevel.h>
+#include <bundle.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -41,8 +44,10 @@
 #include "amd_request.h"
 #include "amd_app_group.h"
 
-
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define AUL_SP_DBUS_PATH "/Org/Tizen/Aul/Syspopup"
+#define AUL_SP_DBUS_SIGNAL_INTERFACE "org.tizen.aul.syspopup"
+#define AUL_SP_DBUS_LAUNCH_REQUEST_SIGNAL "syspopup_launch_request"
 
 typedef struct _r_app_info_t {
 	char pkg_name[MAX_PACKAGE_STR_SIZE];
@@ -51,9 +56,10 @@ typedef struct _r_app_info_t {
 } r_app_info_t;
 
 GSList *r_app_info_list;
+static DBusConnection *syspopup_conn;
 
 static void __vconf_cb(keynode_t *key, void *data);
-static int __init();
+static int __init(void);
 
 static int __send_to_sigkill(int pid)
 {
@@ -234,7 +240,7 @@ static void __vconf_cb(keynode_t *key, void *data)
 	}
 }
 
-int __app_dead_handler(int pid, void *data)
+static int __app_dead_handler(int pid, void *data)
 {
 	if (pid <= 0)
 		return 0;
@@ -264,7 +270,83 @@ int __agent_dead_handler(uid_t user)
 	return 0;
 }
 
-static int __init()
+static DBusHandlerResult __syspopup_signal_filter(DBusConnection *conn,
+				DBusMessage *message, void *data)
+{
+	DBusError error;
+	uid_t uid = (uid_t)data;
+	const char *interface;
+	const char *appid;
+	const char *b_raw;
+	bundle *kb;
+
+	dbus_error_init(&error);
+
+	interface = dbus_message_get_interface(message);
+	if (interface == NULL) {
+		_E("reject by security issue - no interface");
+		dbus_error_free(&error);
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+
+	if (dbus_message_is_signal(message, interface,
+				AUL_SP_DBUS_LAUNCH_REQUEST_SIGNAL)) {
+		if (dbus_message_get_args(message, &error, DBUS_TYPE_STRING, &appid,
+				DBUS_TYPE_STRING, &b_raw, DBUS_TYPE_INVALID) == FALSE) {
+			_E("Failed to get data: %s", error.message);
+			dbus_error_free(&error);
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		}
+
+		_D("syspopup launch request: %s", appid);
+		kb = bundle_decode((const bundle_raw *)b_raw, strlen(b_raw));
+		if (kb) {
+			if (_start_app_local_with_bundle(uid, appid, kb) < 0)
+				_E("syspopup launch request failed: %s", appid);
+
+			bundle_free(kb);
+		}
+	}
+
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static int __syspopup_dbus_signal_handler_init(uid_t uid)
+{
+	DBusError error;
+	char rule[MAX_LOCAL_BUFSZ];
+
+	dbus_error_init(&error);
+	syspopup_conn = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
+	if (syspopup_conn == NULL) {
+		_E("Failed to connect to the D-BUS Daemon: %s", error.message);
+		dbus_error_free(&error);
+		return -1;
+	}
+
+	dbus_connection_setup_with_g_main(syspopup_conn, NULL);
+
+	snprintf(rule, sizeof(rule), "path='%s',type='signal',interface='%s'",
+			AUL_SP_DBUS_PATH, AUL_SP_DBUS_SIGNAL_INTERFACE);
+	dbus_bus_add_match(syspopup_conn, rule, &error);
+	if (dbus_error_is_set(&error)) {
+		_E("Failed to rule set: %s", error.message);
+		dbus_error_free(&error);
+		return -1;
+	}
+
+	if (dbus_connection_add_filter(syspopup_conn,
+				__syspopup_signal_filter, (void *)uid, NULL) == FALSE) {
+		_E("Failed to add filter");
+		return -1;
+	}
+
+	_D("syspopup dbus signal initialized");
+
+	return 0;
+}
+
+static int __init(void)
 {
 	if (appinfo_init()) {
 		_E("appinfo_init failed\n");
@@ -282,6 +364,9 @@ static int __init()
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
 				__vconf_cb, NULL) != 0)
 		_E("Unable to register callback for VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS\n");
+
+	if (__syspopup_dbus_signal_handler_init(tzplatform_getuid(TZ_USER_NAME)) < 0)
+		 _E("__syspopup_dbus_signal_handler_init failed");
 
 	return 0;
 }
