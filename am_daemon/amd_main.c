@@ -276,7 +276,7 @@ static int __init()
 		return -1;
 	}
 
-	_requset_init();
+	_request_init();
 	app_group_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
