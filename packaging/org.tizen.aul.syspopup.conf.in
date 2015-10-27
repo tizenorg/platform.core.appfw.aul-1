@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+        "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+
+<busconfig>
+	<policy context="default">
+		<allow send_destination="*"/>
+		<check send_destination="*" send_interface="org.tizen.aul.syspopup" send_member="syspopup_launch_request" privilege="http://tizen.org/privilege/appmanager.launch"/>
+	</policy>
+</busconfig>

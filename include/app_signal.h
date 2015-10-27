@@ -43,18 +43,22 @@
 #define AUL_APP_STATUS_DBUS_GROUP "AppGroup"
 #define AUL_APP_STATUS_DBUS_TERMINATED "AppTerminated"
 
-#define SYSTEM_PATH_CORE    	"/Org/Tizen/System/DeviceD/Core"
-#define SYSTEM_INTERFACE_CORE 	"org.tizen.system.deviced.core"
+#define AUL_SP_DBUS_PATH "/Org/Tizen/Aul/Syspopup"
+#define AUL_SP_DBUS_SIGNAL_INTERFACE "org.tizen.aul.syspopup"
+#define AUL_SP_DBUS_LAUNCH_REQUEST_SIGNAL "syspopup_launch_request"
+
+#define SYSTEM_PATH_CORE	"/Org/Tizen/System/DeviceD/Core"
+#define SYSTEM_INTERFACE_CORE	"org.tizen.system.deviced.core"
 
 #define SYSTEM_SIGNAL_BOOTING_DONE		"BootingDone"
 
-#define SYSTEM_PATH_SYSNOTI    	"/Org/Tizen/System/DeviceD/SysNoti"
-#define SYSTEM_INTERFACE_SYSNOTI 	"org.tizen.system.deviced.SysNoti"
+#define SYSTEM_PATH_SYSNOTI	"/Org/Tizen/System/DeviceD/SysNoti"
+#define SYSTEM_INTERFACE_SYSNOTI	"org.tizen.system.deviced.SysNoti"
 
 #define SYSTEM_SIGNAL_COOLDOWN_CHANGED		"CoolDownChanged"
 
-#define RESOURCED_PATH_CORE    	"/Org/Tizen/ResourceD/Process"
-#define RESOURCED_INTERFACE_CORE 	"org.tizen.resourced.process"
+#define RESOURCED_PATH_CORE	"/Org/Tizen/ResourceD/Process"
+#define RESOURCED_INTERFACE_CORE	"org.tizen.resourced.process"
 
 #define RESOURCED_SIGNAL_PROCESS_STATUS		"ProcStatus"
 
