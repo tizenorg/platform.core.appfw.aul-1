@@ -23,7 +23,7 @@
 #ifndef __AUL_AMD_REQUEST_H_
 #define __AUL_AMD_REQUEST_H_
 
-int _requset_init(void);
+int _request_init(void);
 
 #endif
 
