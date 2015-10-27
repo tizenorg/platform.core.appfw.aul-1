@@ -66,6 +66,7 @@ enum app_cmd {
 	APP_GROUP_RESUME,
 	APP_GROUP_GET_LEADER_PID,
 	APP_GET_STATUS,
+	APP_GET_SOCKET_PAIR,
 
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
@@ -105,6 +106,7 @@ int __app_send_raw_with_noreply(int pid, int cmd, unsigned char *kb_data, int da
 int __app_send_raw_with_noreply_for_uid(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen);
 int __app_send_raw_with_delay_reply(int pid, int cmd, unsigned char *kb_data, int datalen);
 int __app_send_raw_with_delay_reply_for_uid(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen);
+int __app_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int *ret_fd);
 int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen);
 int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, int datalen);
 app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr);

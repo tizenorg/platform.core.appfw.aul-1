@@ -1697,6 +1697,7 @@ int aul_app_group_get_leader_pid(int pid);
 int aul_app_group_clear_top(void);
 int aul_app_group_is_top(void);
 
+int aul_request_data_control_socket_pair(bundle *b, int *fd);
 
 /** @} */
 
