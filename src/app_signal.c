@@ -21,6 +21,7 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stdbool.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
 #include "app_signal.h"
@@ -43,14 +44,67 @@ static void *_status_data;
 static int (*_cooldown_handler) (const char *cooldown_status, void *data);
 static void *_cooldown_data;
 
-static DBusConnection *bus;
-static int app_dbus_signal_handler_initialized;
+static DBusConnection *system_conn;
+static DBusConnection *session_conn;
+
+static DBusConnection *send_conn;
 
 static DBusError err;
-static DBusConnection *conn;
+
+static int system_bus_initialized;
+static int session_bus_initialized;
+
+static int system_bus_ref;
 
 static DBusHandlerResult
-__app_dbus_signal_filter(DBusConnection *conn, DBusMessage *message,
+__dbus_signal_filter_system(DBusConnection *conn, DBusMessage *message,
+		       void *user_data)
+{
+	const char *interface;
+	const char *cooldown_status;
+	int pid = -1;
+	int status;
+
+	DBusError error;
+	dbus_error_init(&error);
+
+	interface = dbus_message_get_interface(message);
+	if (interface == NULL) {
+		_E("reject by security issue - no interface\n");
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+
+	if (dbus_message_is_signal(
+	  message, interface, SYSTEM_SIGNAL_BOOTING_DONE)) {
+		if (_booting_done_handler)
+			_booting_done_handler(pid, _booting_done_data);
+	} else if (dbus_message_is_signal(
+	  message, interface, RESOURCED_SIGNAL_PROCESS_STATUS)) {
+		if (dbus_message_get_args(message, &error, DBUS_TYPE_INT32, &status,
+			DBUS_TYPE_INT32, &pid, DBUS_TYPE_INVALID) == FALSE) {
+			_E("Failed to get data: %s", error.message);
+			dbus_error_free(&error);
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		}
+		if (_status_handler)
+			_status_handler(pid, status, _status_data);
+	} else if (dbus_message_is_signal(
+	  message, interface, SYSTEM_SIGNAL_COOLDOWN_CHANGED)) {
+		if (dbus_message_get_args(message, &error, DBUS_TYPE_STRING, &cooldown_status,
+			DBUS_TYPE_INVALID) == FALSE) {
+			_E("Failed to get data: %s", error.message);
+			dbus_error_free(&error);
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		}
+		if (_cooldown_handler)
+			_cooldown_handler(cooldown_status, _cooldown_data);
+	}
+
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static DBusHandlerResult
+__dbus_signal_filter_session(DBusConnection *conn, DBusMessage *message,
 		       void *user_data)
 {
 	const char *interface;
@@ -87,51 +141,20 @@ __app_dbus_signal_filter(DBusConnection *conn, DBusMessage *message,
 		}
 		if (_app_launch_handler)
 			_app_launch_handler(pid, _app_launch_data);
-	} else if (dbus_message_is_signal(
-	  message, interface, SYSTEM_SIGNAL_BOOTING_DONE)) {
-		if (_booting_done_handler)
-			_booting_done_handler(pid, _booting_done_data);
-	} else if (dbus_message_is_signal(
-	  message, interface, RESOURCED_SIGNAL_PROCESS_STATUS)) {
-		if (dbus_message_get_args(message, &error, DBUS_TYPE_INT32, &status,
-			DBUS_TYPE_INT32, &pid, DBUS_TYPE_INVALID) == FALSE) {
-			_E("Failed to get data: %s", error.message);
-			dbus_error_free(&error);
-			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		}
-		if (_status_handler)
-			_status_handler(pid, status, _status_data);
-	} else if (dbus_message_is_signal(
-	  message, interface, SYSTEM_SIGNAL_COOLDOWN_CHANGED)) {
-		if (dbus_message_get_args(message, &error, DBUS_TYPE_STRING, &cooldown_status,
-			DBUS_TYPE_INVALID) == FALSE) {
-			_E("Failed to get data: %s", error.message);
-			dbus_error_free(&error);
-			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		}
-		if (_cooldown_handler)
-			_cooldown_handler(cooldown_status, _cooldown_data);
 	}
 
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static int __app_dbus_signal_handler_init_with_param(const char *path, const char *interface)
+static int __app_dbus_signal_add_rule(DBusConnection *bus, const char *path, const char *interface)
 {
 	DBusError error;
 	char rule[MAX_LOCAL_BUFSZ];
 
 	dbus_error_init(&error);
-	bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error);
-	if (!bus) {
-		_E("Failed to connect to the D-BUS daemon: %s", error.message);
-		dbus_error_free(&error);
-		return -1;
-	}
-	dbus_connection_setup_with_g_main(bus, NULL);
-
 	snprintf(rule, MAX_LOCAL_BUFSZ,
 		 "path='%s',type='signal',interface='%s'", path, interface);
+
 	/* listening to messages */
 	dbus_bus_add_match(bus, rule, &error);
 	if (dbus_error_is_set(&error)) {
@@ -140,10 +163,47 @@ static int __app_dbus_signal_handler_init_with_param(const char *path, const cha
 		return -1;
 	}
 
+	return 0;
+}
+
+static int __app_dbus_signal_handler_init(const char *path,
+		const char *interface, bool system_bus)
+{
+	DBusConnection *bus;
+	DBusError error;
+
+	if (!system_bus && session_bus_initialized)
+		return 0;
+
+	if (system_bus && system_bus_initialized) {
+		return __app_dbus_signal_add_rule(system_conn, path, interface);
+	}
+
+	dbus_error_init(&error);
+	bus = dbus_bus_get_private(system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION, &error);
+	if (!bus) {
+		_E("Failed to connect to the D-BUS daemon: %s", error.message);
+		dbus_error_free(&error);
+		return -1;
+	}
+	dbus_connection_setup_with_g_main(bus, NULL);
+
+	if (__app_dbus_signal_add_rule(bus, path, interface) != 0)
+		return -1;
+
 	if (dbus_connection_add_filter(bus,
-		__app_dbus_signal_filter, NULL, NULL) == FALSE) {
+				system_bus ? __dbus_signal_filter_system : __dbus_signal_filter_session,
+				NULL, NULL) == FALSE) {
 		_E("add filter fail");
 		return -1;
+	}
+
+	if (system_bus) {
+		system_conn = bus;
+		system_bus_initialized = 1;
+	} else {
+		session_conn = bus;
+		session_bus_initialized = 1;
 	}
 
 	_D("app signal initialized");
@@ -151,29 +211,12 @@ static int __app_dbus_signal_handler_init_with_param(const char *path, const cha
 	return 0;
 }
 
-static int __app_dbus_signal_handler_init(void)
+static int __app_dbus_signal_remove_rule(DBusConnection *bus, const char *path, const char *interface)
 {
-	int ret = 0;
-
-	if (app_dbus_signal_handler_initialized)
-		return 0;
-
-	ret = __app_dbus_signal_handler_init_with_param(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE);
-
-	if (ret == 0)
-		app_dbus_signal_handler_initialized = 1;
-
-	return ret;
-}
-
-static int __app_dbus_signal_handler_fini_with_param(const char *path, const char *interface)
-{
-	DBusError error;
 	char rule[MAX_LOCAL_BUFSZ];
+	DBusError error;
 
 	dbus_error_init(&error);
-
-	dbus_connection_remove_filter(bus, __app_dbus_signal_filter, NULL);
 
 	snprintf(rule, MAX_LOCAL_BUFSZ,
 		 "path='%s',type='signal',interface='%s'", path, interface);
@@ -184,37 +227,51 @@ static int __app_dbus_signal_handler_fini_with_param(const char *path, const cha
 		return -1;
 	}
 
+	return 0;
+}
+
+static int __app_dbus_signal_handler_fini(const char *path, const char *interface, bool system_bus)
+{
+	DBusConnection *bus;
+
+	if (system_bus) {
+		if (!system_bus_initialized)
+			return 0;
+		bus = system_conn;
+	} else {
+		if (!session_bus_initialized)
+			return 0;
+		bus = session_conn;
+	}
+
+	dbus_connection_remove_filter(bus,
+			system_bus ? __dbus_signal_filter_system : __dbus_signal_filter_session, NULL);
+
+	if (__app_dbus_signal_remove_rule(bus, path, interface) != 0)
+		return -1;
+
 	dbus_connection_close(bus);
 	dbus_connection_unref(bus);
+
+	if (system_bus)
+		system_bus_initialized = 0;
+	else
+		session_bus_initialized = 0;
 
 	_D("app signal finialized");
 
 	return 0;
 }
 
-static int __app_dbus_signal_handler_fini(void)
-{
-	int ret = 0;
-
-	if (!app_dbus_signal_handler_initialized)
-		return 0;
-
-	ret = __app_dbus_signal_handler_fini_with_param(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE);
-
-	app_dbus_signal_handler_initialized = 0;
-
-	return ret;
-}
-
 SLPAPI int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
 {
 	if (func) {
-		if (__app_dbus_signal_handler_init() < 0) {
+		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
 	} else if (_app_launch_handler == NULL) {
-		if (__app_dbus_signal_handler_fini() < 0) {
+		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
@@ -228,12 +285,12 @@ SLPAPI int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
 SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 {
 	if (func) {
-		if (__app_dbus_signal_handler_init() < 0) {
+		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
 	} else if (_app_dead_handler == NULL) {
-		if (__app_dbus_signal_handler_fini() < 0) {
+		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
@@ -247,65 +304,103 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 {
 	if (func) {
-		if (__app_dbus_signal_handler_init_with_param(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE) < 0) {
+		if (__app_dbus_signal_handler_init(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE, true) < 0) {
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
-	} else if (_booting_done_handler == NULL) {
-		if (__app_dbus_signal_handler_fini_with_param(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
+		system_bus_ref++;
+	} else if (_booting_done_handler) {
+		system_bus_ref--;
+	} else {
+		_E("already finished");
+		return AUL_R_ERROR;
 	}
+
 	_booting_done_handler = func;
 	_booting_done_data = data;
 
+	if (!system_bus_ref) {
+		if (__app_dbus_signal_handler_fini(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE, true) < 0) {
+			_E("error app signal fini");
+			return AUL_R_ERROR;
+		}
+	} else {
+		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE) != 0)
+			return AUL_R_ERROR;
+	}
 	return AUL_R_OK;
-
 }
 
 SLPAPI int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data)
 {
 	if (func) {
-		if (__app_dbus_signal_handler_init_with_param(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI) < 0) {
+		if (__app_dbus_signal_handler_init(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI, true) < 0) {
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
-	} else if (_cooldown_handler == NULL) {
-		if (__app_dbus_signal_handler_fini_with_param(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
+		system_bus_ref++;
+	} else if (_cooldown_handler) {
+		system_bus_ref--;
+	} else {
+		_E("already finished");
+		return AUL_R_ERROR;
 	}
+
 	_cooldown_handler = func;
 	_cooldown_data = data;
 
-	return AUL_R_OK;
+	if (!system_bus_ref) {
+		if (__app_dbus_signal_handler_fini(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI, true) < 0) {
+			_E("error app signal fini");
+			return AUL_R_ERROR;
+		}
+	} else {
+		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI) != 0)
+			return AUL_R_ERROR;
+	}
 
+	return AUL_R_OK;
 }
 
 SLPAPI int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data)
 {
 	if (func) {
-		if (__app_dbus_signal_handler_init_with_param(RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE) < 0) {
+		if (__app_dbus_signal_handler_init(RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE, true) < 0) {
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
+		system_bus_ref++;
+	} else if (_status_handler) {
+		system_bus_ref--;
+	} else {
+		_E("already finished");
+		return AUL_R_ERROR;
 	}
+
 	_status_handler = func;
 	_status_data = data;
+
+	if (!system_bus_ref) {
+		if (__app_dbus_signal_handler_fini(RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE, true) < 0) {
+			_E("error app signal fini");
+			return AUL_R_ERROR;
+		}
+	} else {
+		if (__app_dbus_signal_remove_rule(system_conn, RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE) != 0)
+			return AUL_R_ERROR;
+	}
 
 	return AUL_R_OK;
 }
 
 static int __app_dbus_send_init(void)
 {
-	if (conn)
+	if (send_conn)
 		return 0;
 
 	dbus_error_init(&err);
-	conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-	if (!conn) {
+	send_conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	if (!send_conn) {
 		_E("Fail to dbus_bus_get : %s", err.message);
 		return -1;
 	}
@@ -345,12 +440,12 @@ SLPAPI int aul_update_freezer_status(int pid, const char *type)
 		ret = -1;
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	dbus_error_free(&err);
@@ -359,8 +454,8 @@ end:
 		dbus_message_unref(msg);
 	}
 
-	if (conn) {
-		dbus_connection_unref(conn);
+	if (send_conn) {
+		dbus_connection_unref(send_conn);
 	}
 
 	return ret;
@@ -398,12 +493,12 @@ SLPAPI int aul_send_app_launch_request_signal(int pid, const char *appid, const 
 		ret = -1;
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	if (msg) {
@@ -456,12 +551,12 @@ SLPAPI int aul_send_app_resume_request_signal(int pid, const char *appid, const 
 		}
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	if (msg) {
@@ -513,12 +608,12 @@ SLPAPI int aul_send_app_terminate_request_signal(int pid, const char *appid, con
 		}
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	if (msg) {
@@ -575,12 +670,12 @@ SLPAPI int aul_send_app_status_change_signal(int pid, const char *appid, const c
 		}
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	if (msg) {
@@ -616,12 +711,12 @@ SLPAPI int aul_send_app_terminated_signal(int pid)
 		ret = -1;
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	if (msg) {
@@ -672,12 +767,12 @@ SLPAPI int aul_send_app_group_signal(int owner_pid, int child_pid, const char *c
 		}
 	}
 
-	if (!dbus_connection_send(conn, msg, &serial)) {
+	if (!dbus_connection_send(send_conn, msg, &serial)) {
 		_E("Failed to send a D-Bus Message.");
 		ret = -1;
 	}
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(send_conn);
 
 end:
 	if (msg) {
