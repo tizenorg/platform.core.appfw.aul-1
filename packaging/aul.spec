@@ -41,6 +41,7 @@ BuildRequires:  pkgconfig(capi-system-info)
 BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  pkgconfig(sqlite3)
 %if %{with wayland}
+BuildRequires:  pkgconfig(ecore-wayland)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(tizen-extension-client)
 %endif
@@ -133,6 +134,7 @@ systemctl daemon-reload
 %attr(0644,root,root) %{_libdir}/libaul.so.*
 %{_bindir}/aul_test
 %{_bindir}/app_launcher
+%{_bindir}/appgroup_info
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
