@@ -108,7 +108,6 @@ __dbus_signal_filter_session(DBusConnection *conn, DBusMessage *message,
 		       void *user_data)
 {
 	const char *interface;
-	const char *cooldown_status;
 	int pid = -1;
 
 	DBusError error;
@@ -174,9 +173,8 @@ static int __app_dbus_signal_handler_init(const char *path,
 	if (!system_bus && session_bus_initialized)
 		return 0;
 
-	if (system_bus && system_bus_initialized) {
+	if (system_bus && system_bus_initialized)
 		return __app_dbus_signal_add_rule(system_conn, path, interface);
-	}
 
 	dbus_error_init(&error);
 	bus = dbus_bus_get_private(system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION, &error);
@@ -449,13 +447,11 @@ SLPAPI int aul_update_freezer_status(int pid, const char *type)
 end:
 	dbus_error_free(&err);
 
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
 
-	if (send_conn) {
+	if (send_conn)
 		dbus_connection_unref(send_conn);
-	}
 
 	return ret;
 
@@ -500,9 +496,9 @@ SLPAPI int aul_send_app_launch_request_signal(int pid, const char *appid, const 
 	dbus_connection_flush(send_conn);
 
 end:
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
+
 	return ret;
 }
 
@@ -558,9 +554,8 @@ SLPAPI int aul_send_app_resume_request_signal(int pid, const char *appid, const 
 	dbus_connection_flush(send_conn);
 
 end:
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
 
 	return ret;
 }
@@ -615,12 +610,10 @@ SLPAPI int aul_send_app_terminate_request_signal(int pid, const char *appid, con
 	dbus_connection_flush(send_conn);
 
 end:
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
 
 	return ret;
-
 }
 
 SLPAPI int aul_send_app_status_change_signal(int pid, const char *appid, const char *pkgid, const char *status, const char *type)
@@ -677,9 +670,8 @@ SLPAPI int aul_send_app_status_change_signal(int pid, const char *appid, const c
 	dbus_connection_flush(send_conn);
 
 end:
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
 
 	return ret;
 }
@@ -718,9 +710,9 @@ SLPAPI int aul_send_app_terminated_signal(int pid)
 	dbus_connection_flush(send_conn);
 
 end:
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
+
 	return ret;
 }
 
@@ -774,9 +766,8 @@ SLPAPI int aul_send_app_group_signal(int owner_pid, int child_pid, const char *c
 	dbus_connection_flush(send_conn);
 
 end:
-	if (msg) {
+	if (msg)
 		dbus_message_unref(msg);
-	}
 
 	return ret;
 }

@@ -35,7 +35,7 @@ typedef struct _preexec_list_t {
 	int (*dl_do_pre_exe) (char *, char *);
 } preexec_list_t;
 
-static void __preexec_list_free()
+static void __preexec_list_free(void)
 {
 	GSList *iter = NULL;
 	preexec_list_t *type_t;
@@ -170,11 +170,6 @@ static inline void __preexec_run(const char *pkg_type, const char *appid,
 }
 
 #else
-
-static void __preexec_list_free()
-{
-}
-
 static inline void __preexec_init(int argc, char **argv)
 {
 }

@@ -38,9 +38,9 @@
 
 #define QUERY_ATTACH "attach database '%s' as Global"
 #define QUERY_CREATE_VIEW_1 "CREATE temp VIEW package_app_app_control as select * "\
-    "from (select  *,0 as for_all_users from  main.package_app_app_control union select *,1 as for_all_users from Global.package_app_app_control)"
+	"from (select  *,0 as for_all_users from  main.package_app_app_control union select *,1 as for_all_users from Global.package_app_app_control)"
 #define QUERY_CREATE_VIEW_2 "CREATE temp VIEW package_app_info as select * "\
-    "from (select  *,0 as for_all_users from  main.package_app_info union select *,1 as for_all_users from Global.package_app_info)"
+	"from (select  *,0 as for_all_users from  main.package_app_info union select *,1 as for_all_users from Global.package_app_info)"
 #define QUERY_CREATE_TABLE_APPSVC "create table if not exists appsvc " \
 	"(operation text, " \
 	"mime_type text, " \
@@ -91,10 +91,10 @@ static int __mkdir(const char *dir, mode_t mode)
 
 	snprintf(tmp, sizeof(tmp), "%s", dir);
 	len = strlen(tmp);
-	if(tmp[len - 1] == '/')
+	if (tmp[len - 1] == '/')
 		tmp[len - 1] = 0;
-	for(p = tmp + 1; *p; p++) {
-		if(*p == '/') {
+	for (p = tmp + 1; *p; p++) {
+		if (*p == '/') {
 			*p = 0;
 			ret = mkdir(tmp, mode);
 			if (ret && errno != EEXIST)
@@ -102,10 +102,12 @@ static int __mkdir(const char *dir, mode_t mode)
 			*p = '/';
 		}
 	}
+
 	return mkdir(tmp, mode);
 }
 
-static void __mkdir_for_user(const char* dir, uid_t uid, gid_t gid) {
+static void __mkdir_for_user(const char* dir, uid_t uid, gid_t gid)
+{
 	int ret = 0;
 
 	ret = __mkdir(dir, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
@@ -113,8 +115,10 @@ static void __mkdir_for_user(const char* dir, uid_t uid, gid_t gid) {
 		_E("Fail to create directory %s %d", dir, errno);
 	} else if (getuid() == ROOT_UID) {
 		ret = chown(dir, uid, gid);
-		if (ret == -1)
-			_E("Fail to chown %s %d.%d, because %s", dir, uid, gid, strerror(errno));
+		if (ret == -1) {
+			_E("Fail to chown %s %d.%d, because %d",
+						dir, uid, gid, errno);
+		}
 	}
 }
 
@@ -137,7 +141,7 @@ static const char *__get_svc_db(uid_t uid)
 	}
 
 	if (uid_caller == ROOT_UID || uid_caller == uid)
-		__mkdir_for_user (db_path, uid, gid);
+		__mkdir_for_user(db_path, uid, gid);
 
 	return appsvc_db;
 }
@@ -167,7 +171,7 @@ static const char *__get_app_info_db(uid_t uid)
 	}
 
 	if (uid_caller == ROOT_UID || uid_caller == uid)
-		__mkdir_for_user (db_path, uid, gid);
+		__mkdir_for_user(db_path, uid, gid);
 
 	return app_info_db;
 }
@@ -175,7 +179,6 @@ static const char *__get_app_info_db(uid_t uid)
 /**
  * db initialize
  */
-
 static int __init(uid_t uid, bool readonly)
 {
 	int rc;
@@ -194,12 +197,12 @@ static int __init(uid_t uid, bool readonly)
 	}
 
 	rc = sqlite3_exec(svc_db, "PRAGMA journal_mode = PERSIST", NULL, NULL, NULL);
-	if (SQLITE_OK != rc) {
+	if (rc != SQLITE_OK) {
 		_E("Fail to change journal mode\n");
 		goto err;
 	}
 	rc = sqlite3_exec(svc_db, QUERY_CREATE_TABLE_APPSVC, NULL, NULL, NULL);
-	if(SQLITE_OK!=rc){
+	if (rc != SQLITE_OK) {
 		_E("Fail to create tables\n");
 		goto err;
 	}
@@ -212,7 +215,7 @@ err:
 }
 
 static int __collate_appsvc(void *ucol, int str1_len, const void *str1,
-                            int str2_len, const void *str2)
+				int str2_len, const void *str2)
 {
 	char *saveptr1 = NULL;
 	char *saveptr2 = NULL;
@@ -261,7 +264,7 @@ static int __collate_appsvc(void *ucol, int str1_len, const void *str1,
 			continue;
 		}
 
-		if ( (strcmp(op, in_op) == 0) && (strcmp(mime, in_mime) == 0) ) {
+		if ((strcmp(op, in_op) == 0) && (strcmp(mime, in_mime) == 0)) {
 			SECURE_LOGD("%s %s %s %s %s %s", op, in_op, mime, in_mime, uri, in_uri);
 			if (g_pattern_match_simple(uri, in_uri)) {
 				SECURE_LOGD("in_uri : %s | uri : %s", in_uri, uri);
@@ -270,7 +273,7 @@ static int __collate_appsvc(void *ucol, int str1_len, const void *str1,
 				return 0;
 			}
 		}
-	} while ( (token = strtok_r(NULL, ";", &saveptr1)) );
+	} while ((token = strtok_r(NULL, ";", &saveptr1)));
 
 	free(dup_str1);
 	free(dup_str2);
@@ -300,20 +303,21 @@ static int __init_app_info_db(uid_t uid)
 		goto err;
 	}
 
-	rc = sqlite3_exec(app_info_db, "PRAGMA journal_mode = PERSIST", NULL, NULL,
-	                  NULL);
+	rc = sqlite3_exec(app_info_db, "PRAGMA journal_mode = PERSIST",
+					NULL, NULL, NULL);
 	if (SQLITE_OK != rc) {
 		_D("Fail to change journal mode\n");
 		goto err;
 	}
 
-	sqlite3_create_collation(app_info_db, SVC_COLLATION, SQLITE_UTF8, NULL,
-	                         __collate_appsvc);
+	sqlite3_create_collation(app_info_db, SVC_COLLATION, SQLITE_UTF8,
+					NULL, __collate_appsvc);
 
 	return 0;
 err:
 	sqlite3_close(app_info_db);
 	app_info_db = NULL;
+
 	return -1;
 }
 
@@ -330,15 +334,21 @@ static int __fini(void)
 int _svc_db_check_perm(uid_t uid, bool readonly)
 {
 	int ret = 0;
+	const char *db;
+
 	if (__init(uid, readonly) < 0)
 		return -1;
 
-	ret = access(__get_svc_db(uid), readonly ? R_OK : (R_OK | W_OK));
+	db = __get_svc_db(uid);
+	if (db == NULL)
+		return -1;
+
+	ret = access(db, readonly ? R_OK : (R_OK | W_OK));
 	return ret;
 }
 
 int _svc_db_add_app(const char *op, const char *mime_type, const char *uri,
-                    const char *pkg_name, uid_t uid)
+			const char *pkg_name, uid_t uid)
 {
 	char m[BUF_MAX_LEN];
 	char u[URI_MAX_LEN];
@@ -350,7 +360,7 @@ int _svc_db_add_app(const char *op, const char *mime_type, const char *uri,
 	if (__init(uid, false) < 0)
 		return -1;
 
-	if (op == NULL )
+	if (op == NULL)
 		return -1;
 
 	if (mime_type == NULL)
@@ -365,7 +375,7 @@ int _svc_db_add_app(const char *op, const char *mime_type, const char *uri,
 
 
 	result = sqlite3_prepare_v2(svc_db, insert_query, strlen(insert_query),
-	                            &p_statement, NULL);
+					&p_statement, NULL);
 	if (result != SQLITE_OK) {
 		_E("Sqlite3 error [%d] : <%s> preparing <%s> querry\n", result,
 		   sqlite3_errmsg(svc_db), insert_query);
@@ -376,7 +386,6 @@ int _svc_db_add_app(const char *op, const char *mime_type, const char *uri,
 	sqlite3_bind_text(p_statement, 2, m, -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(p_statement, 3, u, -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(p_statement, 4, pkg_name, -1, SQLITE_TRANSIENT);
-
 
 	result = sqlite3_step(p_statement);
 	if (result != SQLITE_DONE) {
@@ -409,7 +418,7 @@ int _svc_db_delete_with_pkgname(const char *pkg_name, uid_t uid)
 		return -1;
 
 	result = sqlite3_prepare_v2(svc_db, delete_query, strlen(delete_query),
-	                            &p_statement, NULL);
+					&p_statement, NULL);
 	if (result != SQLITE_OK) {
 		_E("Sqlite3 error [%d] : <%s> preparing <%s> querry\n", result,
 		   sqlite3_errmsg(svc_db), delete_query);
@@ -471,7 +480,7 @@ int _svc_db_is_defapp(const char *pkg_name, uid_t uid)
 		return 0;
 
 	snprintf(query, QUERY_MAX_LEN,
-	         "select count(*) from appsvc where pkg_name = '%s';", pkg_name);
+			"select count(*) from appsvc where pkg_name = '%s';", pkg_name);
 
 	ret = sqlite3_prepare(svc_db, query, sizeof(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
@@ -481,9 +490,9 @@ int _svc_db_is_defapp(const char *pkg_name, uid_t uid)
 	}
 
 	ret = sqlite3_step(stmt);
-	if (ret == SQLITE_ROW) {
+	if (ret == SQLITE_ROW)
 		cnt = sqlite3_column_int(stmt, 0);
-	}
+
 	sqlite3_finalize(stmt);
 
 	__fini();
@@ -504,7 +513,7 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri,
 	char* pkgname;
 	char* ret_val = NULL;
 
-	if (op == NULL )
+	if (op == NULL)
 		return NULL;
 
 	if (mime_type == NULL)
@@ -522,16 +531,15 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri,
 
 
 	snprintf(query, QUERY_MAX_LEN,
-	         "select pkg_name from appsvc where operation='%s' and mime_type='%s' and uri='%s'",
-	         \
-	         op, m, u);
+			"select pkg_name from appsvc where operation='%s' and mime_type='%s' and uri='%s'",
+			op, m, u);
 
 	SECURE_LOGD("query : %s\n", query);
 
 	ret = sqlite3_prepare(svc_db, query, strlen(query), &stmt, NULL);
-	if ( ret != SQLITE_OK) {
-		_E("prepare error, ret = %d, extended = %d\n", ret,
-		   sqlite3_extended_errcode(svc_db));
+	if (ret != SQLITE_OK) {
+		_E("prepare error, ret = %d, extended = %d\n",
+				ret, sqlite3_extended_errcode(svc_db));
 		goto db_fini;
 	}
 
@@ -554,13 +562,12 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri,
 
 	SECURE_LOGD("pkgname : %s\n", pkgname);
 
-stmt_finialize :
+stmt_finialize:
 	ret = sqlite3_finalize(stmt);
-	if ( ret != SQLITE_OK) {
+	if (ret != SQLITE_OK)
 		_D("finalize error(%d)", ret);
-	}
 
-db_fini :
+db_fini:
 	__fini();
 
 	return ret_val;
@@ -603,16 +610,16 @@ int _svc_db_adjust_list_with_submode(int mainapp_mode, char *win_id, GSList **pk
 		if (subapp == NULL)
 			continue;
 
-		// find if the main app is in the pkg_list
+		/* find if the main app is in the pkg_list */
 		mainapp = g_slist_find_custom(*pkg_list, submode_mainid, __appid_compare);
 		if (mainapp == NULL)
 			continue;
 
 		if (win_id && !mainapp_mode)
-			//subapp mode - remove mainapp from list
+			/* subapp mode - remove mainapp from list */
 			excluded_appid = (char *)mainapp->data;
 		else
-			//mainapp mode - remove subapp from list
+			/* mainapp mode - remove subapp from list */
 			excluded_appid = (char *)subapp->data;
 
 		if (excluded_appid) {
@@ -628,7 +635,7 @@ int _svc_db_adjust_list_with_submode(int mainapp_mode, char *win_id, GSList **pk
 }
 
 int _svc_db_get_list_with_condition(char *op, char *uri, char *mime,
-                                    GSList **pkg_list, uid_t uid)
+					GSList **pkg_list, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
 	sqlite3_stmt* stmt;
@@ -642,14 +649,14 @@ int _svc_db_get_list_with_condition(char *op, char *uri, char *mime,
 		return 0;
 
 	snprintf(query, QUERY_MAX_LEN,
-	         "select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ac.app_control like '%%%s|%s|%s%%' and ai.component_type='uiapp'",
-	         op, uri, mime);
+			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ac.app_control like '%%%s|%s|%s%%' and ai.component_type='uiapp'",
+			op, uri, mime);
 	SECURE_LOGD("query : %s\n", query);
 
 	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
-	if ( ret != SQLITE_OK) {
-		_E("prepare error, ret = %d, extended = %d\n", ret,
-		   sqlite3_extended_errcode(app_info_db));
+	if (ret != SQLITE_OK) {
+		_E("prepare error, ret = %d, extended = %d\n",
+				ret, sqlite3_extended_errcode(app_info_db));
 		return -1;
 	}
 
@@ -676,7 +683,7 @@ int _svc_db_get_list_with_condition(char *op, char *uri, char *mime,
 }
 
 int _svc_db_get_list_with_collation(char *op, char *uri, char *mime,
-                                    GSList **pkg_list, uid_t uid)
+					GSList **pkg_list, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
 	sqlite3_stmt* stmt;
@@ -686,19 +693,18 @@ int _svc_db_get_list_with_collation(char *op, char *uri, char *mime,
 	char *pkgname = NULL;
 	int found;
 
-	if (__init_app_info_db(uid) < 0) {
+	if (__init_app_info_db(uid) < 0)
 		return 0;
-	}
 
 	snprintf(query, QUERY_MAX_LEN,
-	         "select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ac.app_control='%s|%s|%s' collate appsvc_collation and ai.component_type='uiapp'",
-	         op, uri, mime);
+			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ac.app_control='%s|%s|%s' collate appsvc_collation and ai.component_type='uiapp'",
+			op, uri, mime);
 	SECURE_LOGD("query : %s\n", query);
 
 	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
-	if ( ret != SQLITE_OK) {
-		_E("prepare error, ret = %d, extended = %d\n", ret,
-		   sqlite3_extended_errcode(app_info_db));
+	if (ret != SQLITE_OK) {
+		_E("prepare error, ret = %d, extended = %d\n",
+				ret, sqlite3_extended_errcode(app_info_db));
 		return -1;
 	}
 
@@ -740,9 +746,9 @@ int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid)
 	snprintf(query, QUERY_MAX_LEN, "select pkg_name from appsvc");
 
 	ret = sqlite3_prepare(svc_db, query, sizeof(query), &stmt, NULL);
-	if ( ret != SQLITE_OK) {
-		_E("prepare error, ret = %d, extended = %d\n", ret,
-		   sqlite3_extended_errcode(svc_db));
+	if (ret != SQLITE_OK) {
+		_E("prepare error, ret = %d, extended = %d\n",
+				ret, sqlite3_extended_errcode(svc_db));
 		return -1;
 	}
 

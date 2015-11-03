@@ -56,6 +56,7 @@ static void __free_miregex_file_info(miregex_file_info *info)
 
 	if (info->regex != NULL)
 		free(info->regex);
+
 	if (info->desc != NULL)
 		free(info->desc);
 
@@ -74,12 +75,12 @@ static miregex_file_info *__get_miregex_file_info(const char *path)
 		return NULL;
 	}
 
-	info = (miregex_file_info *) malloc(sizeof(miregex_file_info));
-	if(info == NULL) {
+	info = (miregex_file_info *)malloc(sizeof(miregex_file_info));
+	if (info == NULL) {
 		fclose(f);
 		return NULL;
 	}
-		
+
 	info->regex = NULL;
 	info->desc = NULL;
 
@@ -96,8 +97,6 @@ static miregex_file_info *__get_miregex_file_info(const char *path)
 			info->desc = strdup(oneline);
 	}
 
-	/*_D("conf file process done : info->regex = %s, 
-		info->desc = %s",info->regex, info->desc);*/
 	fclose(f);
 
 	return info;
@@ -113,7 +112,7 @@ static int __add_miregex(const char *name, const char *regex, const char *desc)
 	if (regex == NULL)
 		return -1;
 
-	tbl = (regex_tbl *) malloc(sizeof(regex_tbl));
+	tbl = (regex_tbl *)malloc(sizeof(regex_tbl));
 	if (NULL == tbl) {
 		_E("Malloc failed!");
 		return -1;
@@ -129,6 +128,7 @@ static int __add_miregex(const char *name, const char *regex, const char *desc)
 				free(tbl);
 				tbl = NULL;
 			}
+
 			return -1;
 		}
 		regerror(error, &(tbl->regex_preg), msg, ret);
@@ -137,10 +137,12 @@ static int __add_miregex(const char *name, const char *regex, const char *desc)
 			free(msg);
 			msg = NULL;
 		}
+
 		if (tbl) {
 			free(tbl);
 			tbl = NULL;
 		}
+
 		return -1;
 	}
 
@@ -150,8 +152,6 @@ static int __add_miregex(const char *name, const char *regex, const char *desc)
 		tbl->desc = strdup(desc);
 	tbl->next = miregex_tbl;
 	miregex_tbl = tbl;
-
-	/*_D("added regex - %d %s %s##",getpid(),tbl->mimetype,tbl->regex);*/
 
 	return 0;
 }
@@ -202,7 +202,8 @@ static void __miregex_free_regex_table()
 regex_tbl *miregex_get_regex_table()
 {
 	DIR *dp;
-	struct dirent *dentry;
+	struct dirent dentry;
+	struct dirent *result = NULL;
 	char buf[MAX_LOCAL_BUFSZ];
 	miregex_file_info *info;
 
@@ -218,17 +219,17 @@ regex_tbl *miregex_get_regex_table()
 	if (dp == NULL)
 		return NULL;
 
-	while ((dentry = readdir(dp)) != NULL) {
-		if (dentry->d_name[0] == '.')
+	while (readdir_r(dp, &dentry, &result) == 0 && result != NULL) {
+		if (dentry.d_name[0] == '.')
 			continue;
 
 		snprintf(buf, sizeof(buf), "%s/%s", MIREGEX_DIR,
-			 dentry->d_name);
+			 dentry.d_name);
 		info = __get_miregex_file_info(buf);
 		if (info == NULL)
 			continue;
 
-		if (__add_miregex(dentry->d_name, 
+		if (__add_miregex(dentry.d_name,
 			info->regex, info->desc) < 0) {
 			/* TODO : invalid regular expression - will be removed*/
 		}
@@ -240,4 +241,3 @@ regex_tbl *miregex_get_regex_table()
 
 	return miregex_tbl;
 }
-

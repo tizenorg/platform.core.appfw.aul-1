@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 				print_usage(argv[0]);
 				return -1;
 			} else {
-				strcpy(args.appid, optarg);
+				strncpy(args.appid, optarg, sizeof(args.appid) - 1);
 			}
 			op = next_opt;
 			break;

@@ -42,7 +42,7 @@ static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, sockl
 static inline void __set_sock_option(int fd, int cli)
 {
 	int size;
-	struct timeval tv = { 5, 200 * 1000 };	/*  5.2 sec */
+	struct timeval tv = { 5, 200 * 1000 };	/* 5.2 sec */
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
@@ -56,7 +56,6 @@ int __create_server_sock(int pid)
 	struct sockaddr_un saddr;
 	struct sockaddr_un p_saddr;
 	int fd;
-	mode_t orig_mask;
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
@@ -79,7 +78,7 @@ int __create_server_sock(int pid)
 	unlink(saddr.sun_path);
 
 	/* labeling to socket for SMACK */
-	if (getuid() == 0) {	// this is meaningful iff current user is ROOT
+	if (getuid() == 0) {	/* this is meaningful iff current user is ROOT */
 		if (fsetxattr(fd, "security.SMACK64IPOUT", "@", 1, 0) < 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
@@ -469,20 +468,20 @@ static int __recv_message(int sock, struct iovec *vec, int vec_max_size, int *ve
 	/* get the ANCILLARY data */
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if (cmsg == NULL) {
-		if(nr_fds != NULL)
+		if (nr_fds != NULL)
 			*nr_fds = 0;
 	} else {
 		int iter = 0;
 		int fdnum = 0;
 
-		for (; cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg), iter ++) {
-			switch(cmsg->cmsg_type) {
-				case SCM_RIGHTS:
-					if (fds != NULL)
-						fdnum = __get_descriptors(cmsg, &msg, fds, MAX_NR_OF_DESCRIPTORS);
-					if (nr_fds != NULL)
-						*nr_fds = fdnum;
-					break;
+		for (; cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg), iter++) {
+			switch (cmsg->cmsg_type) {
+			case SCM_RIGHTS:
+				if (fds != NULL)
+					fdnum = __get_descriptors(cmsg, &msg, fds, MAX_NR_OF_DESCRIPTORS);
+				if (nr_fds != NULL)
+					*nr_fds = fdnum;
+				break;
 			}
 		}
 	}
@@ -523,14 +522,14 @@ int __app_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_
 
 	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
 		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if(len > 0) {
+		if (len > 0) {
 			while (len != datalen + 8) {
 				ret = send(fd, &pkt->data[len - 8], datalen + 8 - len, 0);
 				if (ret < 0) {
 					_E("second send() failed - %d %d (errno: %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE) {
+					if (errno == EPIPE)
 						_E("pid:%d, fd:%d\n", pid, fd);
-					}
+
 					close(fd);
 					if (pkt) {
 						free(pkt);
@@ -542,9 +541,9 @@ int __app_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_
 				_D("send() len - %d %d", len, datalen + 8);
 			}
 		} else {
-			if (errno == EPIPE) {
+			if (errno == EPIPE)
 				_E("pid:%d, fd:%d\n", pid, fd);
-			}
+
 			close(fd);
 			if (pkt) {
 				free(pkt);
@@ -562,8 +561,7 @@ int __app_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_
 
 retry_recv:
 
-	if(cmd == APP_GET_SOCKET_PAIR) {
-
+	if (cmd == APP_GET_SOCKET_PAIR) {
 		char recv_buff[1024];
 		struct iovec vec[3];
 		int ret = 0;
@@ -582,11 +580,10 @@ retry_recv:
 		} else
 			recv_buff[ret] = '\0';
 
-		if(fds_len > 0){
+		if (fds_len > 0) {
 			_E("fds : %d", fds[0]);
 			ret_fd[0] = fds[0];
 		}
-
 	} else {
 		len = recv(fd, &res, sizeof(int), 0);
 		if (len == -1) {
@@ -870,7 +867,7 @@ app_pkt_t *__app_recv_raw(int fd, int *clifd, struct ucred *cr)
 	pkt->len = datalen;
 
 	len = 0;
-	while( len != pkt->len ) {
+	while (len != pkt->len) {
 		ret = recv(*clifd, pkt->data + len, pkt->len - len, 0);
 		if (ret < 0) {
 			_E("recv error %d %d", len, pkt->len);
@@ -949,7 +946,7 @@ retry_recv:
 	pkt->len = len;
 
 	len = 0;
-	while( len != pkt->len ) {
+	while (len != pkt->len) {
 		ret = recv(fd, pkt->data + len, pkt->len - len, 0);
 		if (ret < 0) {
 			if (errno == EINTR) {

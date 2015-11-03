@@ -113,8 +113,10 @@ static int __send_message(int sock, const struct iovec *vec, int vec_size, const
 	sndret = sendmsg(sock, &msg, 0);
 
 	_D("sendmsg ret : %d", sndret);
-	if(sndret < 0) return -errno;
-	else return sndret;
+	if (sndret < 0)
+		return -errno;
+	else
+		return sndret;
 }
 
 static int __send_result_data(int fd, int cmd, unsigned char *kb_data, int datalen)
@@ -168,9 +170,9 @@ static int __send_result_to_client(int fd, int res)
 static void __real_send(int clifd, int ret)
 {
 	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
-		if (errno == EPIPE) {
+		if (errno == EPIPE)
 			_E("send failed due to EPIPE.\n");
-		}
+
 		_E("send fail to client");
 	}
 
@@ -183,7 +185,7 @@ static int __get_caller_pid(bundle *kb)
 	int pid;
 
 	pid_str = bundle_get_val(kb, AUL_K_ORG_CALLER_PID);
-	if(pid_str)
+	if (pid_str)
 		goto end;
 
 	pid_str = bundle_get_val(kb, AUL_K_CALLER_PID);
@@ -211,9 +213,9 @@ static int __foward_cmd(int cmd, bundle *kb, int cr_pid)
 			return AUL_R_ERROR;
 
 	pgid = getpgid(cr_pid);
-	if(pgid > 0) {
+	if (pgid > 0) {
 		snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", pgid);
-		bundle_del(kb,AUL_K_CALLEE_PID);
+		bundle_del(kb, AUL_K_CALLEE_PID);
 		bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 	}
 
@@ -270,9 +272,9 @@ static int __app_process_by_pid(int cmd,
 		ret = _term_req_app(pid, clifd);
 		break;
 	case APP_TERM_BY_PID_ASYNC:
-		if ((ret = __app_send_raw_with_noreply(pid, cmd, (unsigned char *)&dummy, sizeof(int))) < 0) {
+		if ((ret = __app_send_raw_with_noreply(pid, cmd, (unsigned char *)&dummy, sizeof(int))) < 0)
 			_D("terminate req packet send error");
-		}
+
 		__real_send(clifd, ret);
 		break;
 	case APP_PAUSE_BY_PID:
@@ -317,14 +319,13 @@ static void __handle_agent_dead_signal(struct ucred *pcr)
 
 static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
-
 	char *caller;
 	char *callee;
 	char *socket_pair_key;
 	int socket_pair_key_len;
-	int *handles;
+	int *handles = NULL;
 	struct iovec vec[3];
-	int msglen;
+	int msglen = 0;
 	char buffer[1024];
 	struct sockaddr_un saddr;
 	char *datacontrol_type;
@@ -338,7 +339,6 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	socket_pair_key_len = strlen(caller) + strlen(callee) + 2;
 
 	socket_pair_key = (char *)calloc(socket_pair_key_len, sizeof(char));
-
 	if (socket_pair_key == NULL) {
 		_E("calloc fail");
 		goto err_out;
@@ -348,9 +348,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	_E("socket pair key : %s", socket_pair_key);
 
 	handles = g_hash_table_lookup(__socket_pair_hash, socket_pair_key);
-
 	if (handles == NULL) {
-
 		handles = (int *)calloc(2, sizeof(int));
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, handles) != 0) {
 			_E("error create socket pair");
@@ -358,7 +356,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 			goto err_out;
 		}
 
-		if(handles[0] == -1) {
+		if (handles[0] == -1) {
 			_E("error socket open");
 			__send_result_to_client(clifd, -1);
 			goto err_out;
@@ -380,9 +378,8 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	if (datacontrol_type != NULL) {
 		_E("datacontrol_type : %s", datacontrol_type);
 		if (strcmp(datacontrol_type, "consumer") == 0) {
-
 			msglen = __send_message(clifd, vec, 1, &handles[0], 1);
-			if(msglen < 0) {
+			if (msglen < 0) {
 				_E("Error[%d]: while sending message\n", -msglen);
 				__send_result_to_client(clifd, -1);
 				goto err_out;
@@ -394,10 +391,9 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 				g_hash_table_remove(__socket_pair_hash, socket_pair_key);
 			}
 
-		}
-		else {
+		} else {
 			msglen = __send_message(clifd, vec, 1, &handles[1], 1);
-			if(msglen < 0) {
+			if (msglen < 0) {
 				_E("Error[%d]: while sending message\n", -msglen);
 				__send_result_to_client(clifd, -1);
 				goto err_out;
@@ -730,7 +726,7 @@ static int __dispatch_app_is_running(int clifd, const app_pkt_t *pkt, struct ucr
 	}
 	strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
 	ret = _status_app_is_running(appid, cr->uid);
-	SECURE_LOGD("APP_IS_RUNNING : %s : %d",appid, ret);
+	SECURE_LOGD("APP_IS_RUNNING : %s : %d", appid, ret);
 	__send_result_to_client(clifd, ret);
 	free(appid);
 
