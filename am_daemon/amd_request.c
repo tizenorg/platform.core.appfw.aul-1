@@ -635,7 +635,7 @@ static int __dispatch_app_pause(int clifd, const app_pkt_t *pkt, struct ucred *c
 		return -1;
 	}
 
-	appid = (char *)bundle_get_val(kb, AUL_K_PKG_NAME);
+	appid = (char *)bundle_get_val(kb, AUL_K_APPID);
 	ret = _status_app_is_running_v2(appid, cr->uid);
 	if (ret > 0) {
 		ret = _pause_app(ret, clifd);
