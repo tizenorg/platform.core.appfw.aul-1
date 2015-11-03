@@ -283,9 +283,6 @@ int _term_req_app(int pid, int clifd)
 
 int _term_bgapp(int pid, int clifd)
 {
-	return _term_app(pid, clifd);
-	/* FIXME: app group feature should be merged */
-#if 0
 	int dummy;
 	int fd;
 	int cnt;
@@ -296,7 +293,7 @@ int _term_bgapp(int pid, int clifd)
 	if (app_group_is_leader_pid(pid)) {
 		app_group_get_group_pids(pid, &cnt, &pids);
 		if (cnt > 0) {
-			status = _status_get_app_info_status(pids[cnt - 1]);
+			status = _status_get_app_info_status(pids[cnt - 1], getuid());
 			if (status == STATUS_BG) {
 				for (i = cnt - 1 ; i >= 0; i--) {
 					if (i != 0)
@@ -323,7 +320,6 @@ int _term_bgapp(int pid, int clifd)
 		__set_reply_handler(fd, pid, clifd, APP_TERM_BGAPP_BY_PID);
 
 	return 0;
-#endif
 }
 
 int _fake_launch_app(int cmd, int pid, bundle *kb, int clifd)
@@ -566,6 +562,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	const char *multiple = NULL;
 	const char *app_path = NULL;
 	const char *pkg_type = NULL;
+	const char *component_type = NULL;
 	int pid = -1;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
@@ -573,6 +570,10 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	int delay_reply = 0;
 	int pad_pid = LAUNCHPAD_PID;
 	gboolean is_group_app = FALSE;
+	int lpid;
+	gboolean can_attach;
+	gboolean new_process;
+	app_group_launch_mode launch_mode;
 
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
@@ -623,9 +624,52 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		pid = _status_app_is_running(appid, caller_uid);
 	}
 
-	if (app_group_is_group_app(kb, caller_uid)) {
-		pid = -1;
-		is_group_app = TRUE;
+	component_type = appinfo_get_value(ai, AIT_COMP);
+	if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
+		if (app_group_is_group_app(kb)) {
+			pid = -1;
+			is_group_app = TRUE;
+		}
+
+		int st = -1;
+
+		if (pid > 0)
+			st = _status_get_app_info_status(pid, caller_uid);
+
+		if (pid == -1 || st == STATUS_DYING) {
+			int found_pid = -1;
+			int found_lpid = -1;
+
+			if (app_group_find_singleton(appid, &found_pid, &found_lpid) == 0) {
+				pid = found_pid;
+				new_process = FALSE;
+			} else {
+				new_process = TRUE;
+			}
+
+			if (app_group_can_start_app(appid, kb, &can_attach, &lpid, &launch_mode) != 0 ) {
+				_E("can't make group info");
+				pid = -EILLEGALACCESS;
+				__real_send(fd, pid);
+				return pid;
+			}
+
+			if (can_attach && lpid == found_lpid) {
+				_E("can't launch singleton app in the same group");
+				pid = -EILLEGALACCESS;
+				__real_send(fd, pid);
+				return pid;
+			}
+
+			if (found_pid != -1) {
+				_W("app_group_clear_top, pid: %d", found_pid);
+				app_group_clear_top(found_pid);
+			}
+		}
+
+		if (pid == -1 && can_attach)
+			pid = app_group_find_pid_from_recycle_bin(appid);
+
 	}
 
 	if (pid > 0) {
@@ -649,15 +693,23 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_EXEC, app_path);
 		bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
 		pid = app_agent_send_cmd(caller_uid, cmd, kb);
+
+		if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
+			if (new_process) {
+				_D("add app group info");
+				app_group_start_app(pid, kb, lpid, can_attach, launch_mode);
+			} else {
+				app_group_restart_app(pid, kb);
+			}
+		}
+	}
+
+	if (pid > 0) {
+		_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
 	}
 
 	if (!delay_reply)
 		__real_send(fd, pid);
-
-	if (pid > 0) {
-		if (!is_group_app)
-			_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
-	}
 
 	return pid;
 }

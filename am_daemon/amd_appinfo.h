@@ -19,7 +19,12 @@ enum appinfo_type {
 	AIT_PKGID,
 	AIT_PRELOAD,
 	AIT_STATUS,
+	AIT_LAUNCH_MODE,
+	AIT_MAX
 };
+
+#define APP_TYPE_UI		"ui"
+#define APP_TYPE_SERVICE	"svc"
 
 int appinfo_init(void);
 void appinfo_fini(void);

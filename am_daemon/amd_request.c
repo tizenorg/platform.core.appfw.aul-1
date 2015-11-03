@@ -419,43 +419,7 @@ err_out:
 	return -1;
 }
 
-static int __dispatch_app_group_add(int clifd, const app_pkt_t *pkt, struct ucred *cr)
-{
-	bundle *b;
-	char *buf;
-	int pid, wid, leader_pid;
-
-	b = bundle_decode(pkt->data, pkt->len);
-	bundle_get_str(b, AUL_K_PID, &buf);
-	pid = atoi(buf);
-	bundle_get_str(b, AUL_K_WID, &buf);
-	wid = atoi(buf);
-	bundle_get_str(b, AUL_K_LEADER_PID, &buf);
-	leader_pid = atoi(buf);
-	bundle_free(b);
-	app_group_add(leader_pid, pid, wid);
-	__real_send(clifd, 0);
-
-	return 0;
-}
-
-static int __dispatch_app_group_remove(int clifd, const app_pkt_t *pkt, struct ucred *cr)
-{
-	bundle *b;
-	char *buf;
-	int pid;
-
-	b = bundle_decode(pkt->data, pkt->len);
-	bundle_get_str(b, AUL_K_PID, &buf);
-	pid = atoi(buf);
-	bundle_free(b);
-	app_group_remove(pid);
-	__real_send(clifd, 0);
-
-	return 0;
-}
-
-static int __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+static void __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt)
 {
 	bundle *b;
 	char *buf;
@@ -467,20 +431,47 @@ static int __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt, stru
 	pid = atoi(buf);
 	bundle_free(b);
 	wid = app_group_get_window(pid);
-	__real_send(clifd, wid);
-
-	return 0;
+	__send_result_to_client(clifd, wid);
 }
 
-static int __dispatch_app_group_resume(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+static void __dispatch_app_group_set_window(int clifd, const app_pkt_t *pkt, int pid)
 {
-	app_group_resume(cr->pid);
-	__real_send(clifd, 0);
+	bundle *b;
+	char *buf;
+	int wid;
+	int ret;
 
-	return 0;
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_WID, &buf);
+	wid = atoi(buf);
+	bundle_free(b);
+	ret = app_group_set_window(pid, wid);
+	__send_result_to_client(clifd, ret);
 }
 
-static int __dispatch_app_group_get_leader_pid(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+static void __dispatch_app_group_get_fg_flag(int clifd, const app_pkt_t *pkt)
+{
+	bundle *b;
+	char *buf;
+	int pid;
+	int fg;
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_K_PID, &buf);
+	pid = atoi(buf);
+	bundle_free(b);
+	fg = app_group_get_fg_flag(pid);
+	__send_result_to_client(clifd, fg);
+}
+
+static void __dispatch_app_group_clear_top(int clifd, int pid)
+{
+	app_group_clear_top(pid);
+	__send_result_to_client(clifd, 0);
+}
+
+static void __dispatch_app_group_get_leader_pid(int clifd,
+		const app_pkt_t *pkt)
 {
 	bundle *b;
 	char *buf;
@@ -492,40 +483,55 @@ static int __dispatch_app_group_get_leader_pid(int clifd, const app_pkt_t *pkt, 
 	pid = atoi(buf);
 	bundle_free(b);
 	lpid = app_group_get_leader_pid(pid);
-	__real_send(clifd, lpid);
-
-	return 0;
+	__send_result_to_client(clifd, lpid);
 }
 
-static int __dispatch_app_group_get_leader_pids(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+static void __dispatch_app_group_get_leader_pids(int clifd,
+		const app_pkt_t *pkt)
 {
 	int cnt;
 	int *pids;
-	int empty[1] = { 0 };
+	unsigned char empty[1] = { 0 };
 
 	app_group_get_leader_pids(&cnt, &pids);
 
 	if (pids == NULL || cnt == 0) {
-		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS,
-				(unsigned char *)empty, 0);
+		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS, empty, 0);
 	} else {
 		__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS,
-				(unsigned char *)pids, cnt * sizeof(int));
+			(unsigned char *)pids, cnt * sizeof(int));
 	}
 	if (pids != NULL)
 		free(pids);
-
-	return 0;
 }
 
-static int __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+static void __dispatch_app_group_get_idle_pids(int clifd,
+		const app_pkt_t *pkt)
+{
+	int cnt;
+	int *pids;
+	unsigned char empty[1] = { 0 };
+
+	app_group_get_idle_pids(&cnt, &pids);
+
+	if (pids == NULL || cnt == 0) {
+		__send_result_data(clifd, APP_GROUP_GET_IDLE_PIDS, empty, 0);
+	} else {
+		__send_result_data(clifd, APP_GROUP_GET_IDLE_PIDS,
+			(unsigned char *)pids, cnt * sizeof(int));
+	}
+	if (pids != NULL)
+		free(pids);
+}
+
+static void __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt)
 {
 	bundle *b;
 	char *buf;
 	int leader_pid;
 	int cnt;
 	int *pids;
-	int empty[1] = { 0 };
+	unsigned char empty[1] = { 0 };
 
 	b = bundle_decode(pkt->data, pkt->len);
 	bundle_get_str(b, AUL_K_LEADER_PID, &buf);
@@ -534,16 +540,21 @@ static int __dispatch_app_group_get_group_pids(int clifd, const app_pkt_t *pkt, 
 
 	app_group_get_group_pids(leader_pid, &cnt, &pids);
 	if (pids == NULL || cnt == 0) {
-		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS,
-				(unsigned char *)empty, 0);
+		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS, empty, 0);
 	} else {
 		__send_result_data(clifd, APP_GROUP_GET_GROUP_PIDS,
-				(unsigned char *)pids, cnt * sizeof(int));
+			(unsigned char *)pids, cnt * sizeof(int));
 	}
 	if (pids != NULL)
 		free(pids);
+}
 
-	return 0;
+static void __dispatch_app_group_lower(int clifd, int pid)
+{
+	int ret = 0;
+
+	app_group_lower(pid, &ret);
+	__send_result_to_client(clifd, ret);
 }
 
 static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *cr)
@@ -956,13 +967,15 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_TERM_BGAPP_BY_PID] = __dispatch_app_term,
 	[APP_PAUSE] = __dispatch_app_pause,
 	[APP_PAUSE_BY_PID] = __dispatch_app_process_by_pid,
-	[APP_GROUP_ADD] = __dispatch_app_group_add,
-	[APP_GROUP_REMOVE] = __dispatch_app_group_remove,
 	[APP_GROUP_GET_WINDOW] = __dispatch_app_group_get_window,
+	[APP_GROUP_SET_WINDOW] = __dispatch_app_group_set_window,
+	[APP_GROUP_GET_FG] = __dispatch_app_group_get_fg_flag,
+	[APP_GROUP_GET_LEADER_PID] = __dispatch_app_group_get_leader_pid,
 	[APP_GROUP_GET_LEADER_PIDS] = __dispatch_app_group_get_leader_pids,
 	[APP_GROUP_GET_GROUP_PIDS] = __dispatch_app_group_get_group_pids,
-	[APP_GROUP_RESUME] = __dispatch_app_group_resume,
-	[APP_GROUP_GET_LEADER_PID] = __dispatch_app_group_get_leader_pid,
+	[APP_GROUP_GET_IDLE_PIDS] = __dispatch_app_group_get_idle_pids,
+	[APP_GROUP_LOWER] = __dispatch_app_group_lower,
+	[APP_GROUP_CLEAR_TOP] = __dispatch_app_group_clear_top,
 	[APP_GET_STATUS] = __dispatch_app_get_status,
 	[AMD_RELOAD_APPINFO] = __dispatch_amd_reload_appinfo,
 	[AGENT_DEAD_SIGNAL] = __dispatch_agent_dead_signal,

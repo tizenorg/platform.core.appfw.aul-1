@@ -84,28 +84,17 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
-	bool is_sub_app = true;
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
 		info_t = (app_status_info_t *)iter->data;
 		if((pid == info_t->pid) && ((info_t->uid == uid) || (info_t->uid == 0))) {
 			info_t->status = status;
-			is_sub_app = false;
 			break;
 		}
 	}
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
-		info_t = (app_status_info_t *)iter->data;
-
-		//SECURE_LOGD("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
-	}
-
-	if (is_sub_app) {
-		app_group_set_status(pid, status);
-	}
+	app_group_set_status(pid, status, false);
 
 	return 0;
 }
@@ -166,7 +155,7 @@ int _status_get_app_info_status(int pid, uid_t uid)
 		}
 	}
 
-	return -1;
+	return app_group_get_status(pid);
 }
 
 int _status_app_is_running(const char *appid, uid_t uid)
