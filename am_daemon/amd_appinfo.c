@@ -39,6 +39,7 @@ enum _appinfo_idx {
 	_AI_PKGID,
 	_AI_PRELOAD,
 	_AI_STATUS,
+	_AI_LAUNCH_MODE,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -61,6 +62,7 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_PKGID] = { "PackageId", AIT_PKGID, },
 	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, },
 	[_AI_STATUS] = { "Status", AIT_STATUS, },
+	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE },
 };
 
 struct appinfo {
@@ -113,6 +115,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	char *type;
 	char *appid;
 	char *pkgid;
+	char *mode;
 	bool multiple;
 	bool onboot;
 	bool restart;
@@ -226,6 +229,13 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	}
 	c->val[_AI_PKGID] = strdup(pkgid);
 	c->val[_AI_STATUS] = strdup("installed");
+
+	if (pkgmgrinfo_appinfo_get_launch_mode(handle, &mode)) {
+		_E("failed to get launch_mode");
+		_free_appinfo(c);
+		return -1;
+	}
+	c->val[_AI_LAUNCH_MODE] = strdup(mode ? mode : "single");
 
 	SECURE_LOGD("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
 

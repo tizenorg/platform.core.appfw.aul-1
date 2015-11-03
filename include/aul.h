@@ -1788,6 +1788,16 @@ int aul_app_group_get_window(int pid);
 /*
  * This API is only for Appfw internally.
  */
+int aul_app_group_get_window(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_app_group_set_window(int wid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_get_leader_pids(int *cnt, int **pids);
 
 /*
@@ -1809,6 +1819,21 @@ int aul_app_group_clear_top(void);
  * This API is only for Appfw internally.
  */
 int aul_app_group_is_top(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_app_group_get_fg_flag(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_app_group_lower(int *exit);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_app_group_get_idle_pids(int *cnt, int **pids);
 
 /*
  * This API is only for Appfw internally.

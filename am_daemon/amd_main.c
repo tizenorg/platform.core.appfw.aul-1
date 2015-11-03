@@ -248,11 +248,24 @@ static int __app_dead_handler(int pid, void *data)
 	 _D("APP_DEAD_SIGNAL : %d", pid);
 
 	if (app_group_is_leader_pid(pid)) {
-		app_group_clear_top(pid);
-		app_group_set_dead_pid(pid);
-		app_group_remove(pid);
+		_W("app_group_leader_app, pid: %d", pid);
+		if (app_group_find_second_leader(pid) == -1) {
+			app_group_clear_top(pid);
+			app_group_set_dead_pid(pid);
+			app_group_remove(pid);
+		} else
+			app_group_remove_leader_pid(pid);
 	} else if (app_group_is_sub_app(pid)) {
-		app_group_reroute(pid);
+		_W("app_group_sub_app, pid: %d", pid);
+		int caller_pid = app_group_get_next_caller_pid(pid);
+
+		if (app_group_can_reroute(pid) || (caller_pid > 0 && caller_pid != pid)) {
+			_W("app_group reroute");
+			app_group_reroute(pid);
+		} else {
+			_W("app_group clear top");
+			app_group_clear_top(pid);
+		}
 		app_group_set_dead_pid(pid);
 		app_group_remove(pid);
 	}
