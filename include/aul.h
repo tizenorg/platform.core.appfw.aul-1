@@ -1686,16 +1686,16 @@ int aul_reload_appinfo(void);
 int aul_status_update(int status);
 int aul_running_list_update(char *appid, char *app_path, char *pid);
 
-void aul_app_group_add(int leader_pid, int pid, int wid);
-void aul_app_group_remove(int pid);
-void aul_app_group_attach_window(int parent_wid, int child_wid);
-void aul_app_group_detach_window(int child_wid);
 int aul_app_group_get_window(int pid);
+int aul_app_group_set_window(int wid);
 void aul_app_group_get_leader_pids(int *cnt, int **pids);
 void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids);
 int aul_app_group_get_leader_pid(int pid);
 int aul_app_group_clear_top(void);
 int aul_app_group_is_top(void);
+int aul_app_group_get_fg_flag(int pid);
+void aul_app_group_lower(int *exit);
+void aul_app_group_get_idle_pids(int *cnt, int **pids);
 
 int aul_request_data_control_socket_pair(bundle *b, int *fd);
 
