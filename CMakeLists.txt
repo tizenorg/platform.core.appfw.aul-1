@@ -15,7 +15,7 @@ ENDIF (with_x11)
 INCLUDE(FindPkgConfig)
 SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon security-manager cynara-client cynara-creds-socket cynara-session capi-system-info vconf sqlite3 iniparser)
 IF (with_wayland)
-	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client)
+	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client ecore-wayland)
 ENDIF (with_wayland)
 IF (with_x11)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES})
@@ -110,6 +110,12 @@ SET(APP_LAUNCHER "app_launcher")
 ADD_EXECUTABLE(${APP_LAUNCHER} app_launcher.c)
 TARGET_LINK_LIBRARIES(${APP_LAUNCHER} aul aul_mods ${APP_LAUNCHER_DEPS_LDFLAGS})
 INSTALL(TARGETS app_launcher DESTINATION bin)
+
+# appgroup info tool
+SET(APPGROUP_INFO "appgroup_info")
+ADD_EXECUTABLE(${APPGROUP_INFO} tool/app_group_info.c)
+TARGET_LINK_LIBRARIES(${APPGROUP_INFO} aul aul_mods ${APPGROUP_INFO_DEPS_LDFLAGS})
+INSTALL(TARGETS appgroup_info DESTINATION bin)
 
 # pkgconfig file
 CONFIGURE_FILE(aul.pc.in aul.pc @ONLY)
