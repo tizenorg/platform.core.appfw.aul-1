@@ -183,35 +183,32 @@ char *__proc_get_cmdline_bypid(int pid)
 	if (ret <= 0)
 		return NULL;
 
-	/* support app launched by shell script*/
+	/* support app launched by shell script */
 	if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0) {
 		return strdup(&buf[BINSH_SIZE + 1]);
-	}
-	else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0) {
+	} else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0) {
 		char* ptr = buf;
 
-		// buf comes with double null-terminated string
+		/* buf comes with double null-terminated string */
 		while (1) {
-			while (*ptr) {
+			while (*ptr)
 				ptr++;
-			}
+
 			ptr++;
 
 			if (!(*ptr))
 				break;
 
-			// ignore trailing "--"
+			/* ignore trailing "--" */
 			if (strncmp(ptr, "-", 1) != 0)
 				break;
 		};
 
 		return strdup(ptr);
-	}
-	else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
+	} else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
 		if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
-			if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0) {
+			if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0)
 				return strdup(&buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3]);
-			}
 		}
 	}
 
@@ -225,7 +222,7 @@ char *__proc_get_exe_bypid(int pid)
 	ssize_t len;
 
 	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-	len=readlink(buf, buf2, MAX_CMD_BUFSZ - 1);
+	len = readlink(buf, buf2, MAX_CMD_BUFSZ - 1);
 	if (len <= 0)
 		return NULL;
 	buf2[len] = 0;
@@ -268,18 +265,18 @@ static inline int __get_pgid_from_stat(int pid)
 	return pid;
 }
 
-int __proc_iter_pgid(int pgid, int (*iterfunc) (int pid, void *priv,uid_t uid),
-		     void *priv)
+int __proc_iter_pgid(int pgid, int (*iterfunc)(int pid, void *priv, uid_t uid),
+			void *priv)
 {
 	DIR *dp;
 	struct dirent *dentry;
 	int _pgid;
 	int ret = -1;
 	uid_t uid;
+
 	dp = opendir("/proc");
-	if (dp == NULL) {
+	if (dp == NULL)
 		return -1;
-	}
 
 	while ((dentry = readdir(dp)) != NULL) {
 		if (!isdigit(dentry->d_name[0]))
@@ -288,7 +285,7 @@ int __proc_iter_pgid(int pgid, int (*iterfunc) (int pid, void *priv,uid_t uid),
 		_pgid = __get_pgid_from_stat(atoi(dentry->d_name));
 		if (pgid == _pgid) {
 			uid =  __proc_get_usr_bypid(atoi(dentry->d_name));
-			ret = iterfunc(atoi(dentry->d_name), priv,uid);
+			ret = iterfunc(atoi(dentry->d_name), priv, uid);
 			if (ret >= 0)
 				break;
 		}

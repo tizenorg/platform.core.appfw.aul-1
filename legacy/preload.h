@@ -20,7 +20,7 @@
  */
 
 
-#ifdef PRELOAD_ACTIVATE 
+#ifdef PRELOAD_ACTIVATE
 
 #include <dlfcn.h>
 #define PRELOAD_FILE SHARE_PREFIX"/preload_list.txt"
@@ -46,9 +46,9 @@ static inline void __preload_init(int argc, char **argv)
 
 	g_argc = argc;
 	g_argv = argv;
-	for (i = 0; i < argc; i++) {
+	for (i = 0; i < argc; i++)
 		max_cmdline_size += (strlen(argv[i]) + 1);
-	}
+
 	_D("max_cmdline_size = %d", max_cmdline_size);
 
 	preload_list = fopen(PRELOAD_FILE, "rt");
@@ -119,9 +119,8 @@ static inline void __preload_exec(int argc, char **argv)
 		return;
 
 	handle = dlopen(argv[0], RTLD_LAZY | RTLD_GLOBAL);
-	if (handle == NULL) {
+	if (handle == NULL)
 		return;
-	}
 
 	dl_main = dlsym(handle, "main");
 	if (dl_main != NULL) {
@@ -139,8 +138,13 @@ static inline void __preload_exec(int argc, char **argv)
 
 #else
 
-static inline void __preload_init();
-static inline void __preload_exec(int argc, char **argv);
+static inline void __preload_init()
+{
+}
+
+static inline void __preload_exec(int argc, char **argv)
+{
+}
 
 #endif
 

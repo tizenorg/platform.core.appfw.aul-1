@@ -71,9 +71,9 @@ int launch_test()
 	bundle *kb = NULL;
 
 	kb = create_internal_bundle(3);
-	if (NULL == kb) {
+	if (kb == NULL)
 		return -1;
-	}
+
 	printf("[aul_launch_app %d test] %s \n", num++, gargv[2]);
 
 	ret = aul_launch_app(gargv[2], kb);
@@ -92,9 +92,9 @@ int launch_test_for_uid()
 	bundle *kb = NULL;
 
 	kb = create_internal_bundle(3);
-	if (NULL == kb) {
+	if (kb == NULL)
 		return -1;
-	}
+
 	printf("[aul_launch_app %d test] %s \n", num++, gargv[2]);
 
 	ret = aul_launch_app_for_uid(gargv[2], kb, atoi(gargv[3]));
@@ -113,9 +113,8 @@ int dbus_launch_test()
 
 	kb = create_internal_bundle(3);
 
-	if (NULL == kb) {
+	if (kb == NULL)
 		return -1;
-	}
 
 	ret = aul_launch_app(gargv[2], kb);
 
@@ -205,33 +204,6 @@ static test_func_t scn_func[] = {
 	{"n", resume_test, "open_test", ""},
 	{"n", launch_test, "launch_test", ""}
 };
-
-static gboolean run_all_test(void *data)
-{
-	static int pos = 0;
-	int ret;
-
-	if (pos > sizeof(scn_func) / sizeof(test_func_t) - 1) {
-		printf("all internal test done\n");
-		g_main_loop_quit(mainloop);
-		return 0;
-	}
-
-	if (strncmp(scn_func[pos].name, "n", 1) == 0) {
-		printf("[test %d] %s , pkgname = %s\n", pos, scn_func[pos].desc,
-		       gargv[2]);
-		apn_pid = scn_func[pos].func();
-		printf("... return pid = %d\n", apn_pid);
-	} else {
-		printf("[test %d] %s , pid = %d\n", pos, scn_func[pos].desc,
-		       apn_pid);
-		ret = scn_func[pos].func();
-		printf("... return res = %d\n", ret);
-	}
-	pos++;
-
-	return 1;
-}
 
 int all_test()
 {
@@ -562,30 +534,29 @@ int reload_appinfo(void)
 }
 
 static test_func_t test_func[] = {
-	{"launch",launch_test,"aul_launch_app test",
+	{"launch", launch_test, "aul_launch_app test",
 		"[usage] launch <pkgname> <key1> <val1> <key2> <val2> ..."},
-	{"launch_for_uid", launch_test_for_uid, "launch with uid test",
-		"[usage] launch_for_uid <appid> <uid>"},
-	{"open",open_test,"aul_open_app test",
+	{"launch_for_uid", launch_test_for_uid,
+		"launch with uid test",	"[usage] launch_for_uid <appid> <uid>"},
+	{"open", open_test, "aul_open_app test",
 		"[usage] open <pkgname>" },
-	{"resume",resume_test,"aul_resume_app test",
+	{"resume", resume_test, "aul_resume_app test",
 		"[usage] resume <pkgname>" },
-	{"resume_pid",resume_pid_test,"aul_resume_pid test",
+	{"resume_pid", resume_pid_test, "aul_resume_pid test",
 		"[usage] resume_pid <pid>" },
-	{"term_pid", term_pid_test,"aul_terminate_pid test",
+	{"term_pid", term_pid_test, "aul_terminate_pid test",
 		"[usage] term_pid <pid>" },
-	{"term_req_pid", term_req_pid_test,"aul_subapp_terminate_request_pid test",
+	{"term_req_pid", term_req_pid_test, "aul_subapp_terminate_request_pid test",
 		"[usage] term_req_pid <pid>" },
 	{"term_pid_without_restart", term_pid_without_restart_test, "aul_terminate_pid_without_restart test",
 		"[usage] term_pid_without_restart <pid>" },
 	{"term_bgapp", term_bgapp_pid_test, "aul_terminate_bgapp_pid test",
 		"[usage] term_bgapp <pid>" },
-	{"dbuslaunch", dbus_launch_test,"launch by dbus auto activation",
+	{"dbuslaunch", dbus_launch_test, "launch by dbus auto activation",
 		"[usage] term_pid <pid>" },
-	{"all",all_test,"test based on predefine scenario",
+	{"all", all_test, "test based on predefine scenario",
 		"[usage] all <pkgname>"},
-
-	{"is_run", is_run_test,"aul_is_running test",
+	{"is_run", is_run_test, "aul_is_running test",
 		"[usage] is_run <pkgname>"},
 	{"getallpkg", get_allpkg_test, "aul_app_get_running_app_info test",
 		"[usage] getallpkg all"},
@@ -593,7 +564,6 @@ static test_func_t test_func[] = {
 		"[usage] get_app_bypid <pid>"},
 	{"get_pkg_bypid", get_pkg_bypid_test, "aul_app_get_pkgid_bypid test",
 		"[usage] get_pkg_bypid <pid>"},
-
 	{"open_file", open_file_test, "aul_open_file test",
 		"[usage] open_file <filename>"},
 	{"open_content", open_content_test, "aul_open_content test",
@@ -606,35 +576,26 @@ static test_func_t test_func[] = {
 		"[usage] get_mime_file <filename>"},
 	{"get_mime_content", get_mime_content_test, "aul_get_mime_from_content",
 		"[usage] get_mime_content <content>"},
-
 	{"get_mime_icon", aul_get_mime_icon_test, "aul_get_mime_icon test",
 		"[usage] get_mime_icon <mimetype>"},
 	{"get_mime_desc", aul_get_mime_description_test, "aul_get_mime_description test",
 		"[usage] get_mime_desc <mimetype>"},
 	{"get_mime_ext", aul_get_mime_extension_test, "aul_get_mime_extension test",
 		"[usage] get_mime_ext <mimetype>"},
-
 	{"test_regex", test_regex, "regular expression parser test",
 		"[usage] test_regex <full text>"},
-
 	{"getpkg", get_pkg_func, "get package",
-	      	"[usage] getpkg <pkgname>"},
-	{"pause", pause_test,"aul_pause_app test",
+		"[usage] getpkg <pkgname>"},
+	{"pause", pause_test, "aul_pause_app test",
 		"[usage] pause <pkgname>" },
-	{"pause_pid", pause_pid_test,"aul_pause_pid test",
+	{"pause_pid", pause_pid_test, "aul_pause_pid test",
 		"[usage] pause_pid <pid>" },
 	{"update_list", update_running_list, "update running list",
-	      	"[usage] update_list <appid> <app_path> <pid>"},
+		"[usage] update_list <appid> <app_path> <pid>"},
 	{"reload", reload_appinfo, "reload appinfo table",
 		"[usage] reload"},
 	{"get_status_pid", get_status_pid, "aul_app_get_status_bypid test",
 		"[usage] get_status_pid <pid>"},
-/*
-	{"setpkg", set_pkg_func, "set package",
-	      	"[usage] setpkg <pkgname> <apppath>"},
-	{"delpkg", del_pkg_func, "del package",
-	      	"[usage] getpkg <pkgname>"},
-*/
 };
 
 int callfunc(char *testname)
@@ -715,7 +676,7 @@ int main(int argc, char **argv)
 	/*aul_listen_app_dead_signal(dead_tracker,NULL); */
 	/*aul_listen_app_dead_signal(NULL,NULL); */
 
-	g_idle_add(run_func,NULL);
+	g_idle_add(run_func, NULL);
 
 	mainloop = g_main_loop_new(NULL, FALSE);
 	if (!mainloop) {

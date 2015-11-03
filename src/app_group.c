@@ -19,29 +19,24 @@
 #include <tizen-extension-client-protocol.h>
 static struct tizen_policy *tz_policy = NULL;
 
-static void
-_reg_handle_global(void *data, struct wl_registry *reg, uint32_t id, const char *interface, uint32_t ver)
+static void _reg_handle_global(void *data, struct wl_registry *reg, uint32_t id,
+				const char *interface, uint32_t ver)
 {
-   if (!strcmp(interface, "tizen_policy"))
-     {
-        tz_policy = wl_registry_bind(reg,
-                                       id,
-                                       &tizen_policy_interface,
-                                       1);
-     }
+	if (!strcmp(interface, "tizen_policy")) {
+		tz_policy = wl_registry_bind(reg, id,
+				&tizen_policy_interface, 1);
+	}
 }
 
-static void
-_reg_handle_global_remove(void *data, struct wl_registry *reg, uint32_t id)
+static void _reg_handle_global_remove(void *data, struct wl_registry *reg,
+					uint32_t id)
 {
-   // do nothing
-   ;
+   /* do nothing */
 }
 
-static const struct wl_registry_listener reg_listener =
-{
-   _reg_handle_global,
-   _reg_handle_global_remove
+static const struct wl_registry_listener reg_listener = {
+	_reg_handle_global,
+	_reg_handle_global_remove
 };
 #endif
 
@@ -88,8 +83,7 @@ SLPAPI void aul_app_group_attach_window(int parent_wid, int child_wid)
 	wl_registry_add_listener(reg, &reg_listener, NULL);
 	wl_display_roundtrip(dpy);
 
-	if (!tz_policy)
-	{
+	if (!tz_policy) {
 		_E("ERR: no tizen_policy global interface");
 		wl_registry_destroy(reg);
 		wl_display_disconnect(dpy);
@@ -103,7 +97,7 @@ SLPAPI void aul_app_group_attach_window(int parent_wid, int child_wid)
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
-	//ecore_x_icccm_transient_for_set(child_wid, parent_wid);
+	/* ecore_x_icccm_transient_for_set(child_wid, parent_wid); */
 #endif
 }
 
@@ -118,8 +112,7 @@ SLPAPI void aul_app_group_detach_window(int child_wid)
 	wl_registry_add_listener(reg, &reg_listener, NULL);
 	wl_display_roundtrip(dpy);
 
-	if (!tz_policy)
-	{
+	if (!tz_policy) {
 		_E("ERR: no tz_policy global interface");
 		wl_registry_destroy(reg);
 		wl_display_disconnect(dpy);
@@ -133,7 +126,7 @@ SLPAPI void aul_app_group_detach_window(int child_wid)
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
-	//ecore_x_icccm_transient_for_unset(child_wid);
+	/* ecore_x_icccm_transient_for_unset(child_wid); */
 #endif
 }
 
@@ -197,7 +190,7 @@ SLPAPI void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
-		if (ret->len > 0 && ret->len <= INT_MAX) {
+		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {
 			*pids = malloc(ret->len);
 			if (*pids == NULL) {
 				_E("out of memory");

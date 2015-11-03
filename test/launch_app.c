@@ -42,7 +42,7 @@ static bundle *create_internal_bundle(int start)
 	bundle *kb;
 	int i;
 	char arg[1024] = {0, };
-	char* val_array[128];
+	char *val_array[128];
 
 	kb = bundle_create();
 	for (i = start; i < gargc - 1; i++) {
@@ -51,17 +51,17 @@ static bundle *create_internal_bundle(int start)
 		else {
 			int j = 1;
 			strncpy(arg, gargv[i + 1], 1023);
-			val_array[0] = strtok(arg,",");
-			while(1)
-			{
-				val_array[j] = strtok(NULL,",");
-				if(val_array[j] == NULL)
+			val_array[0] = strtok(arg, ",");
+			while (1) {
+				val_array[j] = strtok(NULL, ",");
+				if (val_array[j] == NULL)
 					break;
 				j++;
 			}
-			if(j==1)
+
+			if (j == 1)
 				bundle_add(kb, gargv[i], gargv[i + 1]);
-			else if(j>1)
+			else if (j > 1)
 				bundle_add_str_array(kb, gargv[i],
 					(const char**)val_array, j);
 		}
@@ -79,6 +79,7 @@ int launch(void)
 		printf("bundle creation fail\n");
 		return -1;
 	}
+
 	pid = aul_launch_app(gargv[1], kb);
 	return pid;
 }
@@ -93,7 +94,7 @@ static int __launch_app_dead_handler(int pid, void *data)
 {
 	int listen_pid = (intptr_t)data;
 
-	if(listen_pid == pid)
+	if (listen_pid == pid)
 		g_main_loop_quit(mainloop);
 
 	return 0;
@@ -108,7 +109,7 @@ static gboolean run_func(void *data)
 		printf("... successfully launched\n");
 		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
 
-		if (str && strcmp(str, "SYNC") == 0 )
+		if (str && strcmp(str, "SYNC") == 0)
 			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
 		else
 			g_main_loop_quit(mainloop);
@@ -148,4 +149,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
