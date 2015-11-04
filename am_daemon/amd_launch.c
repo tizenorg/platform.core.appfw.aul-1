@@ -44,9 +44,6 @@
 
 #define DAC_ACTIVATE
 
-#include "access_control.h"
-
-
 #define TERM_WAIT_SEC 3
 #define INIT_PID 1
 
