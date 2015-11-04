@@ -77,12 +77,6 @@ SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
 SET_TARGET_PROPERTIES(aul PROPERTIES VERSION ${FULLVER})
 INSTALL(TARGETS aul DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
 
-
-# launchpad(old avatar) daemon
-ADD_EXECUTABLE(amd_session_agent am_session_agent/agent.c)
-TARGET_LINK_LIBRARIES(amd_session_agent aul_mods aul ${pkgs_LDFLAGS})
-INSTALL(TARGETS amd_session_agent DESTINATION bin)
-
 ADD_EXECUTABLE(amd
 	am_daemon/amd_main.c
 	am_daemon/amd_request.c
