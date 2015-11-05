@@ -89,6 +89,7 @@ int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 	const struct appinfo *ai;
 	const char *app_path;
 	const char *pkg_type;
+	const char *pkg_id;
 	const char *hwacc;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 
@@ -113,11 +114,13 @@ int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 	hwacc = appinfo_get_value(ai, AIT_HWACC);
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
+	pkg_id = appinfo_get_value(ai, AIT_PKGID);
 
 	__set_stime(kb);
 	bundle_add_str(kb, AUL_K_HWACC, hwacc);
 	bundle_add_str(kb, AUL_K_EXEC, app_path);
 	bundle_add_str(kb, AUL_K_PACKAGETYPE, pkg_type);
+	bundle_add_str(kb, AUL_K_PKGID, pkg_id);
 
 	pid = app_agent_send_cmd(uid, APP_START, kb);
 	if (pid > 0)
@@ -566,6 +569,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	const char *multiple = NULL;
 	const char *app_path = NULL;
 	const char *pkg_type = NULL;
+	const char *pkg_id = NULL;
 	int pid = -1;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
@@ -614,6 +618,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
+	pkg_id = appinfo_get_value(ai, AIT_PKGID);
 
 	if ((ret = __compare_signature(ai, cmd, caller_uid, appid, caller_appid, fd)) != 0)
 		return ret;
@@ -648,6 +653,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_HWACC, hwacc);
 		bundle_add(kb, AUL_K_EXEC, app_path);
 		bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
+		bundle_add(kb, AUL_K_PKGID, pkg_id);
 		pid = app_agent_send_cmd(caller_uid, cmd, kb);
 	}
 
