@@ -41,11 +41,12 @@
 
 static int aul_initialized = 0;
 static int aul_fd;
+static void *__window_object = NULL;
+static void *__bg_object = NULL;
+static void *__conformant_object = NULL;
 
 static int (*_aul_handler) (aul_type type, bundle *kb, void *data) = NULL;
 static void *_aul_data;
-
-
 
 static int app_resume();
 static int app_terminate();
@@ -757,6 +758,36 @@ SLPAPI int aul_unset_data_control_provider_cb(void)
 {
 	__dc_handler = NULL;
 	return 0;
+}
+
+SLPAPI void aul_set_preinit_window(void *evas_object)
+{
+        __window_object = evas_object;
+}
+
+SLPAPI void* aul_get_preinit_window(const char *win_name)
+{
+        return __window_object;
+}
+
+SLPAPI void aul_set_preinit_background(void *evas_object)
+{
+        __bg_object = evas_object;
+}
+
+SLPAPI void* aul_get_preinit_background(void)
+{
+        return __bg_object;
+}
+
+SLPAPI void aul_set_preinit_conformant(void *evas_object)
+{
+	__conformant_object = evas_object;
+}
+
+SLPAPI void* aul_get_preinit_conformant(void)
+{
+	return __conformant_object;
 }
 
 SLPAPI int aul_pause_app(const char *appid)

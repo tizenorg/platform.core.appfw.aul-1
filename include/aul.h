@@ -225,7 +225,8 @@ typedef enum _aul_type{
 #define AUL_K_LEADER_PID	"__AUL_LEADER_PID__"
 /** AUL internal private key - To support data control*/
 #define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
-
+/** AUL internal private key */
+#define AUL_K_PKGID		"__AUL_PKGID_"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -1521,6 +1522,16 @@ int aul_kill_pid(int pid);
 int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
 int aul_remove_caller_cb(int pid);
 int aul_invoke_caller_cb(int pid);
+
+void aul_set_preinit_window(void *evas_object);
+void* aul_get_preinit_window(const char *win_name);
+void aul_set_preinit_background(void *evas_object);
+void* aul_get_preinit_background(void);
+void aul_set_preinit_conformant(void *evas_object);
+void* aul_get_preinit_conformant(void);
+void aul_set_preinit_appid(const char *appid);
+void aul_set_preinit_pkgid(const char *pkgid);
+const char* aul_get_preinit_pkgid(void);
 
 int aul_update_freezer_status(int pid, const char* type);
 
