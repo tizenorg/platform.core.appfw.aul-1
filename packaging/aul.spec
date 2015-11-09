@@ -11,8 +11,6 @@ Source0:    %{name}-%{version}.tar.gz
 Source100:  ac.conf
 Source101:  ac.service
 Source102:  ac.socket
-Source103:  amd_session_agent.service
-Source104:  amd_session_agent.socket
 Source1001: %{name}.manifest
 
 Requires(post):   /sbin/ldconfig
@@ -102,15 +100,11 @@ install -m 0644 .appsvc.db %{buildroot}%{_sysconfdir}/skel/.applications/dbspace
 install -m 0644 %SOURCE100 %{buildroot}%{_tmpfilesdir}/ac.conf
 install -m 0644 %SOURCE101 %{buildroot}%{_unitdir_user}/ac.service
 install -m 0644 %SOURCE102 %{buildroot}%{_unitdir_user}/ac.socket
-install -m 0644 %SOURCE103 %{buildroot}%{_unitdir_user}/amd_session_agent.service
-install -m 0644 %SOURCE104 %{buildroot}%{_unitdir_user}/amd_session_agent.socket
 ln -sf ../ac.service %{buildroot}%{_unitdir_user}/default.target.wants/ac.service
 ln -sf ../ac.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/ac.socket
-ln -sf ../amd_session_agent.socket %{buildroot}%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 
 mkdir -p %{buildroot}%{_datadir}/appsvc
 cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
-
 
 %preun
 if [ $1 == 0 ]; then
@@ -139,7 +133,6 @@ systemctl daemon-reload
 %attr(0644,root,root) %{_libdir}/libaul.so.*
 %{_bindir}/aul_test
 %{_bindir}/app_launcher
-%caps(cap_mac_admin,cap_mac_override,cap_setgid=ei) %{_bindir}/amd_session_agent
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
@@ -149,14 +142,10 @@ systemctl daemon-reload
 %{_unitdir_user}/default.target.wants/ac.service
 %{_unitdir_user}/ac.socket
 %{_unitdir_user}/sockets.target.wants/ac.socket
-%{_unitdir_user}/amd_session_agent.service
-%{_unitdir_user}/amd_session_agent.socket
-%{_unitdir_user}/sockets.target.wants/amd_session_agent.socket
 %{_bindir}/amd
 %{_bindir}/daemon-manager-release-agent
 %{_bindir}/daemon-manager-launch-agent
 %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
-
 
 %files test
 %{_bindir}/launch_app
