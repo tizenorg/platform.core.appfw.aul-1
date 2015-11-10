@@ -146,14 +146,14 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 	return 0;
 }
 
-SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
+SLPAPI int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid)
 {
 	app_pkt_t *pkt;
 	int pgid;
 	int ret;
 
 	if (pid != getpid()) {
-		pkt = __app_send_cmd_with_result(AUL_UTIL_PID,
+		pkt = __app_send_cmd_with_result_for_uid(AUL_UTIL_PID, uid,
 			APP_GET_APPID_BYPID, (unsigned char *)&pid,
 			sizeof(pid));
 		if (pkt == NULL)
@@ -185,7 +185,12 @@ SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	return AUL_R_ERROR;
 }
 
-SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
+SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
+{
+	return aul_app_get_appid_bypid_for_uid(pid, appid, len, getuid());
+}
+
+SLPAPI int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid)
 {
 	app_pkt_t *pkt = NULL;
 	int pgid;
@@ -218,7 +223,7 @@ SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 	if (pkgid == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, cmd,
+	pkt = __app_send_cmd_with_result_for_uid(AUL_UTIL_PID, uid, cmd,
 					(unsigned char *)&pid, sizeof(pid));
 
 	if (pkt == NULL)
@@ -231,5 +236,10 @@ SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 	snprintf(pkgid, len, "%s", pkt->data);
 	free(pkt);
 	return AUL_R_OK;
+}
+
+SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
+{
+	return aul_app_get_pkgid_bypid_for_uid(pid, pkgid, len, getuid());
 }
 

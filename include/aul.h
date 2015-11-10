@@ -1,9 +1,7 @@
 /*
  *  aul
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +17,6 @@
  *
  */
 
-
 #ifndef __AUL_H__
 #define __AUL_H__
 
@@ -30,42 +27,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @mainpage
- *
- * This is new version of Application Utility Library
- *
- * Almost function's input param is application package name(APN).\n
- * APN is application package name which is set by developer.\n
- * In case of in-house application, prefix is org.tizen.\n
- * It is different from debian package name.\n
- *
- * - Debian Package Name : Name which is managed by package manager
- * - Application Package Name : Name which is used by AUL
- * - Execution Path : real program executable path
- */
-
-/**
- * @open
- * @ingroup APPLICATION_FRAMEWORK
- * @defgroup aul  Application Utility Library
- * @{
- */
-
-
-/**
- * @file 	aul.h
- * @brief 	Application Utility Library header
- *
- * Patched by    Knhoon Baik <knhoon.baik@samsung.com>
- * Patched by    Youmin Ha   <youmin.ha@samsung.com>
- */
-
-/**
- * @addtogroup aul
- * @{
- */
 
 /**
  * @brief Return values in AUL.
@@ -99,31 +60,6 @@ enum app_status {
 	STATUS_SERVICE
 };
 
-/** @} */
-
-/**
- * @defgroup aul_launch		Primitive APIs to launch/resume/terminate application
- * @ingroup aul
- * @brief
- *	APIs to launch/resume/terminate application
- *	- Launch application based on application package name
- *	- Resume application based on application package name
- *	- Resume application based on pid (required root or inhouse permisssion)
- *	- Terminate application base on pid (required root or inhouse permission)
- *
- *	AUL internal information
- *	- AUL grant pid, gid to launched application for security
- *	- AUL send RESET/RESUME/TERM event for running application in case of single instance
- *	- AUL set application enviroment based on desktop entry
- *	- AUL support single instance / multi instance
- *	- AUL support application data exchange format (bundle)
- */
-
-/**
- * @addtogroup aul_launch
- * @{
- */
-
 typedef enum _aul_type{
 	AUL_START,
 	AUL_RESUME,
@@ -131,6 +67,49 @@ typedef enum _aul_type{
 	AUL_TERMINATE_BGAPP,
 	AUL_PAUSE,
 }aul_type;
+
+/** AUL public key - To check caller's secuirty */
+#define AUL_K_CALLER_PID	"__AUL_CALLER_PID__"
+/** AUL public key - To check callee's secuirty */
+#define AUL_K_CALLEE_PID	"__AUL_CALLEE_PID__"
+/** AUL public key - added for multiuser mode */
+#define AUL_K_CALLER_UID	"__AUL_CALLER_UID__"
+/** AUL public key - added for multiuser mode */
+#define AUL_K_CALLEE_UID	"__AUL_CALLEE_UID__"
+/** AUL public key - added for multiuser mode */
+#define AUL_K_TARGET_UID	"__AUL_TARGET_UID__"
+/** AUL public key - To check caller's secuirty */
+#define AUL_K_CALLER_APPID	"__AUL_CALLER_APPID__"
+/** AUL public key - To check caller's secuirty */
+#define AUL_K_CALLEE_APPID	"__AUL_CALLEE_APPID__"
+/** AUL public key - To find argv0 */
+#define AUL_K_ARGV0		"__AUL_ARGV0__"
+/** AUL public key - To measure launching time */
+#define AUL_K_STARTTIME		"__AUL_STARTTIME__"
+/** AUL public key - To support launching based on mime type */
+#define AUL_K_MIME_TYPE		"__AUL_MIME_TYPE__"
+/** AUL public key - To support launching based on mime type */
+#define AUL_K_UNALIASED_MIME_TYPE		"__AUL_UNALIASED_MIME_TYPE__"
+/** AUL public key - To support launching based on mime type */
+#define AUL_K_MIME_CONTENT	"__AUL_MIME_CONTENT__"
+/** AUL public key - To support launching based on service */
+#define AUL_K_SERVICE_NAME		"__AUL_SERVICE_NAME__"
+/** AUL public key - To force launch app selector instead of lauchingn default app */
+#define AUL_K_FORCE_LAUNCH_APP_SELECTOR	"__AUL_FORCE_LAUNCH_APP_SELECTOR__"
+/** AUL public key - To support debug argument */
+#define AUL_K_DEBUG	"__AUL_DEBUG__"
+/** AUL public key - To support SDK */
+#define AUL_K_SDK	"__AUL_SDK__"
+/** AUL public key - To support Media key */
+#define AUL_K_MULTI_KEY	"__AUL_MULTI_KEY__"
+/** AUL public key - To support Media key */
+#define AUL_K_MULTI_KEY_EVENT	"__AUL_MULTI_KEY_EVENT__"
+/** AUL public bundle value */
+#define AUL_K_PRIVACY_APPID		"__AUL_PRIVACY_APPID__"
+/** AUL public bundle value - To support Media key*/
+#define AUL_V_KEY_PRESSED	"__AUL_KEY_PRESSED__"
+/** AUL public bundle value - To support Media key*/
+#define AUL_V_KEY_RELEASED	"__AUL_KEY_RELEASED__"
 
 /** AUL internal private key */
 #define AUL_K_PKG_NAME		"__AUL_PKG_NAME__"
@@ -146,65 +125,8 @@ typedef enum _aul_type{
 #define AUL_K_ORG_CALLER_PID	"__AUL_ORG_CALLER_PID__"
 /** AUL internal private key - To check forwarded callee app's pid */
 #define AUL_K_FWD_CALLEE_PID	"__AUL_FWD_CALLEE_PID__"
-
 /** AUL internal private key */
 #define AUL_K_NO_CANCEL        "__AUL_NO_CANCEL__"
-
-/** AUL public key - To check caller's secuirty */
-#define AUL_K_CALLER_PID	"__AUL_CALLER_PID__"
-/** AUL public key - To check callee's secuirty */
-#define AUL_K_CALLEE_PID	"__AUL_CALLEE_PID__"
-
-/** AUL public key - added for multiuser mode */
-#define AUL_K_CALLER_UID	"__AUL_CALLER_UID__"
-/** AUL public key - added for multiuser mode */
-#define AUL_K_CALLEE_UID	"__AUL_CALLEE_UID__"
-/** AUL public key - added for multiuser mode */
-#define AUL_K_TARGET_UID	"__AUL_TARGET_UID__"
-
-/** AUL public key - To check caller's secuirty */
-#define AUL_K_CALLER_APPID	"__AUL_CALLER_APPID__"
-/** AUL public key - To check caller's secuirty */
-#define AUL_K_CALLEE_APPID	"__AUL_CALLEE_APPID__"
-
-/** AUL public key - To find argv0 */
-#define AUL_K_ARGV0		"__AUL_ARGV0__"
-/** AUL public key - To measure launching time */
-#define AUL_K_STARTTIME		"__AUL_STARTTIME__"
-
-/** AUL public key - To support launching based on mime type */
-#define AUL_K_MIME_TYPE		"__AUL_MIME_TYPE__"
-/** AUL public key - To support launching based on mime type */
-#define AUL_K_UNALIASED_MIME_TYPE		"__AUL_UNALIASED_MIME_TYPE__"
-/** AUL public key - To support launching based on mime type */
-#define AUL_K_MIME_CONTENT	"__AUL_MIME_CONTENT__"
-
-/** AUL public key - To support launching based on service */
-#define AUL_K_SERVICE_NAME		"__AUL_SERVICE_NAME__"
-
-/** AUL public key - To force launch app selector instead of lauchingn default app */
-#define AUL_K_FORCE_LAUNCH_APP_SELECTOR	"__AUL_FORCE_LAUNCH_APP_SELECTOR__"
-
-/** AUL public key - To support debug argument */
-#define AUL_K_DEBUG	"__AUL_DEBUG__"
-
-/** AUL public key - To support SDK */
-#define AUL_K_SDK	"__AUL_SDK__"
-
-/** AUL public key - To support Media key */
-#define AUL_K_MULTI_KEY	"__AUL_MULTI_KEY__"
-/** AUL public key - To support Media key */
-#define AUL_K_MULTI_KEY_EVENT	"__AUL_MULTI_KEY_EVENT__"
-
-/** AUL public bundle value */
-#define AUL_K_PRIVACY_APPID		"__AUL_PRIVACY_APPID__"
-
-
-/** AUL public bundle value - To support Media key*/
-#define AUL_V_KEY_PRESSED	"__AUL_KEY_PRESSED__"
-/** AUL public bundle value - To support Media key*/
-#define AUL_V_KEY_RELEASED	"__AUL_KEY_RELEASED__"
-
 /** AUL internal private key */
 #define AUL_K_EXEC		"__AUL_EXEC__"
 /** AUL internal private key */
@@ -213,8 +135,6 @@ typedef enum _aul_type{
 #define AUL_K_PACKAGETYPE	"__AUL_PACKAGETYPE__"
 /** AUL internal private key */
 #define AUL_K_HWACC		"__AUL_HWACC__"
-
-
 /** AUL internal private key */
 #define AUL_K_APPID		"__AUL_APPID__"
 /** AUL internal private key */
@@ -260,10 +180,6 @@ typedef int (*aul_handler_fn) (aul_type type, bundle * b, void *data);
  * @pre
  *	you must have aul handler to use this API.
  *	aul_luanch_init register aul handler.
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -298,7 +214,7 @@ typedef int (*aul_handler_fn) (aul_type type, bundle * b, void *data);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_launch_init(aul_handler_fn handler, void *data);
 
@@ -323,8 +239,6 @@ int aul_launch_init(aul_handler_fn handler, void *data);
  * @pre
  *	you must have aul handler to use this API.
  *	aul_luanch_init register aul handler.
- * @post
- *	None
  * @see
  *	aul_launch_init
  * @code
@@ -344,7 +258,8 @@ int aul_launch_init(aul_handler_fn handler, void *data);
  *
  * @endcode
  * @remark
- *      If you use AppCore, you NEED NOT use this API.
+ *	If you use AppCore, you NEED NOT use this API.
+ *	This API is only available in User Session.
 */
 int aul_launch_argv_handler(int argc, char **argv);
 
@@ -394,6 +309,7 @@ int aul_launch_argv_handler(int argc, char **argv);
  * @endcode
  * @remark
  *      If you use AppCore, you NEED NOT to use this API.
+ *	This API is only available in User Session.
 */
 int aul_launch_local(bundle *b);
 
@@ -419,10 +335,6 @@ int aul_launch_local(bundle *b);
  * @retval	AUL_R_ECOM	- internal AUL IPC error
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_open_app
  * @code
@@ -439,9 +351,38 @@ int aul_launch_local(bundle *b);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  */
 int aul_launch_app(const char *appid, bundle *kb);
+
+/**
+ * @par Description:
+ *	This API launches application with the given bundle.
+ *  If the application is not running or a multiple-instance one, this API launches with the given bundle.
+ *	If the application is running, this API sends a RESET event to the App.
+ *	While the application is running, if the application cannot receive the RESET event,
+ *	this API returns a general error(AUL_R_ERROR).\n
+ * @par Purpose:
+ *      This API is for caller.
+ *      This API's purpose is to launch/reset application with given bundle.
+ * @par Typical use case:
+ *	If you know the target application's pkgname and bundle types,
+ *	you can use this API to launch/reset the application.
+ *
+ * @param[in]	pkgname		package name to be run as callee
+ * @param[in]	kb		bundle to be passed to callee
+ * @param[in]	uid		User ID to launch
+ * @return	callee's pid if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild package name
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @see
+ *	aul_open_app
+ * @remark
+ *	This API is also available in System Session.
+ */
 int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid);
 
 /**
@@ -465,10 +406,6 @@ int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid);
  * @retval	AUL_R_ECOM	- internal AUL IPC error
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_launch_app, aul_app_is_running, aul_resume_pid
  * @code
@@ -486,6 +423,7 @@ int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid);
  *	If you don't want to launch the app,
  *	you should check app's running state with aul_app_is_running.
  *	This API will launch the application if the application is not running.
+ *	This API is only available in User Session.
 */
 int aul_open_app(const char *appid);
 
@@ -509,10 +447,6 @@ int aul_open_app(const char *appid);
  * @retval	AUL_R_ECOM	- internal AUL IPC error
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_launch_app, aul_app_is_running, aul_resume_pid
  * @deprecated
@@ -534,6 +468,7 @@ int aul_open_app(const char *appid);
  *	This API will launch the application if the application is not running.
  *	If you want to only resume without launching in multiple instance application model,
  *	you should use aul_resume_pid.
+ *	This API is only available in User Session.
 */
 int aul_resume_app(const char *appid);
 
@@ -558,10 +493,6 @@ int aul_resume_app(const char *appid);
  * @retval	AUL_R_ERROR	- general error (include application is not running)
  * @warning	This API need to require root or inhouse permisssion \n
  *		If you have not the permission, this API return AUL_R_ERROR. \n
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_launch_app
  * @code
@@ -581,7 +512,7 @@ int aul_resume_app(const char *appid);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_resume_pid(int pid);
 
@@ -606,12 +537,6 @@ int aul_resume_pid(int pid);
  * @retval	AUL_R_ERROR	- general error
  * @warning	This API need to require root or inhouse permisssion. \n
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -630,28 +555,35 @@ int aul_resume_pid(int pid);
  * @endcode
  * @remark
  *	If you have not the permission, this API return AUL_R_ERROR. \n
+ *	This API is only available in User Session.
 */
 int aul_terminate_pid(int pid);
-int aul_terminate_bgapp_pid(int pid);
-int aul_terminate_pid_without_restart(int pid);
+
+/**
+ * @par Description:
+ *	This API trigger to terminate application asynchronously
+ *
+ *	If the application is running, this API send a terminate event to the App. \n
+ *	If the app cannot receive the event, AUL kill forcely the application.\n
+ * @par Purpose:
+ *      This API's purpose is to kill application
+ * @par Typical use case:
+ *	In general, Application like Task Manager use this API.
+ *
+ *		This API need to require root or inhouse permisssion. \n
+ *
+ * @param[in]	pid	application's pid to be terminated
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild pid
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ * @warning	This API need to require root or inhouse permisssion. \n
+ * @remark
+ *	If you have not the permission, this API return AUL_R_ERROR. \n
+ *	This API is only available in User Session.
+*/
 int aul_terminate_pid_async(int pid);
-
-/** @} */
-
-/**
- * @defgroup aul_info		Helper APIs to get running application information
- * @ingroup aul
- * @brief
- *	API to get running application information (state, executable path, ..)
- *	- get application package name from pid
- *	- get application running state
- *	- get application list of runnning applications
- */
-
-/**
- * @addtogroup aul_info
- * @{
- */
 
 /**
  *@brief Running application's information structure retrieved by AUL
@@ -684,12 +616,6 @@ typedef int (*aul_app_info_iter_fn)(const aul_app_info *ainfo, void *data);
  * @retval	1	app_name is running now.
  * @retval	0	app_name is NOT running now.
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -700,7 +626,7 @@ typedef int (*aul_app_info_iter_fn)(const aul_app_info *ainfo, void *data);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 *
 */
 int aul_app_is_running(const char *appid);
@@ -721,12 +647,6 @@ int aul_app_is_running(const char *appid);
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- internal error
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -750,6 +670,7 @@ int aul_app_is_running(const char *appid);
  *	This API should use if you want to know running application which has desktop files.
  *	If you want to get all process list, you must iterate process information by using proc filesystem
  *	Or, If you want to get all window list, you must iterate XWindows by using XWindow APIs
+ *	This API is only available in User Session.
  */
 int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
 
@@ -767,12 +688,6 @@ int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a package name
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -788,7 +703,7 @@ int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
 
@@ -806,12 +721,7 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a appid
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
+ *
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -827,9 +737,30 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len);
+
+/**
+ * @par Description:
+ *	This API get application pkgid by pid
+ * @par Purpose:
+ *	If you want to get pkgid of running application, use this API
+ * @par Typical use case:
+ *	In general, You can use this API when you want to know caller's information.
+ *
+ * @param[in]	pid		given pid
+ * @param[out]	pkgid		package id
+ * @param[in]	len		length of pkgid
+ * @param[in]	uid		User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- no such a appid
+ *
+ * @remark
+ *	This API is also available in System Session.
+*/
+int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid);
 
 /**
  * @par Description:
@@ -845,12 +776,6 @@ int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a appid
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -866,32 +791,29 @@ int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_app_get_appid_bypid(int pid, char *appid, int len);
 
-/** @} */
-
 /**
- * @defgroup aul_mime High-level APIs to launch default application based on mime type
- * @ingroup aul
- * @brief
- *   AUL High-level APIs based on mime type
+ * @par Description:
+ *	This API get application appid by pid
+ * @par Purpose:
+ *	If you want to get appid of running application, use this API
+ * @par Typical use case:
+ *	In general, You can use this API when you want to know caller's information.
  *
- *   These APIs provide two functionality\n
- *
- *   -# To launch default application to open a file based on its MIME type \n
- *   For example, you can launch the default video player to open .mp4 files
- *   or launch the default browser to open HTML files \n
- *   -# To launch default application to process given content \n
- *   For example, you can launch the default e-mail application to process
- *   "nice@samsung.com" e-mail address.
- */
-
-/**
- * @addtogroup aul_mime
- * @{
- */
+ * @param[in]	pid		given pid
+ * @param[out]	appid		application id
+ * @param[in]	len		length of pkgname
+ * @param[in]	uid		User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- no such a appid
+ * @remark
+ *	This API is also available in System Session.
+*/
+int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid);
 
 /**
  * @par Description:
@@ -917,12 +839,6 @@ int aul_app_get_appid_bypid(int pid, char *appid, int len);
  * @retval	AUL_R_ECOM	- internal AUL IPC error
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -933,7 +849,7 @@ int aul_app_get_appid_bypid(int pid, char *appid, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_open_file(const char* filename);
@@ -963,10 +879,6 @@ int aul_open_file(const char* filename);
  * @retval	AUL_R_ECOM	- internal AUL IPC error
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_open_file, aul_get_mime_from_file
  * @code
@@ -983,7 +895,7 @@ int aul_open_file(const char* filename);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  */
 int aul_open_file_with_mimetype(const char *filename, const char *mimetype);
 
@@ -1012,12 +924,6 @@ int aul_open_file_with_mimetype(const char *filename, const char *mimetype);
  * @retval	AUL_R_ECOM	- internal AUL IPC error
  * @retval	AUL_R_ERROR	- general error or no found mimetype
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -1028,7 +934,7 @@ int aul_open_file_with_mimetype(const char *filename, const char *mimetype);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_open_content(const char* content);
@@ -1050,10 +956,6 @@ int aul_open_content(const char* content);
  * @retval	AUL_R_EINVAL	- invalid argument(mimetype)
  * @retval	AUL_R_ERROR	- general error or no found mimetype
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_set_defapp_with_mime
  * @code
@@ -1067,7 +969,7 @@ int aul_open_content(const char* content);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
@@ -1089,10 +991,6 @@ int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
  * @retval	AUL_R_EINVAL	- invalid argument(mimetype)
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_get_defapp_from_mime
  * @code
@@ -1105,7 +1003,7 @@ int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_set_defapp_with_mime(const char *mimetype, const char *defapp);
 
@@ -1128,12 +1026,6 @@ int aul_set_defapp_with_mime(const char *mimetype, const char *defapp);
  * @retval	AUL_R_EINVAL	- invalid argument(filename)
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -1145,7 +1037,7 @@ int aul_set_defapp_with_mime(const char *mimetype, const char *defapp);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  */
 int aul_get_mime_from_file(const char *filename, char *mimetype, int len);
 
@@ -1168,12 +1060,6 @@ int aul_get_mime_from_file(const char *filename, char *mimetype, int len);
  * @retval	AUL_R_EINVAL	- invalid argument(content)
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -1185,7 +1071,7 @@ int aul_get_mime_from_file(const char *filename, char *mimetype, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
 */
 int aul_get_mime_from_content(const char *content, char *mimetype, int len);
 
@@ -1205,12 +1091,6 @@ int aul_get_mime_from_content(const char *content, char *mimetype, int len);
  * @retval	AUL_R_EINVAL	- invalid argument(content)
  * @retval	AUL_R_ERROR	- general error (no such mime type)
  *
- * @pre
- *	None
- * @post
- *	None
- * @see
- *	None
  * @code
  * #include <aul.h>
  *
@@ -1222,7 +1102,7 @@ int aul_get_mime_from_content(const char *content, char *mimetype, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  */
 int aul_get_mime_icon(const char *mimetype, char *iconname, int len);
 
@@ -1244,10 +1124,6 @@ int aul_get_mime_icon(const char *mimetype, char *iconname, int len);
  * @retval	AUL_R_EINVAL	- invalid argument(mimetype)
  * @retval	AUL_R_ERROR	- general error (no mimetype or no extenstion)
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_get_mime_description
  * @code
@@ -1263,7 +1139,7 @@ int aul_get_mime_icon(const char *mimetype, char *iconname, int len);
  * @remark
  *	Some mimetype don't have extension.
  *	In that case, You can use aul_get_mime_description.
- *
+ *	This API is only available in User Session.
 */
 int aul_get_mime_extension(const char *mimetype, char *extlist, int len);
 
@@ -1286,10 +1162,6 @@ int aul_get_mime_extension(const char *mimetype, char *extlist, int len);
  * @retval	AUL_R_EINVAL	- invalid argument(mimetype)
  * @retval	AUL_R_ERROR	- general error (no mimetype or no descrition)
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_get_mime_extension
  * @code
@@ -1305,7 +1177,7 @@ int aul_get_mime_extension(const char *mimetype, char *extlist, int len);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  */
 int aul_get_mime_description(const char *mimetype, char *desc, int len);
 
@@ -1351,7 +1223,7 @@ int aul_get_mime_description(const char *mimetype, char *desc, int len);
  * }
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_create_result_bundle(bundle *inb, bundle **outb);
@@ -1398,7 +1270,7 @@ int aul_create_result_bundle(bundle *inb, bundle **outb);
  * }
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_send_service_result(bundle *b);
@@ -1416,10 +1288,6 @@ int aul_send_service_result(bundle *b);
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_listen_app_launch_signal
  * @code
@@ -1438,7 +1306,7 @@ int aul_send_service_result(bundle *b);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
@@ -1456,10 +1324,6 @@ int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- *	None
  * @see
  *	aul_listen_app_dead_signal
  * @code
@@ -1478,68 +1342,10 @@ int aul_listen_app_dead_signal(int (*func) (int, void *), void *data);
  *
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  *
  */
 int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
-
-int aul_listen_booting_done_signal(int (*func) (int, void *), void *data);
-
-int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data);
-
-int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data);
-
-const char *aul_get_app_external_root_path(void);
-const char *aul_get_app_root_path(void);
-const char *aul_get_app_data_path(void);
-const char *aul_get_app_cache_path(void);
-const char *aul_get_app_resource_path(void);
-const char *aul_get_app_tep_resource_path(void);
-const char *aul_get_app_shared_data_path(void);
-const char *aul_get_app_shared_resource_path(void);
-const char *aul_get_app_shared_trusted_path(void);
-const char *aul_get_app_external_data_path(void);
-const char *aul_get_app_external_cache_path(void);
-const char *aul_get_app_external_shared_data_path(void);
-const char *aul_get_app_specific_path(void);
-const char *aul_get_app_external_specific_path(void);
-int aul_get_app_shared_data_path_by_appid(const char *app_id, char **path);
-int aul_get_app_shared_resource_path_by_appid(const char *app_id, char **path);
-int aul_get_app_shared_trusted_path_by_appid(const char *app_id, char **path);
-int aul_get_app_external_shared_data_path_by_appid(const char *app_id, char **path);
-int aul_get_usr_app_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
-int aul_get_usr_app_shared_resource_path_by_appid(const char *app_id, char **path, uid_t uid);
-int aul_get_usr_app_shared_trusted_path_by_appid(const char *app_id, char **path, uid_t uid);
-int aul_get_usr_app_external_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
-
-
-typedef int (*subapp_fn)(void *data);
-
-int aul_set_subapp(subapp_fn cb, void *data);
-int aul_subapp_terminate_request_pid(int pid);
-int aul_is_subapp(void);
-int aul_kill_pid(int pid);
-int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
-int aul_remove_caller_cb(int pid);
-int aul_invoke_caller_cb(int pid);
-
-void aul_set_preinit_window(void *evas_object);
-void* aul_get_preinit_window(const char *win_name);
-void aul_set_preinit_background(void *evas_object);
-void* aul_get_preinit_background(void);
-void aul_set_preinit_conformant(void *evas_object);
-void* aul_get_preinit_conformant(void);
-void aul_set_preinit_appid(const char *appid);
-void aul_set_preinit_pkgid(const char *pkgid);
-
-int aul_update_freezer_status(int pid, const char* type);
-
-int aul_send_app_launch_request_signal(int pid, const char* appid, const char* pkgid, const char* type);
-int aul_send_app_resume_request_signal(int pid, const char* appid, const char* pkgid, const char *type);
-int aul_send_app_terminate_request_signal(int pid, const char* appid, const char* pkgid, const char *type);
-int aul_send_app_status_change_signal(int pid, const char* appid, const char* pkgid, const char* status, const char *type);
-int aul_send_app_terminated_signal(int pid);
-int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pkgid);
 
 /**
  * @par Description:
@@ -1559,10 +1365,6 @@ int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pk
  * @retval	STATUS_NORESTART
  * @see
  *	aul_status_update
- * @pre
- * 	None
- * @post
- * 	None
  * @code
  * #include <aul.h>
  *
@@ -1586,7 +1388,7 @@ int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pk
  * }
  * @endcode
  * @remark
- *	None
+ *	This API is only available in User Session.
  */
 int aul_app_get_status_bypid(int pid);
 
@@ -1605,10 +1407,6 @@ int aul_app_get_status_bypid(int pid);
  * @retval	AUL_R_ERROR	- general error
  * @see
  *	aul_remove_status_local_cb
- * @pre
- *	None
- * @post
- * 	None
  * @code
  * #include <aul.h>
  *
@@ -1630,7 +1428,7 @@ int aul_app_get_status_bypid(int pid);
  * }
  * @endcode
  * @remark
- * 	None
+ *	This API is only available in User Session.
  *
  */
 int aul_add_status_local_cb(int (*func) (int, void *), void *data);
@@ -1648,10 +1446,6 @@ int aul_add_status_local_cb(int (*func) (int, void *), void *data);
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- general error
  *
- * @pre
- *	None
- * @post
- * 	None
  * @see
  *	aul_add_status_local_cb
  * @code
@@ -1681,43 +1475,365 @@ int aul_add_status_local_cb(int (*func) (int, void *), void *data);
  *
  * @endcode
  * @remark
- * 	None
+ *	This API is only available in User Session.
  *
  */
 int aul_remove_status_local_cb(int (*func) (int, void *), void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_terminate_bgapp_pid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_terminate_pid_without_restart(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_external_root_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_root_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_data_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_cache_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_resource_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_tep_resource_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_shared_data_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_shared_resource_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_shared_trusted_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_external_data_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_external_cache_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_external_shared_data_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_specific_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_app_external_specific_path(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_app_shared_data_path_by_appid(const char *app_id, char **path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_app_shared_resource_path_by_appid(const char *app_id, char **path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_app_shared_trusted_path_by_appid(const char *app_id, char **path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_app_external_shared_data_path_by_appid(const char *app_id, char **path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_usr_app_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_usr_app_shared_resource_path_by_appid(const char *app_id, char **path, uid_t uid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_usr_app_shared_trusted_path_by_appid(const char *app_id, char **path, uid_t uid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_usr_app_external_shared_data_path_by_appid(const char *app_id, char **path, uid_t uid);
+
+/*
+ * This type is only for Appfw internally.
+ */
+typedef int (*subapp_fn)(void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_set_subapp(subapp_fn cb, void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_subapp_terminate_request_pid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_is_subapp(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_kill_pid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_remove_caller_cb(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_invoke_caller_cb(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_preinit_window(void *evas_object);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void* aul_get_preinit_window(const char *win_name);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_preinit_background(void *evas_object);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void* aul_get_preinit_background(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_preinit_conformant(void *evas_object);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void* aul_get_preinit_conformant(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_preinit_appid(const char *appid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_preinit_pkgid(const char *pkgid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_update_freezer_status(int pid, const char* type);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_send_app_launch_request_signal(int pid, const char* appid, const char* pkgid, const char* type);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_send_app_resume_request_signal(int pid, const char* appid, const char* pkgid, const char *type);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_send_app_terminate_request_signal(int pid, const char* appid, const char* pkgid, const char *type);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_send_app_status_change_signal(int pid, const char* appid, const char* pkgid, const char* status, const char *type);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_send_app_terminated_signal(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pkgid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_invoke_status_local_cb(int status);
 
+/*
+ * This type is only for Appfw internally.
+ */
 typedef int (*data_control_provider_handler_fn) (bundle *b, int request_id, void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_unset_data_control_provider_cb(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_pause_app(const char *appid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_pause_pid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_reload_appinfo(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_status_update(int status);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_running_list_update(char *appid, char *app_path, char *pid);
 
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_add(int leader_pid, int pid, int wid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_remove(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_attach_window(int parent_wid, int child_wid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_detach_window(int child_wid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_app_group_get_window(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_get_leader_pids(int *cnt, int **pids);
+
+/*
+ * This API is only for Appfw internally.
+ */
 void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_app_group_get_leader_pid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_app_group_clear_top(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_app_group_is_top(void);
 
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_request_data_control_socket_pair(bundle *b, int *fd);
 
-/** @} */
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_listen_booting_done_signal(int (*func) (int, void *), void *data);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data);
 
 
 #ifdef __cplusplus
 	}
 #endif
 
-
 #endif		/* __AUL_H__ */
 
-/* vi: set ts=8 sts=8 sw=8: */
