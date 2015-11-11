@@ -25,6 +25,7 @@
 #include <glib.h>
 #include <aul.h>
 #include <string.h>
+#include <bundle.h>
 
 #include "amd_config.h"
 #include "amd_status.h"
@@ -36,6 +37,11 @@
 #include "amd_app_group.h"
 
 GSList *app_status_info_list = NULL;
+GList *widget_listen_list = NULL;
+
+typedef struct widget_subscriber {
+	int pid;
+} widget_subscriber;
 
 int _status_add_app_info_list(const char *appid, const char *app_path, int pid, int pad_pid, uid_t uid)
 {
@@ -155,7 +161,7 @@ int _status_remove_app_info_list(int pid, uid_t uid)
 int _status_get_app_info_status(int pid, uid_t uid)
 {
 	GSList *iter = NULL;
-	app_status_info_t *info_t = NULL;
+	 app_status_info_t *info_t = NULL;
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
 	{
@@ -481,6 +487,83 @@ int _status_get_pkgid_bypid(int fd, int pid)
 		free(pkt);
 
 	close(fd);
+
+	return 0;
+}
+
+
+int _status_subscribe_widget_status(int pid)
+{
+	widget_subscriber *info = NULL;
+
+	info = (widget_subscriber *)malloc(sizeof(widget_subscriber));
+	if (!info) {
+		_E("out of memory");
+		return -1;
+	}
+
+	info->pid = pid;
+
+	widget_listen_list = g_list_append(widget_listen_list, info);
+
+	return 0;
+}
+
+int _status_unsubscribe_widget_status(int pid)
+{
+	GList *head = widget_listen_list;
+	widget_subscriber *info = NULL;
+
+	while (head) {
+		info = (widget_subscriber *)head->data;
+		if (info) {
+			if (info->pid == pid) {
+				widget_listen_list = g_list_remove(widget_listen_list, head->data);
+				free(info);
+				return 0;
+			}
+		}
+		head = head->next;
+	}
+
+	return -1;
+}
+
+int _status_publish_widget_status(bundle *b)
+{
+	GSList *head = widget_listen_list;
+	widget_subscriber *info = NULL;
+	int subscriber_pid = -1;
+	char *viewer = NULL;
+	char *end_ptr = NULL;
+	int viewer_pid = 0;
+	int ret = 0;
+	GSList *disconnected = NULL;
+
+	viewer = bundle_get_val(b, AUL_K_WIDGET_INTERNAL_STATUS);
+	if (viewer)
+		viewer_pid = strtol(viewer, &end_ptr, 10);
+
+	while (head) {
+		info = (widget_subscriber *)head->data;
+		if (info) {
+			subscriber_pid = info->pid;
+			if (viewer_pid == 0 || (viewer_pid == subscriber_pid)) {
+				ret = app_send_cmd_with_noreply(subscriber_pid, APP_WIDGET_UPDATE, b);
+				if (ret == AUL_R_ECOMM) {
+					disconnected = g_slist_append(disconnected, info);
+				}
+			}
+		}
+		head = head->next;
+	}
+
+	while (disconnected) {
+		info = (widget_subscriber *)disconnected->data;
+		disconnected = g_slist_remove(disconnected, info);
+		if (info)
+			_status_unsubscribe_widget_status(info->pid);
+	}
 
 	return 0;
 }
