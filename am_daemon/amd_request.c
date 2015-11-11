@@ -792,6 +792,37 @@ static int __dispatch_app_get_status(int clifd, const app_pkt_t *pkt, struct ucr
 	return 0;
 }
 
+static int __dispatch_app_listen_widget(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	int pid;
+	int ret;
+
+	memcpy(&pid, pkt->data, sizeof(int));
+	ret = _status_subscribe_widget_status(pid);
+	__send_result_to_client(clifd, ret);
+
+	return 0;
+}
+
+static int __dispatch_app_widget_update(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	bundle *kb;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb == NULL) {
+		close(clifd);
+		return -1;
+	}
+
+	_status_publish_widget_status(kb);
+
+	close(clifd);
+	bundle_free(kb);
+
+	return 0;
+
+}
+
 static int __dispatch_app_released(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	char *appid;
@@ -964,6 +995,8 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_GROUP_RESUME] = __dispatch_app_group_resume,
 	[APP_GROUP_GET_LEADER_PID] = __dispatch_app_group_get_leader_pid,
 	[APP_GET_STATUS] = __dispatch_app_get_status,
+	[APP_LISTEN_WIDGET] = __dispatch_app_listen_widget,
+	[APP_WIDGET_UPDATE] = __dispatch_app_widget_update,
 	[AMD_RELOAD_APPINFO] = __dispatch_amd_reload_appinfo,
 	[AGENT_DEAD_SIGNAL] = __dispatch_agent_dead_signal,
 };
