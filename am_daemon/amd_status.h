@@ -35,7 +35,9 @@ char *_status_app_get_appid_bypid(int pid);
 int _status_send_running_appinfo_v2(int fd); //depcrecated
 int _status_get_appid_bypid(int fd, int pid);
 int _status_get_pkgid_bypid(int fd, int pid);
-
+int _status_subscribe_widget_status(int pid);
+int _status_unsubscribe_widget_status(int pid);
+int _status_publish_widget_status(bundle *b);
 
 
 //TODO : remove
