@@ -58,6 +58,7 @@ static int __send_result_to_launchpad(int fd, int res);
 
 static data_control_provider_handler_fn __dc_handler = NULL;
 extern  int aul_launch_fini();
+extern int app_widget_update(bundle *kb);
 
 int aul_is_initialized()
 {
@@ -460,7 +461,7 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC) {
+	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC && pkt->cmd != APP_WIDGET_UPDATE) {
 		ret = __send_result_to_launchpad(clifd, 0);
 		if (ret < 0) {
 			free(pkt);
@@ -522,6 +523,15 @@ int aul_sock_handler(int fd)
 
 	case APP_PAUSE_BY_PID:
 		app_pause();
+		break;
+
+	case APP_WIDGET_UPDATE:
+		kbundle = bundle_decode(pkt->data, pkt->len);
+		if (kbundle == NULL)
+			goto err;
+
+		app_widget_update(kbundle);
+		bundle_free(kbundle);
 		break;
 
 	default:

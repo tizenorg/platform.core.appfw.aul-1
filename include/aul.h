@@ -148,6 +148,18 @@ typedef enum _aul_type{
 /** AUL internal private key */
 #define AUL_K_PKGID		"__AUL_PKGID_"
 
+#define AUL_K_WIDGET_CLASS_ID		"__AUL_WIDGET_CLASS_ID__"
+
+#define AUL_K_WIDGET_INSTANCE_ID	"__AUL_WIDGET_INSTANCE_ID__"
+
+#define AUL_K_WIDGET_INSTANCE_STATUS	"__AUL_WIDGET_INSTANCE_STATUS__"
+
+#define AUL_K_WIDGET_INTERNAL_STATUS	"__AUL_WIDGET_INTERNAL_STATUS__"
+
+#define AUL_K_WAYLAND_DISPLAY		"__AUL_WAYLAND_DISPLAY__"
+
+#define AUL_K_WAYLAND_WORKING_DIR	"__AUL_WAYLAND_WORKING_DIR__"
+
 /**
  * @brief	This is callback function for aul_launch_init
  * @param[in]	type    event's type received from system
@@ -1834,6 +1846,16 @@ void aul_app_group_lower(int *exit);
  * This API is only for Appfw internally.
  */
 void aul_app_group_get_idle_pids(int *cnt, int **pids);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_listen_widget_status(int (*aul_handler)(const char *widget_id, const char *instance_id, int status, bundle *extra, void *data), void *user_data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_update_widget_status(const char *widget_id, const char *instance_id, int status, bundle *extra, int receiver_pid);
 
 /*
  * This API is only for Appfw internally.
