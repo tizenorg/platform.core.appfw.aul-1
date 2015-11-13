@@ -49,7 +49,7 @@ int _status_add_app_info_list(const char *appid, const char *app_path, int pid, 
 			if(uid == info_t->uid)
 				return 0;
 			else {
-				//PID is unique so if it is exist but user value is not correct remove it.
+				/* PID is unique so if it is exist but user value is not correct remove it. */
 				app_status_info_list = g_slist_remove(app_status_info_list, info_t);
 				free(info_t);
 				break;
@@ -70,8 +70,7 @@ int _status_add_app_info_list(const char *appid, const char *app_path, int pid, 
 	info_t->uid = uid;
 	app_status_info_list = g_slist_append(app_status_info_list, info_t);
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
 
 		SECURE_LOGD(" [%d] : %s, %d, %d", info_t->uid, info_t->appid, info_t->pid, info_t->status);
@@ -85,10 +84,9 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
-		if((pid == info_t->pid) && ((info_t->uid == uid) || (info_t->uid == 0))) {
+		if ((pid == info_t->pid) && ((info_t->uid == uid) || (info_t->uid == 0))) {
 			info_t->status = status;
 			break;
 		}
@@ -113,6 +111,7 @@ int _status_remove_app_info_list_with_uid(uid_t uid)
 			free(info_t);
 		}
 	}
+
 	return 0;
 }
 
@@ -131,13 +130,6 @@ int _status_remove_app_info_list(int pid, uid_t uid)
 		}
 	}
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
-		info_t = (app_status_info_t *)iter->data;
-
-		//SECURE_LOGD("%s, %d, %d", info_t->appid, info_t->pid, info_t->status);
-	}
-
 	return 0;
 }
 
@@ -146,13 +138,11 @@ int _status_get_app_info_status(int pid, uid_t uid)
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
-		if (pid == info_t->pid &&
-				(uid == 0) ? true : (uid == info_t->uid)) {
+		if (pid == info_t->pid
+				&& ((uid == 0) ? true : (uid == info_t->uid)))
 			return info_t->status;
-		}
 	}
 
 	return app_group_get_status(pid);
@@ -163,13 +153,12 @@ int _status_app_is_running(const char *appid, uid_t uid)
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
-		if(( strncmp(appid, info_t->appid, MAX_PACKAGE_STR_SIZE) == 0 ) && (info_t->uid == uid)) {
+		if ((strncmp(appid, info_t->appid, MAX_PACKAGE_STR_SIZE) == 0) && (info_t->uid == uid))
 			return info_t->pid;
-		}
 	}
+
 	return -1;
 }
 
@@ -178,13 +167,12 @@ char* _status_app_get_appid_bypid(int pid)
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
-		if( pid == info_t->pid ) {
+		if (pid == info_t->pid)
 			return info_t->appid;
-		}
 	}
+
 	return NULL;
 }
 
@@ -197,8 +185,7 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 	char buf[AUL_SOCK_MAXBUFF] = {0, };
 
-	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter))
-	{
+	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
 		if (info_t->uid != uid || app_group_is_sub_app(info_t->pid))
 			continue;

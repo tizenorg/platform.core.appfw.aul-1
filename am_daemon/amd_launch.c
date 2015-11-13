@@ -616,6 +616,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	int delay_reply = 0;
 	int pad_pid = LAUNCHPAD_PID;
 	int lpid;
+	int callee_status = -1;
 	gboolean can_attach;
 	gboolean new_process;
 	app_group_launch_mode launch_mode;
@@ -636,9 +637,8 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
 	} else {
 		caller_appid = _status_app_get_appid_bypid(getpgid(caller_pid));
-		if (caller_appid != NULL) {
+		if (caller_appid != NULL)
 			bundle_add(kb, AUL_K_CALLER_APPID, caller_appid);
-		}
 	}
 
 	ai = appinfo_find(caller_uid, appid);
@@ -666,9 +666,8 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		return ret;
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
-	if (!multiple || strncmp(multiple, "false", 5) == 0) {
+	if (!multiple || strncmp(multiple, "false", 5) == 0)
 		pid = _status_app_is_running(appid, caller_uid);
-	}
 
 	component_type = appinfo_get_value(ai, AIT_COMP);
 	if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
@@ -680,22 +679,26 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		}
 	}
 
-	if (pid > 0) {
-		if (_status_get_app_info_status(pid, caller_uid) == STATUS_DYING) {
-			pid = -ETERMINATING;
-		} else if (caller_pid == pid) {
+	if (pid > 0)
+		callee_status = _status_get_app_info_status(pid, caller_uid);
+
+	if (pid > 0 && callee_status != STATUS_DYING) {
+		if (caller_pid == pid) {
 			SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);
 			pid = -ELOCALLAUNCH_ID;
 		} else {
-			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
+			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0)
 				pid = ret;
-			} else {
+			else
 				delay_reply = 1;
-			}
 		}
-	} else if (cmd == APP_RESUME) {
-		_E("%s is not running", appid);
-	} else {
+	} else if (cmd != APP_RESUME) {
+		if (callee_status == STATUS_DYING && pid > 0) {
+			ret = kill(pid, SIGKILL);
+			if (ret == -1)
+				_W("send SIGKILL: %s", strerror(errno));
+		}
+
 		hwacc = appinfo_get_value(ai, AIT_HWACC);
 		bundle_add(kb, AUL_K_HWACC, hwacc);
 		bundle_add(kb, AUL_K_EXEC, app_path);
@@ -711,11 +714,12 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 				app_group_restart_app(pid, kb);
 			}
 		}
+	} else {
+		_E("Unknown application: %s", appid);
 	}
 
-	if (pid > 0) {
+	if (pid > 0)
 		_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
-	}
 
 	if (!delay_reply)
 		__real_send(fd, pid);
