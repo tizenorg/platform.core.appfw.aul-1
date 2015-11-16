@@ -35,6 +35,8 @@
 #include <dbus/dbus.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <bundle.h>
+#include <Ecore.h>
+#include <stdbool.h>
 
 #include "amd_config.h"
 #include "simple_util.h"
@@ -56,7 +58,14 @@ typedef struct _r_app_info_t {
 	uid_t user;
 } r_app_info_t;
 
-GSList *r_app_info_list;
+struct restart_info {
+	char *appid;
+	int count;
+	Ecore_Timer *timer;
+};
+
+static GSList *r_app_info_list;
+static GHashTable *restart_tbl;
 
 static void __vconf_cb(keynode_t *key, void *data);
 static int __init(void);
@@ -240,12 +249,95 @@ static void __vconf_cb(keynode_t *key, void *data)
 	}
 }
 
+static Eina_Bool __restart_timeout_handler(void *data)
+{
+	struct restart_info *ri = (struct restart_info *)data;
+
+	_D("ri (%x)", ri);
+	_D("appid (%s)", ri->appid);
+
+	g_hash_table_remove(restart_tbl, ri->appid);
+	free(ri->appid);
+	free(ri);
+
+	return ECORE_CALLBACK_CANCEL;
+}
+
+static bool __check_restart(const char *appid)
+{
+	struct restart_info *ri = NULL;
+
+	ri = g_hash_table_lookup(restart_tbl, appid);
+	if (!ri) {
+		ri = calloc(1, sizeof(*ri));
+		if (!ri) {
+			_E("create restart info: %s", strerror(errno));
+			return true;
+		}
+		memset(ri, 0, sizeof(struct restart_info));
+		ri->appid = strdup(appid);
+		ri->count = 1;
+		g_hash_table_insert(restart_tbl, ri->appid, ri);
+
+		_D("ri (%x)", ri);
+		_D("appid (%s)", appid);
+
+		ri->timer = ecore_timer_add(10, __restart_timeout_handler, ri);
+	} else {
+		ri->count++;
+		_D("count (%d)", ri->count);
+		if (ri->count > 5) {
+			ecore_timer_del(ri->timer);
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool __can_restart_app(int pid)
+{
+	const char *pkg_status;
+	const char *appid = NULL;
+	const struct appinfo *ai = NULL;
+
+	appid = _status_app_get_appid_bypid(pid);
+	ai = appinfo_find(getuid(), appid);
+	pkg_status = appinfo_get_value(ai, AIT_STATUS);
+	_D("appid: %s", appid);
+	if (ai && pkg_status && strncmp(pkg_status, "blocking", 8) == 0) {
+		appinfo_set_value((struct appinfo *)ai, AIT_STATUS, "restart");
+	} else if (ai && pkg_status && strncmp(pkg_status, "norestart", 9) == 0) {
+		appinfo_set_value((struct appinfo *)ai, AIT_STATUS, "installed");
+	} else {
+		if (appid != NULL && __check_restart(appid)) {
+			int r = appinfo_get_boolean(ai, AIT_RESTART);
+
+			if (r)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 static int __app_dead_handler(int pid, void *data)
 {
 	if (pid <= 0)
 		return 0;
 
 	 _D("APP_DEAD_SIGNAL : %d", pid);
+
+	bool restart;
+	char *appid = NULL;
+	const char *tmp_appid;
+
+	restart =  __can_restart_app(pid);
+	if (restart) {
+		tmp_appid = _status_app_get_appid_bypid(pid);
+
+		if (tmp_appid)
+			appid = strdup(tmp_appid);
+	}
 
 	if (app_group_is_leader_pid(pid)) {
 		_W("app_group_leader_app, pid: %d", pid);
@@ -272,6 +364,11 @@ static int __app_dead_handler(int pid, void *data)
 
 	__remove_item_running_list(pid, getuid());
 	_status_remove_app_info_list(pid, getuid());
+
+	if (restart)
+		_start_app_local(getuid(), appid);
+	if (appid)
+		free(appid);
 
 	return 0;
 }
@@ -371,6 +468,7 @@ static int __init(void)
 		return -1;
 	}
 
+	restart_tbl = g_hash_table_new(g_str_hash, g_str_equal);
 	_request_init();
 	app_group_init();
 

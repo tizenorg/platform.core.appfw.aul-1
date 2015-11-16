@@ -13,7 +13,7 @@ ENDIF (with_x11)
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon security-manager cynara-client cynara-creds-socket cynara-session capi-system-info vconf sqlite3 iniparser)
+SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle ecore dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon security-manager cynara-client cynara-creds-socket cynara-session capi-system-info vconf sqlite3 iniparser)
 IF (with_wayland)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client ecore-wayland)
 ENDIF (with_wayland)
@@ -87,17 +87,6 @@ ADD_EXECUTABLE(amd
 	)
 TARGET_LINK_LIBRARIES(amd aul_mods aul ${pkgs_LDFLAGS})
 INSTALL(TARGETS amd DESTINATION bin)
-
-# daemon-manager
-SET(REL_AGENT daemon-manager-release-agent)
-ADD_EXECUTABLE(${REL_AGENT} agent/${REL_AGENT}.c)
-TARGET_LINK_LIBRARIES(${REL_AGENT} ${pkgs_LDFLAGS} aul aul_mods)
-INSTALL(TARGETS ${REL_AGENT} DESTINATION bin)
-
-SET(LAUNCH_AGENT daemon-manager-launch-agent)
-ADD_EXECUTABLE(${LAUNCH_AGENT} agent/${LAUNCH_AGENT}.c)
-TARGET_LINK_LIBRARIES(${LAUNCH_AGENT} ${pkgs_LDFLAGS})
-INSTALL(TARGETS ${LAUNCH_AGENT} DESTINATION bin)
 
 # app_launcher
 SET(APP_LAUNCHER "app_launcher")
