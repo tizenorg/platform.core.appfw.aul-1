@@ -29,6 +29,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <glib.h>
+#include <dbus/dbus.h>
 
 #include "aul.h"
 #include "aul_api.h"
@@ -38,6 +39,9 @@
 #include "launch.h"
 #include "key.h"
 #include "aul_util.h"
+#include "app_signal.h"
+
+#define TEP_ISMOUNT_MAX_RETRY_CNT 20
 
 static int aul_initialized = 0;
 static int aul_fd;
@@ -823,5 +827,72 @@ SLPAPI int aul_reload_appinfo(void)
 	return app_request_to_launchpad(AMD_RELOAD_APPINFO, pkgname, NULL);
 }
 
-/* vi: set ts=8 sts=8 sw=8: */
+SLPAPI int aul_is_tep_mount_dbus_done(const char *tep_string)
+{
+	DBusMessage *msg;
+	DBusMessage *reply;
+	DBusError err;
+	int ret = -1;
+	int r = -1;
+
+	DBusConnection *conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+	if (!conn) {
+		_E("dbus_bus_get error");
+		return -EBADMSG;
+	}
+
+	msg = dbus_message_new_method_call(TEP_BUS_NAME, TEP_OBJECT_PATH, TEP_INTERFACE_NAME, TEP_IS_MOUNTED_METHOD);
+	if(!msg) {
+		_E("dbus_message_new_method_call(%s:%s-%s)", TEP_OBJECT_PATH, TEP_INTERFACE_NAME, TEP_IS_MOUNTED_METHOD);
+		return ret;
+	}
+
+	if (!dbus_message_append_args(msg,
+					DBUS_TYPE_STRING, &tep_string,
+					DBUS_TYPE_INVALID)) {
+		_E("Ran out of memory while constructing args\n");
+		dbus_message_unref(msg);
+		return ret;
+	}
+
+	dbus_error_init(&err);
+	reply = dbus_connection_send_with_reply_and_block(conn, msg, 500, &err);
+	if (!reply) {
+		_E("dbus_connection_send error(%s:%s)", err.name, err.message);
+		goto func_out;
+	}
+
+	r = dbus_message_get_args(reply, &err, DBUS_TYPE_INT32, &ret, DBUS_TYPE_INVALID);
+	if (!r) {
+		_E("no message : [%s:%s]", err.name, err.message);
+		goto func_out;
+	}
+
+func_out :
+	dbus_message_unref(msg);
+	dbus_error_free(&err);
+	return ret;
+}
+
+SLPAPI int aul_check_tep_mount(const char *tep_path)
+{
+	if(tep_path) {
+		int rv = -1;
+		int cnt = 0;
+		while(cnt < TEP_ISMOUNT_MAX_RETRY_CNT) {
+			rv = aul_is_tep_mount_dbus_done(tep_path);
+			if(rv == 1)
+				break;
+			usleep(50 * 1000);
+			cnt++;
+		}
+		/* incase after trying 1 sec, not getting mounted then quit */
+		if( rv != 1) {
+			_E("Not able to mount within 1 sec");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 
