@@ -29,6 +29,9 @@
 #include <stdio.h>
 #include <sys/prctl.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <pkgmgr-info.h>
 #include <poll.h>
 #include <tzplatform_config.h>
@@ -41,6 +44,7 @@
 #include "app_sock.h"
 #include "simple_util.h"
 #include "launch.h"
+#include "app_signal.h"
 
 #define DAC_ACTIVATE
 
@@ -56,6 +60,8 @@
 #define SDK_DYNAMIC_ANALYSIS "DYNAMIC_ANALYSIS"
 #define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define PREFIX_EXTERNAL_STORAGE_PATH "/opt/storage/sdcard/"
+#define PREFIX_APP_PATH "/opt/usr/apps/"
 
 typedef struct {
 	char *pkg_name;     /* package */
@@ -88,6 +94,7 @@ int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 	const char *pkg_type;
 	const char *pkg_id;
 	const char *hwacc;
+	const char *process_pool;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 
 	snprintf(tmpbuf, sizeof(tmpbuf), "%d", getpid());
@@ -112,12 +119,14 @@ int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	pkg_id = appinfo_get_value(ai, AIT_PKGID);
+	process_pool = appinfo_get_value(ai, AIT_POOL);
 
 	__set_stime(kb);
 	bundle_add_str(kb, AUL_K_HWACC, hwacc);
 	bundle_add_str(kb, AUL_K_EXEC, app_path);
 	bundle_add_str(kb, AUL_K_PACKAGETYPE, pkg_type);
 	bundle_add_str(kb, AUL_K_PKGID, pkg_id);
+	bundle_add_str(kb, AUL_K_INTERNAL_POOL, process_pool);
 
 	pid = app_agent_send_cmd(uid, APP_START, kb);
 	if (pid > 0)
@@ -598,6 +607,101 @@ static int __get_pid_for_app_group(const char *appid, int pid, int caller_uid, b
 	return pid;
 }
 
+static int __tep_mount(char *mnt_path[])
+{
+	DBusMessage *msg;
+	int func_ret = 0;
+	int rv = 0;
+	struct stat link_buf = {0,};
+
+	static DBusConnection *conn = NULL;
+
+	if (!conn) {
+		conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+		if (!conn) {
+			_E("dbus_bus_get error");
+			return -1;
+		}
+	}
+
+	rv = lstat(mnt_path[0], &link_buf);
+	if (rv == 0) {
+		rv = unlink(mnt_path[0]);
+		if (rv)
+			_E("Unable tp remove link file %s", mnt_path[0]);
+	}
+
+	msg = dbus_message_new_method_call(TEP_BUS_NAME, TEP_OBJECT_PATH,
+	                                   TEP_INTERFACE_NAME, TEP_MOUNT_METHOD);
+	if (!msg) {
+		_E("dbus_message_new_method_call(%s:%s-%s)", TEP_OBJECT_PATH,
+		   TEP_INTERFACE_NAME, TEP_MOUNT_METHOD);
+		return -1;
+	}
+
+	if (!dbus_message_append_args(msg,
+	                              DBUS_TYPE_STRING, &mnt_path[0],
+	                              DBUS_TYPE_STRING, &mnt_path[1],
+	                              DBUS_TYPE_INVALID)) {
+		_E("Ran out of memory while constructing args\n");
+		func_ret = -1;
+		goto func_out;
+	}
+
+	if (dbus_connection_send(conn, msg, NULL) == FALSE) {
+		_E("dbus_connection_send error");
+		func_ret = -1;
+		goto func_out;
+	}
+func_out :
+	dbus_message_unref(msg);
+	return func_ret;
+}
+
+static void __send_mount_request(const struct appinfo *ai, const char *tep_name,
+                                 bundle *kb)
+{
+	SECURE_LOGD("tep name is: %s", tep_name);
+	char *mnt_path[2] = {NULL, };
+	const char *installed_storage = NULL;
+	char tep_path[PATH_MAX] = {0, };
+
+	const char *pkgid = appinfo_get_value(ai, AIT_PKGID);
+	installed_storage = appinfo_get_value(ai, AIT_STORAGE_TYPE);
+	if (installed_storage != NULL) {
+		SECURE_LOGD("storage: %s", installed_storage);
+		if (strncmp(installed_storage, "internal", 8) == 0) {
+			snprintf(tep_path, PATH_MAX, "%s%s/res/%s", PREFIX_APP_PATH, pkgid,
+			         tep_name);
+			mnt_path[1] = strdup(tep_path);
+			snprintf(tep_path, PATH_MAX, "%s%s/res/tep", PREFIX_APP_PATH, pkgid);
+			mnt_path[0] = strdup(tep_path);
+		} else if (strncmp(installed_storage, "external", 8) == 0) {
+			snprintf(tep_path, PATH_MAX, "%step/%s", PREFIX_EXTERNAL_STORAGE_PATH,
+			         tep_name);
+			mnt_path[1] = strdup(tep_path);
+			snprintf(tep_path, PATH_MAX, "%step/tep-access",
+			         PREFIX_EXTERNAL_STORAGE_PATH); /* TODO : keeping tep/tep-access for now for external storage */
+			mnt_path[0] = strdup(tep_path);
+		}
+
+		if (mnt_path[0] && mnt_path[1]) {
+			bundle_add(kb, AUL_TEP_PATH, mnt_path[0]);
+			int ret = -1;
+			ret = aul_is_tep_mount_dbus_done(mnt_path[0]);
+			if (ret != 1) {
+				ret = __tep_mount(mnt_path);
+				if (ret < 0)
+					_E("dbus error %d", ret);
+			}
+		}
+		if (mnt_path[0])
+			free(mnt_path[0]);
+		if (mnt_path[1])
+			free(mnt_path[1]);
+	}
+}
+
 int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		uid_t caller_uid, int fd)
 {
@@ -609,6 +713,8 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	const char *pkg_type = NULL;
 	const char *pkg_id = NULL;
 	const char *component_type = NULL;
+	const char *process_pool = NULL;
+	const char *tep_name = NULL;
 	int pid = -1;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
@@ -661,6 +767,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	app_path = appinfo_get_value(ai, AIT_EXEC);
 	pkg_type = appinfo_get_value(ai, AIT_TYPE);
 	pkg_id = appinfo_get_value(ai, AIT_PKGID);
+	process_pool = appinfo_get_value(ai, AIT_POOL);
 
 	if ((ret = __compare_signature(ai, cmd, caller_uid, appid, caller_appid, fd)) != 0)
 		return ret;
@@ -678,6 +785,10 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			return pid;
 		}
 	}
+
+	tep_name = appinfo_get_value(ai, AIT_TEP);
+	if (tep_name != NULL)
+		__send_mount_request(ai, tep_name, kb);
 
 	if (pid > 0)
 		callee_status = _status_get_app_info_status(pid, caller_uid);
@@ -704,6 +815,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_EXEC, app_path);
 		bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
 		bundle_add(kb, AUL_K_PKGID, pkg_id);
+		bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool);
 		pid = app_agent_send_cmd(caller_uid, cmd, kb);
 
 		if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {

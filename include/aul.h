@@ -147,6 +147,10 @@ typedef enum _aul_type{
 #define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
 /** AUL internal private key */
 #define AUL_K_PKGID		"__AUL_PKGID_"
+/** AUL internal private key */
+#define AUL_K_INTERNAL_POOL "__AUL_INTERNAL_POOL__"
+/** AUL internal private key */
+#define AUL_TEP_PATH		"_AUL_TEP_PATH_"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -1855,6 +1859,15 @@ int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data);
  */
 int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_check_tep_mount(const char *tep_path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_is_tep_mount_dbus_done(const char *tep_string);
 
 #ifdef __cplusplus
 	}
