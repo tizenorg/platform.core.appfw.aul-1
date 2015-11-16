@@ -39,6 +39,7 @@ enum _appinfo_idx {
 	_AI_PKGID,
 	_AI_PRELOAD,
 	_AI_STATUS,
+	_AI_POOL,
 	_AI_LAUNCH_MODE,
 	_AI_MAX,
 };
@@ -62,6 +63,7 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_PKGID] = { "PackageId", AIT_PKGID, },
 	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, },
 	[_AI_STATUS] = { "Status", AIT_STATUS, },
+	[_AI_POOL] = { "ProcessPool", AIT_POOL, },
 	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE },
 };
 
@@ -120,6 +122,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	bool onboot;
 	bool restart;
 	bool preload;
+	bool process_pool = false;
 	pkgmgrinfo_app_hwacceleration hwacc;
 	pkgmgrinfo_app_component component;
 	pkgmgrinfo_permission_type permission;
@@ -229,6 +232,19 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	}
 	c->val[_AI_PKGID] = strdup(pkgid);
 	c->val[_AI_STATUS] = strdup("installed");
+
+#if 0 // TODO : pkgmgrinfo_appinfo_is_process_pool() should be prepared
+	if (pkgmgrinfo_appinfo_is_process_pool(handle, &process_pool)) {
+		_E("failed to get process_pool");
+		_free_appinfo(c);
+		return -1;
+	}
+#endif
+	if (process_pool == false) {
+		c->val[_AI_POOL] = strdup("false");
+	} else {
+		c->val[_AI_POOL] = strdup("true");
+	}
 
 	if (pkgmgrinfo_appinfo_get_launch_mode(handle, &mode)) {
 		_E("failed to get launch_mode");

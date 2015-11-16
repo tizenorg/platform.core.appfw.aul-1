@@ -19,6 +19,7 @@ enum appinfo_type {
 	AIT_PKGID,
 	AIT_PRELOAD,
 	AIT_STATUS,
+	AIT_POOL,
 	AIT_LAUNCH_MODE,
 	AIT_MAX
 };

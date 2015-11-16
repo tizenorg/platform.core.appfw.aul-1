@@ -821,25 +821,6 @@ static int __dispatch_app_get_status(int clifd, const app_pkt_t *pkt, struct ucr
 	return 0;
 }
 
-static int __dispatch_app_released(int clifd, const app_pkt_t *pkt, struct ucred *cr)
-{
-	char *appid;
-	int ret;
-
-	appid = malloc(MAX_PACKAGE_STR_SIZE);
-	if (appid == NULL) {
-		_E("out of memory");
-		__send_result_to_client(clifd, -1);
-		return -1;
-	}
-	strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-	ret = __release_srv(cr->uid, appid);
-	__send_result_to_client(clifd, ret);
-	free(appid);
-
-	return 0;
-}
-
 static int __dispatch_agent_dead_signal(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	_D("AMD_AGENT_DEAD_SIGNAL");
@@ -978,7 +959,6 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_KEY_RESERVE] = __dispatch_legacy_command,
 	[APP_KEY_RELEASE] = __dispatch_legacy_command,
 	[APP_STATUS_UPDATE] = __dispatch_app_status_update,
-	[APP_RELEASED] = __dispatch_app_released,
 	[APP_RUNNING_LIST_UPDATE] = __dispatch_legacy_command,
 	[APP_TERM_REQ_BY_PID] = __dispatch_app_process_by_pid,
 	[APP_TERM_BY_PID_ASYNC] = __dispatch_app_term_async,

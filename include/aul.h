@@ -147,6 +147,8 @@ typedef enum _aul_type{
 #define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
 /** AUL internal private key */
 #define AUL_K_PKGID		"__AUL_PKGID_"
+/** AUL internal private key */
+#define AUL_K_INTERNAL_POOL "__AUL_INTERNAL_POOL__"
 
 /**
  * @brief	This is callback function for aul_launch_init
