@@ -110,6 +110,10 @@ typedef enum _aul_type{
 #define AUL_V_KEY_PRESSED	"__AUL_KEY_PRESSED__"
 /** AUL public bundle value - To support Media key*/
 #define AUL_V_KEY_RELEASED	"__AUL_KEY_RELEASED__"
+/** AUL public key - To support rua stat */
+#define AUL_SVC_K_RUA_STAT_CALLER "__K_RUA_STAT_CALLER__"
+#define AUL_SVC_K_RUA_STAT_TAG    "__K_RUA_STAT_TAG__"
+
 
 /** AUL internal private key */
 #define AUL_K_PKG_NAME		"__AUL_PKG_NAME__"
@@ -143,7 +147,7 @@ typedef enum _aul_type{
 #define AUL_K_WID		"__AUL_WID__"
 /** AUL internal private key */
 #define AUL_K_LEADER_PID	"__AUL_LEADER_PID__"
-/** AUL internal private key - To support data control*/
+/** AUL internal private key - To support data control */
 #define AUL_K_DATA_CONTROL_TYPE   "__AUL_DATA_CONTROL_TYPE__"
 /** AUL internal private key */
 #define AUL_K_PKGID		"__AUL_PKGID_"
