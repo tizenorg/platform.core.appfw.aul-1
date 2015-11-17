@@ -32,6 +32,10 @@
 #include <pkgmgr-info.h>
 #include <poll.h>
 #include <tzplatform_config.h>
+#include <cynara-client.h>
+#include <cynara-creds-socket.h>
+#include <cynara-session.h>
+#include <fcntl.h>
 
 #include "amd_config.h"
 #include "amd_launch.h"
@@ -41,6 +45,7 @@
 #include "app_sock.h"
 #include "simple_util.h"
 #include "launch.h"
+#include "aul_svc.h"
 
 #define DAC_ACTIVATE
 
@@ -598,6 +603,83 @@ static int __get_pid_for_app_group(const char *appid, int pid, int caller_uid, b
 	return pid;
 }
 
+static int __check_privilege_by_cynara(int fd, uid_t uid, int pid, const char *privilege)
+{
+	int ret = 0;
+	int result;
+	char *client = NULL;
+	char *session = NULL;
+	char user[10] = {0,};
+	cynara *p_cynara;
+
+	if (privilege == NULL) {
+		return -1;
+	}
+
+	ret = cynara_initialize(&p_cynara, NULL);
+	if (ret != CYNARA_API_SUCCESS) {
+		_E("cynara_initialize failed.");
+		return -1;
+	}
+
+	ret = cynara_creds_socket_get_client(fd, CLIENT_METHOD_DEFAULT, &client);
+        if (ret != CYNARA_API_SUCCESS) {
+                _E("cynara_creds_socket_get_client failed.");
+		ret = -1;
+		goto end;
+        }
+
+	session = cynara_session_from_pid(pid);
+	if (session == NULL) {
+		_E("cynara_session_from_pid failed.");
+		ret = -1;
+		goto end;
+	}
+
+	snprintf(user, 10, "%d", uid);
+
+	result = cynara_check(p_cynara, client, session, user, privilege);
+	switch(result) {
+	case CYNARA_API_ACCESS_ALLOWED:
+		_D("Access allowed");
+		ret = 0;
+		break;
+	case CYNARA_API_ACCESS_DENIED:
+		_D("Access denied");
+		ret = 1;
+		break;
+	default:
+		_D("cynara_check error");
+		ret = -1;
+		break;
+	}
+
+end:
+	free(session);
+	free(client);
+
+	cynara_finish(p_cynara);
+
+	return ret;
+}
+
+static int __check_app_control_privilege(const char *operation, uid_t uid, int pid, int fd)
+{
+	int ret = 0;
+
+	if (operation == NULL || pid < 1)
+		return 0;
+
+	if (!strcmp(operation, AUL_SVC_OPERATION_CALL)) {
+		ret = __check_privilege_by_cynara(fd, uid, pid, "http://tizen.org/privilege/call");
+		if (ret != 0) {
+			_E("no privilege for call operation");
+		}
+	}
+
+	return ret;
+}
+
 int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		uid_t caller_uid, int fd)
 {
@@ -609,6 +691,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	const char *pkg_type = NULL;
 	const char *pkg_id = NULL;
 	const char *component_type = NULL;
+	const char *operation = NULL;
 	int pid = -1;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
@@ -664,6 +747,16 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 
 	if ((ret = __compare_signature(ai, cmd, caller_uid, appid, caller_appid, fd)) != 0)
 		return ret;
+
+	/* check privilege */
+	operation = bundle_get_val(kb, "__APP_SVC_OP_TYPE__");
+	if (operation) {
+		ret = __check_app_control_privilege(operation, caller_uid, caller_pid, fd);
+		if (ret != 0) {
+			__real_send(fd, ret);
+			return ret;
+		}
+	}
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
 	if (!multiple || strncmp(multiple, "false", 5) == 0)
