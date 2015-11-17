@@ -21,8 +21,7 @@
 
 #include <unistd.h>
 #include <sys/types.h>
-
-
+#include <glib.h>
 
 int _status_add_app_info_list(const char *appid, const char *app_path, int pid, int pad_pid, uid_t uid);
 int _status_update_app_info_list(int pid, int status,  uid_t uid);
@@ -46,6 +45,16 @@ typedef struct _item_pkt_t {
 	uid_t uid;
 	char appid[512];
 } item_pkt_t;
+
+typedef struct _rua_stat_pkt_t {
+	int uid;
+	char *stat_tag;
+	char *stat_caller;
+	char appid[512];
+	gboolean is_group_app;
+	char *data;
+	int len;
+} rua_stat_pkt_t;
 
 gboolean __add_item_running_list(gpointer user_data);
 
