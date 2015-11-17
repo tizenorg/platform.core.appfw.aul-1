@@ -32,6 +32,7 @@
 
 #include <aul.h>
 #include <bundle.h>
+#include <rua.h>
 #include <tzplatform_config.h>
 #include <cynara-client.h>
 #include <cynara-creds-socket.h>
@@ -287,6 +288,52 @@ static int __app_process_by_pid(int cmd,
 
 	return ret;
 }
+
+
+static gboolean __add_history_handler(gpointer user_data)
+{
+	struct rua_rec rec;
+	int ret;
+	bundle *kb = NULL;
+	char *app_path = NULL;
+	char *stat_caller = NULL;
+	char *stat_tag = NULL;
+	struct appinfo *ai;
+
+	rua_stat_pkt_t *pkt = (rua_stat_pkt_t *)user_data;
+
+	if (!pkt)
+		return FALSE;
+
+	if (!pkt->is_group_app) {
+
+		ai = (struct appinfo *)appinfo_find(pkt->uid, pkt->appid);;
+		app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
+
+		memset((void *)&rec, 0, sizeof(rec));
+
+		rec.pkg_name = pkt->appid;
+		rec.app_path = app_path;
+
+		if(pkt->len > 0)
+			rec.arg = pkt->data;
+
+		SECURE_LOGD("add rua history %s %s", rec.pkg_name, rec.app_path);
+
+		ret = rua_add_history(&rec);
+		if (ret == -1)
+			_D("rua add history error");
+	}
+
+	if (pkt->stat_caller != NULL && pkt->stat_tag != NULL) {
+		SECURE_LOGD("rua_stat_caller: %s, rua_stat_tag: %s", pkt->stat_caller, pkt->stat_tag);
+		rua_stat_update(pkt->stat_caller, pkt->stat_tag);
+	}
+	free(pkt);
+
+	return FALSE;
+}
+
 
 static int __release_srv(uid_t caller_uid, const char *appid)
 {
@@ -584,6 +631,9 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	int t_uid;
 	char *state;
 	item_pkt_t *item;
+	char *stat_caller = NULL;
+	char *stat_tag = NULL;
+	rua_stat_pkt_t *rua_stat_item;
 
 	kb = bundle_decode(pkt->data, pkt->len);
 	if (kb == NULL) {
@@ -625,6 +675,32 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 		strncpy(item->appid, appid, 511);
 
 		g_timeout_add(1200, __add_item_running_list, item);
+
+		rua_stat_item = calloc(1, sizeof(rua_stat_pkt_t));
+		if (item == NULL) {
+			_E("out of memory");
+			return -1;
+		}
+
+		if (pkt->len > 0) {
+			rua_stat_item->data = (char *)calloc(pkt->len, sizeof(char));
+			if (rua_stat_item->data == NULL) {
+				_E("out of memory");
+				return -1;
+			}
+			memcpy(pkt->data, pkt->data, pkt->len);
+		}
+		stat_caller = (char *)bundle_get_val(kb, AUL_SVC_K_RUA_STAT_CALLER);
+		stat_tag = (char *)bundle_get_val(kb, AUL_SVC_K_RUA_STAT_TAG);
+
+		rua_stat_item->len = pkt->len;
+		rua_stat_item->stat_caller = (stat_caller == NULL) ? NULL : strdup(stat_caller);
+		rua_stat_item->stat_tag = (stat_tag == NULL) ? NULL : strdup(stat_tag);
+		rua_stat_item->uid = cr->uid;
+		rua_stat_item->is_group_app = app_group_is_group_app(kb);
+		strncpy(rua_stat_item->appid, appid, 511);
+
+		g_timeout_add(1500, __add_history_handler, rua_stat_item);
 	}
 	bundle_free(kb);
 
@@ -1134,6 +1210,10 @@ int _request_init(void)
 		close(fd);
 		return -1;
 	}
+	r = rua_init();
+	r = rua_clear_history();
+
+	_D("rua_clear_history : %d", r);
 
 	return 0;
 }
