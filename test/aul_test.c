@@ -442,6 +442,30 @@ static int update_running_list()
 	return 0;
 }
 
+static int _widget_handler(const char *widget_id, const char *instance_id, int status, bundle *extra, void *data)
+{
+	printf("widget_id: %s instance_id: %s status: %d\n", widget_id, instance_id, status);
+	return 0;
+}
+
+static int listen_widget()
+{
+	aul_listen_widget_status(_widget_handler, NULL);
+	return 0;
+}
+
+static int update_widget()
+{
+	if (gargc < 4)
+		return -1;
+
+	const char *widget_id = gargv[2];
+	const char *instance_id = gargv[3];
+	int status = atoi(gargv[4]);
+
+	printf("%s %s %d", widget_id, instance_id, status);
+	return aul_update_widget_status(widget_id, instance_id, status, NULL, getpid());
+}
 
 /*
 static int set_pkg_func()
@@ -596,6 +620,10 @@ static test_func_t test_func[] = {
 		"[usage] reload"},
 	{"get_status_pid", get_status_pid, "aul_app_get_status_bypid test",
 		"[usage] get_status_pid <pid>"},
+	{"listen_widget", listen_widget, "aul_listen_widget_status test",
+		"[usage] listen_widget 1"},
+	{"update_widget", update_widget, "aul_update_widget_status test",
+		"[usage] update_widget <widget_id> <instance_id> <status>"},
 };
 
 int callfunc(char *testname)
@@ -649,8 +677,9 @@ static gboolean run_func(void *data)
 	callfunc(cmd);
 
 	if (strcmp(cmd, "launch_res") == 0 || strcmp(cmd, "all") == 0
-	    || strcmp(cmd, "dbuslaunch") == 0
-	    || strcmp(cmd, "open_svc_res") == 0)
+		|| strcmp(cmd, "dbuslaunch") == 0
+		|| strcmp(cmd, "open_svc_res") == 0
+		|| strcmp(cmd, "listen_widget") == 0)
 		return 0;
 	else
 		g_main_loop_quit(mainloop);
