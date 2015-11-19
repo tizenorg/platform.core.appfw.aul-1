@@ -33,6 +33,7 @@
 #include <aul.h>
 #include <bundle.h>
 #include <rua.h>
+#include <rua_stat.h>
 #include <tzplatform_config.h>
 #include <cynara-client.h>
 #include <cynara-creds-socket.h>
