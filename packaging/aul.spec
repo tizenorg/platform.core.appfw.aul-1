@@ -111,7 +111,6 @@ cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
 if [ $1 == 0 ]; then
     systemctl stop ac.service
     systemctl disable ac
-    systemctl --global disable amd_session_agent
 fi
 
 %post
@@ -145,8 +144,6 @@ systemctl daemon-reload
 %{_unitdir_user}/ac.socket
 %{_unitdir_user}/sockets.target.wants/ac.socket
 %{_bindir}/amd
-%{_bindir}/daemon-manager-release-agent
-%{_bindir}/daemon-manager-launch-agent
 %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
 
 %files test
