@@ -289,7 +289,6 @@ static int __app_process_by_pid(int cmd,
 	return ret;
 }
 
-
 static gboolean __add_history_handler(gpointer user_data)
 {
 	struct rua_rec rec;
@@ -337,28 +336,6 @@ static gboolean __add_history_handler(gpointer user_data)
 	}
 
 	return FALSE;
-}
-
-
-static int __release_srv(uid_t caller_uid, const char *appid)
-{
-	int r;
-	const struct appinfo *ai;
-
-	ai = (struct appinfo *)appinfo_find(caller_uid, appid);
-	if (!ai) {
-		SECURE_LOGE("release service: '%s' not found", appid);
-		return -1;
-	}
-
-	r = appinfo_get_boolean(ai, AIT_RESTART);
-	if (r == 1) {
-		/* Auto restart */
-		SECURE_LOGD("Auto restart set: '%s'", appid);
-		return _start_app_local(caller_uid, appid);
-	}
-
-	return 0;
 }
 
 static void __handle_agent_dead_signal(struct ucred *pcr)
@@ -931,25 +908,6 @@ static int __dispatch_app_get_status(int clifd, const app_pkt_t *pkt, struct ucr
 	return 0;
 }
 
-static int __dispatch_app_released(int clifd, const app_pkt_t *pkt, struct ucred *cr)
-{
-	char *appid;
-	int ret;
-
-	appid = malloc(MAX_PACKAGE_STR_SIZE);
-	if (appid == NULL) {
-		_E("out of memory");
-		__send_result_to_client(clifd, -1);
-		return -1;
-	}
-	strncpy(appid, (const char*)pkt->data, MAX_PACKAGE_STR_SIZE-1);
-	ret = __release_srv(cr->uid, appid);
-	__send_result_to_client(clifd, ret);
-	free(appid);
-
-	return 0;
-}
-
 static int __dispatch_agent_dead_signal(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	_D("AMD_AGENT_DEAD_SIGNAL");
@@ -1088,7 +1046,6 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_KEY_RESERVE] = __dispatch_legacy_command,
 	[APP_KEY_RELEASE] = __dispatch_legacy_command,
 	[APP_STATUS_UPDATE] = __dispatch_app_status_update,
-	[APP_RELEASED] = __dispatch_app_released,
 	[APP_RUNNING_LIST_UPDATE] = __dispatch_legacy_command,
 	[APP_TERM_REQ_BY_PID] = __dispatch_app_process_by_pid,
 	[APP_TERM_BY_PID_ASYNC] = __dispatch_app_term_async,
