@@ -23,6 +23,7 @@ static GHashTable *pkg_pending;
 struct user_appinfo {
 	uid_t uid;
 	GHashTable *tbl; /* key is filename, value is struct appinfo */
+	void *extra_data;
 };
 
 enum _appinfo_idx {
@@ -39,6 +40,9 @@ enum _appinfo_idx {
 	_AI_PKGID,
 	_AI_PRELOAD,
 	_AI_STATUS,
+	_AI_POOL,
+	_AI_TEP,
+	_AI_STORAGE_TYPE,
 	_AI_LAUNCH_MODE,
 	_AI_MAX,
 };
@@ -62,6 +66,9 @@ static struct appinfo_t _appinfos[] = {
 	[_AI_PKGID] = { "PackageId", AIT_PKGID, },
 	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, },
 	[_AI_STATUS] = { "Status", AIT_STATUS, },
+	[_AI_POOL] = { "ProcessPool", AIT_POOL, },
+	[_AI_TEP] = {"Tep", AIT_TEP},
+	[_AI_STORAGE_TYPE] = {"StorageType", AIT_STORAGE_TYPE},
 	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE },
 };
 
@@ -120,6 +127,10 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	bool onboot;
 	bool restart;
 	bool preload;
+	bool process_pool = false;
+	char *tep_name = NULL;
+
+	pkgmgrinfo_installed_storage installed_storage;
 	pkgmgrinfo_app_hwacceleration hwacc;
 	pkgmgrinfo_app_component component;
 	pkgmgrinfo_permission_type permission;
@@ -229,6 +240,33 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	}
 	c->val[_AI_PKGID] = strdup(pkgid);
 	c->val[_AI_STATUS] = strdup("installed");
+
+	if (pkgmgrinfo_appinfo_is_process_pool(handle, &process_pool)) {
+		_E("failed to get process_pool");
+		_free_appinfo(c);
+		return -1;
+	}
+
+	if (process_pool == false)
+		c->val[_AI_POOL] = strdup("false");
+	else
+		c->val[_AI_POOL] = strdup("true");
+
+	if (pkgmgrinfo_pkginfo_get_tep_name((pkgmgrinfo_pkginfo_h)info->extra_data, &tep_name)){
+		_E("failed to get tep_name");
+		c->val[_AI_TEP] = NULL;
+	} else {
+		c->val[_AI_TEP] = strdup(tep_name);
+	}
+
+	if (pkgmgrinfo_appinfo_get_installed_storage_location(handle, &installed_storage) == PMINFO_R_OK) {
+		if (installed_storage == PMINFO_INTERNAL_STORAGE)
+			c->val[_AI_STORAGE_TYPE] = strdup("internal");
+		else if (installed_storage == PMINFO_EXTERNAL_STORAGE)
+			c->val[_AI_STORAGE_TYPE] = strdup("external");
+	} else {
+		c->val[_AI_STORAGE_TYPE] = strdup("internal");
+	}
 
 	if (pkgmgrinfo_appinfo_get_launch_mode(handle, &mode)) {
 		_E("failed to get launch_mode");
@@ -550,6 +588,7 @@ int appinfo_insert(uid_t uid, const char *pkgid)
 		return -1;
 	}
 
+	info->extra_data = handle;
 	if (pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
 				__app_info_insert_handler,
 				info, info->uid)) {
