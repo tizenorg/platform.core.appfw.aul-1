@@ -35,9 +35,6 @@
 #include <rua.h>
 #include <rua_stat.h>
 #include <tzplatform_config.h>
-#include <cynara-client.h>
-#include <cynara-creds-socket.h>
-#include <cynara-session.h>
 #include <systemd/sd-login.h>
 
 #include "amd_config.h"
@@ -49,6 +46,7 @@
 #include "amd_appinfo.h"
 #include "amd_status.h"
 #include "amd_app_group.h"
+#include "amd_cynara.h"
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 #define REGULAR_UID_MIN     5000
@@ -62,7 +60,6 @@ static GHashTable *__socket_pair_hash = NULL;
 
 typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
 
-static cynara *r_cynara = NULL;
 
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
@@ -927,42 +924,6 @@ static int __dispatch_amd_reload_appinfo(int clifd, const app_pkt_t *pkt, struct
 	return 0;
 }
 
-static int __get_caller_info_from_cynara(int sockfd, char **client, char **user, char **session)
-{
-	pid_t pid;
-	int r;
-	char buf[MAX_LOCAL_BUFSZ] = {0,};
-
-	r = cynara_creds_socket_get_pid(sockfd, &pid);
-	if (r != CYNARA_API_SUCCESS) {
-		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
-		_E("cynara_creds_socket_get_pid failed: %s", buf);
-		return -1;
-	}
-
-	*session = cynara_session_from_pid(pid);
-	if (*session == NULL) {
-		_E("cynara_session_from_pid failed.");
-		return -1;
-	}
-
-	r = cynara_creds_socket_get_user(sockfd, USER_METHOD_DEFAULT, user);
-	if (r != CYNARA_API_SUCCESS) {
-		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
-		_E("cynara_cred_socket_get_user failed.");
-		return -1;
-	}
-
-	r = cynara_creds_socket_get_client(sockfd, CLIENT_METHOD_DEFAULT, client);
-	if (r != CYNARA_API_SUCCESS) {
-		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
-		_E("cynara_creds_socket_get_client failed.");
-		return -1;
-	}
-
-	return 0;
-}
-
 static const char *__convert_cmd_to_privilege(int cmd)
 {
 	switch (cmd) {
@@ -981,46 +942,6 @@ static const char *__convert_cmd_to_privilege(int cmd)
 	default:
 		return NULL;
 	}
-}
-
-static int __check_privilege_by_cynara(int sockfd, const char *privilege)
-{
-	int r;
-	int ret;
-	char buf[MAX_LOCAL_BUFSZ] = {0,};
-	char *client = NULL;
-	char *session = NULL;
-	char *user = NULL;
-
-	r = __get_caller_info_from_cynara(sockfd, &client, &user, &session);
-	if (r < 0) {
-		ret = -1;
-		goto end;
-	}
-
-	r = cynara_check(r_cynara, client, session, user, privilege);
-	switch (r) {
-	case CYNARA_API_ACCESS_ALLOWED:
-		_D("%s(%s) from user %s privilege %s allowed.", client, session, user, privilege);
-		ret = 0;
-		break;
-	case CYNARA_API_ACCESS_DENIED:
-		_E("%s(%s) from user %s privilege %s denied.", client, session, user, privilege);
-		ret = -1;
-		break;
-	default:
-		cynara_strerror(r, buf, MAX_LOCAL_BUFSZ);
-		_E("cynara_check failed: %s", buf);
-		ret = -1;
-		break;
-	}
-
-end:
-	free(user);
-	free(session);
-	free(client);
-
-	return ret;
 }
 
 static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
@@ -1085,7 +1006,7 @@ static gboolean __request_handler(gpointer data)
 	if (cr.uid >= REGULAR_UID_MIN) {
 		privilege = __convert_cmd_to_privilege(pkt->cmd);
 		if (privilege) {
-			ret = __check_privilege_by_cynara(clifd, privilege);
+			ret = check_privilege_by_cynara(clifd, privilege);
 			if (ret < 0) {
 				_E("request has been denied by smack");
 				ret = -EILLEGALACCESS;
@@ -1162,8 +1083,8 @@ int _request_init(void)
 		}
 	}
 
-	r = cynara_initialize(&r_cynara, NULL);
-	if (r != CYNARA_API_SUCCESS) {
+	r = init_cynara();
+	if (r != 0) {
 		_E("cynara initialize failed.");
 		close(fd);
 		return -1;
@@ -1172,7 +1093,7 @@ int _request_init(void)
 	src = g_source_new(&funcs, sizeof(GSource));
 	if (!src) {
 		_E("out of memory");
-		cynara_finish(r_cynara);
+		finish_cynara();
 		close(fd);
 		return -1;
 	}
@@ -1181,7 +1102,7 @@ int _request_init(void)
 	if (!gpollfd) {
 		_E("out of memory");
 		g_source_destroy(src);
-		cynara_finish(r_cynara);
+		finish_cynara();
 		close(fd);
 		return -1;
 	}
@@ -1198,7 +1119,7 @@ int _request_init(void)
 	if (r  == 0) {
 		g_free(gpollfd);
 		g_source_destroy(src);
-		cynara_finish(r_cynara);
+		finish_cynara();
 		close(fd);
 		return -1;
 	}

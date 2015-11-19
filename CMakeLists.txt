@@ -84,6 +84,7 @@ ADD_EXECUTABLE(amd
 	am_daemon/amd_launch.c
 	am_daemon/amd_status.c
 	am_daemon/amd_app_group.c
+	am_daemon/amd_cynara.c
 	)
 TARGET_LINK_LIBRARIES(amd aul_mods aul ${pkgs_LDFLAGS})
 INSTALL(TARGETS amd DESTINATION bin)
