@@ -223,7 +223,7 @@ int __create_agent_client_sock(int uid)
 	}
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/-5", uid);
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/.launchpad-process-pool-sock", uid);
  retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
