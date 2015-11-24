@@ -805,7 +805,7 @@ static int __dispatch_app_term_async(int clifd, const app_pkt_t *pkt, struct ucr
 
 static int __dispatch_app_term(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
-	char *appid;
+	char *pid;
 	bundle *kb;
 
 	kb = bundle_decode(pkt->data, pkt->len);
@@ -814,8 +814,9 @@ static int __dispatch_app_term(int clifd, const app_pkt_t *pkt, struct ucred *cr
 		return -1;
 	}
 
-	appid = (char *)bundle_get_val(kb, AUL_K_APPID);
-	__app_process_by_pid(pkt->cmd, appid, cr, clifd);
+	pid = (char *)bundle_get_val(kb, AUL_K_APPID);
+	__app_process_by_pid(pkt->cmd, pid, cr, clifd);
+	_status_update_app_info_list(atoi(pid), STATUS_DYING, cr->uid);
 	bundle_free(kb);
 
 	return 0;
