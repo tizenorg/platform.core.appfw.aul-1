@@ -265,6 +265,7 @@ static int __app_process_by_pid(int cmd,
 	case APP_KILL_BY_PID:
 		if ((ret = _send_to_sigkill(pid)) < 0)
 			_E("fail to killing - %d\n", pid);
+		_status_update_app_info_list(pid, STATUS_DYING, cr->uid);
 		__real_send(clifd, ret);
 		break;
 	case APP_TERM_REQ_BY_PID:
