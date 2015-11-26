@@ -888,6 +888,8 @@ static int __dispatch_app_status_update(int clifd, const app_pkt_t *pkt, struct 
 		ai = appinfo_find(cr->uid, appid);
 		appinfo_set_value((struct appinfo *)ai, AIT_STATUS, "norestart");
 	} else {
+		if (*status == STATUS_VISIBLE && cr->pid == _get_pid_of_last_launched_ui_app())
+			_send_hint_for_visibility(cr->uid);
 		_status_update_app_info_list(cr->pid, *status, cr->uid);
 	}
 	close(clifd);
