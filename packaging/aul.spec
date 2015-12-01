@@ -134,6 +134,7 @@ systemctl daemon-reload
 %{_bindir}/aul_test
 %{_bindir}/app_launcher
 %{_bindir}/appgroup_info
+%{_bindir}/launch_app
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
@@ -147,7 +148,6 @@ systemctl daemon-reload
 %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
 
 %files test
-%{_bindir}/launch_app
 %{_bindir}/open_app
 
 %files devel
