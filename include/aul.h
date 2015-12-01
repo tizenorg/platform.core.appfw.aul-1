@@ -1875,6 +1875,11 @@ int aul_check_tep_mount(const char *tep_path);
  */
 int aul_is_tep_mount_dbus_done(const char *tep_string);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_forward_app(const char *appid, bundle *kb);
+
 #ifdef __cplusplus
 	}
 #endif
