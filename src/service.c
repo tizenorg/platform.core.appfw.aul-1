@@ -1138,18 +1138,16 @@ SLPAPI int aul_svc_send_result(bundle *b, aul_svc_result_val result)
 		return AUL_SVC_RET_EINVAL;
 	}
 
-	if (result != AUL_SVC_RES_OK && result != AUL_SVC_RES_NOT_OK) {
-		_E("invalid result %d", (int)result);
-		return AUL_SVC_RET_EINVAL;
-	}
-
 	/* add result_code to bundle */
 	snprintf(tmp, MAX_LOCAL_BUFSZ, "%d", (int)result);
 	ret = __set_bundle(b, AUL_SVC_K_RES_VAL, tmp);
 	if (ret < 0)
 		return AUL_SVC_RET_ERROR;
 
-	ret = aul_send_service_result(b);
+	if (result == AUL_SVC_RES_CANCEL)
+		ret = aul_send_result(b, 1);
+	else
+		ret = aul_send_result(b, 0);
 
 	/* remove result_code from bundle */
 	bundle_del(b, AUL_SVC_K_RES_VAL);
