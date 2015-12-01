@@ -403,7 +403,7 @@ end:
 	return AUL_R_OK;
 }
 
-int aul_send_result(bundle *kb, int is_cancel)
+SLPAPI int aul_send_result(bundle *kb, int is_cancel)
 {
 	int pid;
 	int ret;
