@@ -155,6 +155,8 @@ typedef enum _aul_type{
 #define AUL_K_INTERNAL_POOL "__AUL_INTERNAL_POOL__"
 /** AUL internal private key */
 #define AUL_TEP_PATH		"_AUL_TEP_PATH_"
+/** AUL internal private key */
+#define AUL_K_COMP_TYPE		"__AUL_COMP_TYPE__"
 
 /**
  * @brief	This is callback function for aul_launch_init
