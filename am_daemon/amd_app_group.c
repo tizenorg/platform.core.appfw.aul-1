@@ -1187,8 +1187,8 @@ void app_group_lower(int pid, int *exit)
 				app_group_reroute(pid);
 				ac = __context_dup(ac);
 				__group_remove(pid);
-			/*	if (ac)
-					__do_recycle(ac); */
+				if (ac)
+					__do_recycle(ac);
 			}
 			*exit = 0;
 		} else
