@@ -74,6 +74,8 @@ typedef struct {
 	char *pkg_type;
 } app_info_from_pkgmgr;
 
+static int __pid_of_last_launched_ui_app;
+
 static void __set_reply_handler(int fd, int pid, int clifd, int cmd);
 static void __real_send(int clifd, int ret);
 static int __nofork_processing(int cmd, int pid, bundle * kb, int clifd);
@@ -90,52 +92,8 @@ static void __set_stime(bundle *kb)
 
 int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 {
-	int ret;
-	int pid;
-	const struct appinfo *ai;
-	const char *app_path;
-	const char *pkg_type;
-	const char *pkg_id;
-	const char *hwacc;
-	const char *process_pool;
-	char tmpbuf[MAX_PID_STR_BUFSZ];
-
-	snprintf(tmpbuf, sizeof(tmpbuf), "%d", getpid());
-	bundle_add_str(kb, AUL_K_CALLER_PID, tmpbuf);
-	snprintf(tmpbuf, sizeof(tmpbuf), "%d", uid);
-	bundle_add_str(kb, AUL_K_CALLER_UID, tmpbuf);
-	bundle_add_str(kb, AUL_K_APPID, appid);
-
-	pid = _status_app_is_running(appid, uid);
-	if (pid > 0) {
-		ret = __nofork_processing(APP_START, pid, kb, -1);
-		return ret;
-	}
-
-	ai = appinfo_find(uid, appid);
-	if (ai == NULL) {
-		_E("cannot find appinfo of %s", appid);
-		return -1;
-	}
-
-	hwacc = appinfo_get_value(ai, AIT_HWACC);
-	app_path = appinfo_get_value(ai, AIT_EXEC);
-	pkg_type = appinfo_get_value(ai, AIT_TYPE);
-	pkg_id = appinfo_get_value(ai, AIT_PKGID);
-	process_pool = appinfo_get_value(ai, AIT_POOL);
-
 	__set_stime(kb);
-	bundle_add_str(kb, AUL_K_HWACC, hwacc);
-	bundle_add_str(kb, AUL_K_EXEC, app_path);
-	bundle_add_str(kb, AUL_K_PACKAGETYPE, pkg_type);
-	bundle_add_str(kb, AUL_K_PKGID, pkg_id);
-	bundle_add_str(kb, AUL_K_INTERNAL_POOL, process_pool);
-
-	pid = app_agent_send_cmd(uid, APP_START, kb);
-	if (pid > 0)
-		_status_add_app_info_list(appid, app_path, pid, LAUNCHPAD_PID, uid);
-
-	return pid;
+	return  _start_app(appid, kb, APP_START, getpid(), uid, -1);
 }
 
 int _start_app_local(uid_t uid, const char *appid)
@@ -737,11 +695,32 @@ static int __check_app_control_privilege(int fd, const char *operation)
 	return 0;
 }
 
+int _send_hint_for_visibility(uid_t uid)
+{
+	bundle *b = NULL;
+	int ret;
+
+	b = bundle_create();
+
+	ret = app_agent_send_cmd(uid, PAD_CMD_VISIBILITY, b);
+
+	if (b)
+		bundle_free(b);
+	__pid_of_last_launched_ui_app = 0;
+
+	return ret;
+}
+
+int _get_pid_of_last_launched_ui_app()
+{
+	return __pid_of_last_launched_ui_app;
+}
+
 int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		uid_t caller_uid, int fd)
 {
+	int ret;
 	const struct appinfo *ai;
-	int ret = -1;
 	const char *status;
 	const char *multiple = NULL;
 	const char *app_path = NULL;
@@ -756,11 +735,10 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	const char *hwacc;
 	char *caller_appid;
 	int delay_reply = 0;
-	int pad_pid = LAUNCHPAD_PID;
 	int lpid;
 	int callee_status = -1;
-	gboolean can_attach;
-	gboolean new_process;
+	gboolean can_attach = FALSE;
+	gboolean new_process = FALSE;
 	app_group_launch_mode launch_mode;
 
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
@@ -849,7 +827,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			else
 				delay_reply = 1;
 		}
-	} else if (cmd != APP_RESUME) {
+	} else {
 		if (callee_status == STATUS_DYING && pid > 0) {
 			ret = kill(pid, SIGKILL);
 			if (ret == -1)
@@ -862,22 +840,22 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_PACKAGETYPE, pkg_type);
 		bundle_add(kb, AUL_K_PKGID, pkg_id);
 		bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool);
+		bundle_add(kb, AUL_K_COMP_TYPE, component_type);
 		pid = app_agent_send_cmd(caller_uid, cmd, kb);
+	}
 
+	if (pid > 0) {
+		_status_add_app_info_list(appid, app_path, pid, LAUNCHPAD_PID, caller_uid);
 		if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
 			if (new_process) {
 				_D("add app group info");
+				__pid_of_last_launched_ui_app = pid;
 				app_group_start_app(pid, kb, lpid, can_attach, launch_mode);
 			} else {
 				app_group_restart_app(pid, kb);
 			}
 		}
-	} else {
-		_E("Unknown application: %s", appid);
 	}
-
-	if (pid > 0)
-		_status_add_app_info_list(appid, app_path, pid, pad_pid, caller_uid);
 
 	if (!delay_reply)
 		__real_send(fd, pid);
