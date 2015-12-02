@@ -87,6 +87,9 @@ enum app_cmd {
 #define ENOLAUNCHPAD 125
 #define EREJECTED 123
 
+#define PAD_CMD_LAUNCH		0
+#define PAD_CMD_VISIBILITY	10
+
 typedef struct _app_pkt_t {
 	int cmd;
 	int len;
