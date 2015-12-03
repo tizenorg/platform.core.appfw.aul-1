@@ -373,7 +373,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	}
 
 	snprintf(socket_pair_key, socket_pair_key_len, "%s_%s", caller, callee);
-	_E("socket pair key : %s", socket_pair_key);
+	_D("socket pair key : %s", socket_pair_key);
 
 	handles = g_hash_table_lookup(__socket_pair_hash, socket_pair_key);
 	if (handles == NULL) {
@@ -381,18 +381,28 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, handles) != 0) {
 			_E("error create socket pair");
 			__send_result_to_client(clifd, -1);
-			goto err_out;
+
+			if (handles)
+				free(handles);
+			if (socket_pair_key)
+				free(socket_pair_key);
+			return -1;
 		}
 
 		if (handles[0] == -1) {
 			_E("error socket open");
 			__send_result_to_client(clifd, -1);
-			goto err_out;
+
+			if (handles)
+				free(handles);
+			if (socket_pair_key)
+				free(socket_pair_key);
+			return -1;
 		}
 		g_hash_table_insert(__socket_pair_hash, strdup(socket_pair_key),
 				handles);
 
-		_E("New socket pair insert done.");
+		_D("New socket pair insert done.");
 	}
 
 
@@ -404,7 +414,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	vec[0].iov_len = strlen(buffer) + 1;
 
 	if (datacontrol_type != NULL) {
-		_E("datacontrol_type : %s", datacontrol_type);
+		_D("datacontrol_type : %s", datacontrol_type);
 		if (strcmp(datacontrol_type, "consumer") == 0) {
 			msglen = __send_message(clifd, vec, 1, &handles[0], 1);
 			if (msglen < 0) {
@@ -435,12 +445,13 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 		}
 	}
 	SECURE_LOGD("send_message msglen : [%d]\n", msglen);
+	if (socket_pair_key)
+		free(socket_pair_key);
 
 	return 0;
 
 err_out:
-	if (handles)
-		free(handles);
+	g_hash_table_remove(__socket_pair_hash, socket_pair_key);
 	if (socket_pair_key)
 		free(socket_pair_key);
 
@@ -1074,7 +1085,7 @@ int _request_init(void)
 	GPollFD *gpollfd;
 	GSource *src;
 
-	__socket_pair_hash = g_hash_table_new_full(g_str_hash,  g_str_equal, NULL, g_free);
+	__socket_pair_hash = g_hash_table_new_full(g_str_hash,  g_str_equal, free, free);
 
 	fd = __create_sock_activation();
 	if (fd == -1) {
