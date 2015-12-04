@@ -912,6 +912,22 @@ int app_group_set_status(int pid, int status, gboolean force)
 	GHashTableIter iter;
 	gpointer key, value;
 
+	char *appid = NULL;
+	const char *pkgid = NULL;
+	const struct appinfo *ai = NULL;
+	const char *comp = NULL;
+
+	appid = _status_app_get_appid_bypid(pid);
+	ai = appinfo_find(getuid(), appid);
+	pkgid = appinfo_get_value(ai, AIT_PKGID);
+	comp = appinfo_get_value(ai, AIT_COMP);
+
+	if (status == STATUS_VISIBLE) {
+		aul_send_app_status_change_signal(pid, appid, pkgid, STATUS_FOREGROUND, comp);
+	} else if (status == STATUS_BG) {
+		aul_send_app_status_change_signal(pid, appid, pkgid, STATUS_BACKGROUND, comp);
+	}
+
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
 		GList *list = (GList*) value;
@@ -930,14 +946,6 @@ int app_group_set_status(int pid, int status, gboolean force)
 					if (__is_visible(pid)) {
 						//__set_fg_flag(pid, 1, force);
 						if (!ac->group_sig && GPOINTER_TO_INT(key) != pid) {
-							char *appid = NULL;
-							const char *pkgid = NULL;
-							const struct appinfo *ai = NULL;
-
-							appid = _status_app_get_appid_bypid(pid);
-							ai = appinfo_find(getuid(), appid);
-							pkgid = appinfo_get_value(ai, AIT_PKGID);
-
 							_D("send group signal %d", pid);
 							aul_send_app_group_signal(GPOINTER_TO_INT(key), pid, pkgid);
 							ac->group_sig = 1;
