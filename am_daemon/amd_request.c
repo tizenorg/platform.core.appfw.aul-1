@@ -234,6 +234,9 @@ static int __app_process_by_pid(int cmd,
 	int ret;
 	int dummy;
 	char *appid;
+	const char *pkgid = NULL;
+	const char *type = NULL;
+	const struct appinfo *ai = NULL;
 
 	if (pkg_name == NULL)
 		return -1;
@@ -250,6 +253,17 @@ static int __app_process_by_pid(int cmd,
 		__real_send(clifd, -1);
 		return -1;
 	}
+
+	ai = appinfo_find(cr->uid, appid);
+	if (ai) {
+		pkgid = appinfo_get_value(ai, AIT_PKGID);
+		type = appinfo_get_value(ai, AIT_COMP);
+	}
+
+	if (ai && (cmd == APP_RESUME_BY_PID || cmd == APP_PAUSE_BY_PID))
+		aul_send_app_resume_request_signal(pid, appid, pkgid, type);
+	else
+		aul_send_app_terminate_request_signal(pid, appid, pkgid, type);
 
 	switch (cmd) {
 	case APP_RESUME_BY_PID:

@@ -100,6 +100,7 @@ static int __kill_bg_apps(int limit)
 
 	for (i = 0, iter = r_app_info_list; i < n; i++) {
 		info_t = (r_app_info_t *)iter->data;
+		aul_send_app_terminate_request_signal(info_t->pid, NULL, NULL, NULL);
 		__send_to_sigkill(info_t->pid);
 		iter = g_slist_next(iter);
 		r_app_info_list = g_slist_remove(r_app_info_list, info_t);
@@ -369,6 +370,7 @@ static int __app_dead_handler(int pid, void *data)
 
 	__remove_item_running_list(pid, getuid());
 	_status_remove_app_info_list(pid, getuid());
+	aul_send_app_terminated_signal(pid);
 
 	if (restart)
 		_start_app_local(getuid(), appid);
