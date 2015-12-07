@@ -898,4 +898,28 @@ SLPAPI int aul_check_tep_mount(const char *tep_path)
 	return 0;
 }
 
+SLPAPI int aul_add_loader(const char *loader_path)
+{
+	int ret;
+
+	if (loader_path == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad(APP_ADD_LOADER, loader_path, NULL);
+	return ret;
+}
+
+SLPAPI int aul_remove_loader(int loader_id)
+{
+	char lid[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (loader_id <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(lid, MAX_PID_STR_BUFSZ, "%d", loader_id);
+	ret = app_request_to_launchpad(APP_REMOVE_LOADER, lid, NULL);
+	return ret;
+}
+
 
