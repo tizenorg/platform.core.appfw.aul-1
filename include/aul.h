@@ -157,6 +157,10 @@ typedef enum _aul_type{
 #define AUL_TEP_PATH		"_AUL_TEP_PATH_"
 /** AUL internal private key */
 #define AUL_K_COMP_TYPE		"__AUL_COMP_TYPE__"
+/** AUL internal private key */
+#define AUL_K_LOADER_ID		"__AUL_LOADER_ID__"
+/** AUL internal private key */
+#define AUL_K_LOADER_PATH	"__AUL_LOADER_PATH__"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -1879,6 +1883,17 @@ int aul_is_tep_mount_dbus_done(const char *tep_string);
  * This API is only for Appfw internally.
  */
 int aul_forward_app(const char *appid, bundle *kb);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_add_loader(const char *loader_path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_remove_loader(int loader_id);
+
 
 #ifdef __cplusplus
 	}
