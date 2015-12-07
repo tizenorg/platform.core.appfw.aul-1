@@ -68,6 +68,8 @@ enum app_cmd {
 	APP_GROUP_CLEAR_TOP,
 	APP_GET_STATUS,
 	APP_GET_SOCKET_PAIR,
+	APP_ADD_LOADER,
+	APP_REMOVE_LOADER,
 
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
@@ -89,6 +91,8 @@ enum app_cmd {
 
 #define PAD_CMD_LAUNCH		0
 #define PAD_CMD_VISIBILITY	10
+#define PAD_CMD_ADD_LOADER	11
+#define PAD_CMD_REMOVE_LOADER	12
 
 typedef struct _app_pkt_t {
 	int cmd;
