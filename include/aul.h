@@ -157,6 +157,10 @@ typedef enum _aul_type{
 #define AUL_TEP_PATH		"_AUL_TEP_PATH_"
 /** AUL internal private key */
 #define AUL_K_COMP_TYPE		"__AUL_COMP_TYPE__"
+/** AUL internal private key */
+#define AUL_K_LOADER_ID		"__AUL_LOADER_ID__"
+/** AUL internal private key */
+#define AUL_K_LOADER_PATH	"__AUL_LOADER_PATH__"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -1879,6 +1883,39 @@ int aul_is_tep_mount_dbus_done(const char *tep_string);
  * This API is only for Appfw internally.
  */
 int aul_forward_app(const char *appid, bundle *kb);
+
+/**
+ * @par Description:
+ *	This API create custom launchpad-loader
+ * @par Purpose:
+ *      This API's purpose is to make a slot for custom loader.
+ *      Once it is made, added loader will make a candidate process to use.
+ *
+ * @param[in]	loader_path	The file name of the custom loader binary including full path
+ * @return	Loader ID if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only for Appfw internally.
+ *	This API is only available in User Session.
+*/
+int aul_add_loader(const char *loader_path);
+
+/**
+ * @par Description:
+ *	This API destroy custom launchpad-loader
+ * @par Purpose:
+ *      This API's purpose is to remove a slot for custom loader.
+ *      Once it is removed, the prepared process will be removed as well.
+ *
+ * @param[in]	loader_id	Loader ID
+ * @return	0 if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only for Appfw internally.
+ *	This API is only available in User Session.
+*/
+int aul_remove_loader(int loader_id);
+
 
 #ifdef __cplusplus
 	}
