@@ -1331,3 +1331,22 @@ SLPAPI int aul_svc_subscribe_launch_result(bundle *b, const char *result)
 
 	return __set_bundle(b, result, "1");
 }
+
+SLPAPI int aul_svc_set_loader_id(bundle *b, int loader_id)
+{
+	char tmp[MAX_LOCAL_BUFSZ];
+
+	if (b == NULL) {
+		_E("bundle for aul_svc_set_loader_id is NULL");
+		return AUL_SVC_RET_EINVAL;
+	}
+
+	if (loader_id <= 0) {
+		_E("invalid loader id");
+		return AUL_SVC_RET_EINVAL;
+	}
+
+	snprintf(tmp, sizeof(tmp),"%d", loader_id);
+	return __set_bundle(b, AUL_K_LOADER_ID, tmp);
+}
+

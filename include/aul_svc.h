@@ -1089,6 +1089,11 @@ int aul_svc_request_transient_app(bundle *b, int callee_wid,
 
 int aul_svc_subscribe_launch_result(bundle *b, const char *event);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_svc_set_loader_id(bundle *b, int loader_id);
+
 #ifdef __cplusplus
 }
 #endif

@@ -47,6 +47,7 @@
 #include "amd_status.h"
 #include "amd_app_group.h"
 #include "amd_cynara.h"
+#include "launch.h"
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 #define REGULAR_UID_MIN     5000
@@ -935,6 +936,45 @@ static int __dispatch_app_get_status(int clifd, const app_pkt_t *pkt, struct ucr
 	return 0;
 }
 
+static int __dispatch_app_add_loader(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	bundle *kb;
+	int ret;
+	char tmpbuf[MAX_PID_STR_BUFSZ];
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb == NULL) {
+		close(clifd);
+		return -1;
+	}
+
+	snprintf(tmpbuf, sizeof(tmpbuf), "%d", getpgid(cr->pid));
+	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
+	ret = app_agent_send_cmd(cr->uid, PAD_CMD_ADD_LOADER, kb);
+	bundle_free(kb);
+	__send_result_to_client(clifd, ret);
+
+	return ret;
+}
+
+static int __dispatch_app_remove_loader(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+	bundle *kb;
+	int ret;
+
+	kb = bundle_decode(pkt->data, pkt->len);
+	if (kb == NULL) {
+		close(clifd);
+		return -1;
+	}
+
+	ret = app_agent_send_cmd(cr->uid, PAD_CMD_REMOVE_LOADER, kb);
+	bundle_free(kb);
+	__send_result_to_client(clifd, ret);
+
+	return ret;
+}
+
 static int __dispatch_agent_dead_signal(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	_D("AMD_AGENT_DEAD_SIGNAL");
@@ -1013,6 +1053,8 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_GROUP_LOWER] = __dispatch_app_group_lower,
 	[APP_GROUP_CLEAR_TOP] = __dispatch_app_group_clear_top,
 	[APP_GET_STATUS] = __dispatch_app_get_status,
+	[APP_ADD_LOADER] = __dispatch_app_add_loader,
+	[APP_REMOVE_LOADER] = __dispatch_app_remove_loader,
 	[AMD_RELOAD_APPINFO] = __dispatch_amd_reload_appinfo,
 	[AGENT_DEAD_SIGNAL] = __dispatch_agent_dead_signal,
 };
