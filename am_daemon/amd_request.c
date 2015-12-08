@@ -58,6 +58,19 @@
 
 #define MAX_NR_OF_DESCRIPTORS 2
 static GHashTable *__socket_pair_hash = NULL;
+static GHashTable *pending_table;
+
+struct pending_list {
+	int clifd;
+	GList *list;
+};
+
+struct request {
+	int clifd;
+	app_pkt_t *pkt;
+	struct ucred cr;
+	guint timer;
+};
 
 typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
 
@@ -642,6 +655,8 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	char *stat_caller = NULL;
 	char *stat_tag = NULL;
 	rua_stat_pkt_t *rua_stat_item = NULL;
+	int pid = -1;
+	struct pending_list *list;
 
 	kb = bundle_decode(pkt->data, pkt->len);
 	if (kb == NULL) {
@@ -650,6 +665,10 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	}
 
 	appid = bundle_get_val(kb, AUL_K_APPID);
+	/* TODO: check multiple */
+	if (appid)
+		pid = _status_app_is_running(appid, cr->uid);
+
 	if (cr->uid < REGULAR_UID_MIN) {
 		target_uid = bundle_get_val(kb, AUL_K_TARGET_UID);
 		if (target_uid != NULL) {
@@ -672,6 +691,14 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	} else {
 		ret = _start_app(appid, kb, pkt->cmd, cr->pid, cr->uid, clifd);
 	}
+
+	/* add pending list to wait app launched successfully */
+	if (pid == -1) {
+		list = calloc(1, sizeof(struct pending_list));
+		list->clifd = clifd;
+		g_hash_table_insert(pending_table, GINT_TO_POINTER(ret), list);
+	}
+
 	if (ret > 0) {
 		item = calloc(1, sizeof(item_pkt_t));
 		if (item == NULL) {
@@ -1059,6 +1086,114 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[AGENT_DEAD_SIGNAL] = __dispatch_agent_dead_signal,
 };
 
+static void __free_request(gpointer data)
+{
+	struct request *req = (struct request *)data;
+
+	free(req->pkt);
+//	g_source_remove(req->timer);
+	free(req);
+}
+
+static void __free_pending_list(gpointer data)
+{
+	struct pending_list *list = (struct pending_list *)data;
+
+	g_list_free_full(list->list, __free_request);
+}
+
+static void _process_pending_request(gpointer data, gpointer user_data)
+{
+	struct request *req = (struct request *)data;
+
+	dispatch_table[req->pkt->cmd](req->clifd, req->pkt, &req->cr);
+}
+
+int _request_reply_for_pending_request(int pid)
+{
+	gpointer result;
+	struct pending_list *plist;
+
+	result = g_hash_table_lookup(pending_table, GINT_TO_POINTER(pid));
+	if (result == NULL)
+		return -1;
+
+	plist = (struct pending_list *)result;
+
+	__send_result_to_client(plist->clifd, pid);
+	g_hash_table_steal(pending_table, GINT_TO_POINTER(pid));
+
+	g_list_foreach(plist->list, _process_pending_request, (gpointer)pid);
+
+	__free_pending_list((gpointer)plist);
+
+	return 0;
+}
+
+struct request *__parse_packet(int clifd, app_pkt_t *pkt,
+		struct ucred cr)
+{
+	struct request *req;
+
+	req = malloc(sizeof(struct request));
+	if (req == NULL)
+		return NULL;
+
+	req->clifd = clifd;
+	/* TODO: store as decoded bundle */
+	req->pkt = calloc(1, AUL_PKT_HEADER_SIZE + pkt->len + 1);
+	memcpy(req->pkt, pkt, sizeof(*(req->pkt)));
+	memcpy(&req->cr, &cr, sizeof(struct ucred));
+
+	return req;
+}
+
+static int __check_request(struct request *req)
+{
+	char *appid;
+	int pid;
+	struct pending_list *list;
+	bundle *b;
+
+	/* TODO: categorize commands */
+	if (req->pkt->cmd != APP_START || req->pkt->cmd != APP_OPEN ||
+			req->pkt->cmd != APP_RESUME ||
+			req->pkt->cmd != APP_RESUME_BY_PID ||
+			req->pkt->cmd != APP_TERM_BY_PID ||
+			req->pkt->cmd != APP_TERM_BY_PID_WITHOUT_RESTART ||
+			req->pkt->cmd != APP_START_RES ||
+			req->pkt->cmd != APP_KILL_BY_PID ||
+			req->pkt->cmd != APP_TERM_REQ_BY_PID ||
+			req->pkt->cmd != APP_TERM_BY_PID_ASYNC ||
+			req->pkt->cmd != APP_TERM_BGAPP_BY_PID ||
+			req->pkt->cmd != APP_PAUSE ||
+			req->pkt->cmd != APP_PAUSE_BY_PID)
+		return 0;
+
+	b = bundle_decode(req->pkt->data, req->pkt->len);
+	if (bundle_get_str(b, AUL_K_APPID, &appid)) {
+		_E("cannot get target appid");
+		return -1;
+	}
+	bundle_free(b);
+
+	pid = _status_app_is_running(appid, req->cr.uid);
+	/* not running, handle immediately */
+	if (pid == -1)
+		return 0;
+
+	/* else, add pending request */
+	list = g_hash_table_lookup(pending_table, GINT_TO_POINTER(pid));
+	if (list == NULL)
+		return 0;
+
+	list->list = g_list_append(list->list, req);
+
+//	req->timer = g_timeout_add(4000, __request_timeout_handler, NULL);
+
+	return 1;
+}
+
 static gboolean __request_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
@@ -1068,10 +1203,17 @@ static gboolean __request_handler(gpointer data)
 	int clifd;
 	struct ucred cr;
 	const char *privilege;
+	struct request *req;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
 		return FALSE;
+	}
+
+	req = __parse_packet(clifd, pkt, cr);
+	if (req == NULL) {
+		free(pkt);
+		return TRUE;
 	}
 
 	if (cr.uid >= REGULAR_UID_MIN) {
@@ -1082,10 +1224,16 @@ static gboolean __request_handler(gpointer data)
 				_E("request has been denied by smack");
 				ret = -EILLEGALACCESS;
 				__real_send(clifd, ret);
+				__free_request(req);
 				free(pkt);
 				return TRUE;
 			}
 		}
+	}
+
+	if (__check_request(req)) {
+		free(pkt);
+		return TRUE;
 	}
 
 	if (pkt->cmd >= 0 && pkt->cmd < APP_CMD_MAX && dispatch_table[pkt->cmd]) {
@@ -1095,6 +1243,7 @@ static gboolean __request_handler(gpointer data)
 		_E("Invalid packet or not supported command");
 		close(clifd);
 	}
+	__free_request(req);
 	free(pkt);
 
 	return TRUE;
@@ -1143,6 +1292,7 @@ int _request_init(void)
 	GSource *src;
 
 	__socket_pair_hash = g_hash_table_new_full(g_str_hash,  g_str_equal, free, free);
+	pending_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, __free_pending_list);
 
 	fd = __create_sock_activation();
 	if (fd == -1) {
