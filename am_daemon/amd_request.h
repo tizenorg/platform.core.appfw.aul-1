@@ -24,6 +24,7 @@
 #define __AUL_AMD_REQUEST_H_
 
 int _request_init(void);
+int _request_reply_for_pending_request(int pid);
 
 #endif
 

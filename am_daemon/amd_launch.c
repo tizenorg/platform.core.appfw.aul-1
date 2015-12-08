@@ -833,7 +833,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			if (ret == -1)
 				_W("send SIGKILL: %s", strerror(errno));
 		}
-
 		hwacc = appinfo_get_value(ai, AIT_HWACC);
 		bundle_add(kb, AUL_K_HWACC, hwacc);
 		bundle_add(kb, AUL_K_EXEC, app_path);
@@ -857,8 +856,9 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		}
 	}
 
+/*
 	if (!delay_reply)
 		__real_send(fd, pid);
-
+*/
 	return pid;
 }
