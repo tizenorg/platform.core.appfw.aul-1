@@ -735,7 +735,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
 	char *caller_appid;
-	int delay_reply = 0;
 	int lpid;
 	int callee_status = -1;
 	gboolean can_attach = FALSE;
@@ -823,12 +822,13 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		if (caller_pid == pid) {
 			SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);
 			pid = -ELOCALLAUNCH_ID;
+			__real_send(fd, pid);
 		} else {
 			aul_send_app_resume_request_signal(pid, appid, pkg_id, component_type);
-			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0)
+			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
 				pid = ret;
-			else
-				delay_reply = 1;
+				__real_send(fd, pid);
+			}
 		}
 	} else {
 		if (callee_status == STATUS_DYING && pid > 0) {
@@ -865,9 +865,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			}
 		}
 	}
-
-	if (!delay_reply)
-		__real_send(fd, pid);
 
 	return pid;
 }
