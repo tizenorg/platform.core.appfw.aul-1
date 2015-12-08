@@ -57,6 +57,18 @@
 
 #define MAX_NR_OF_DESCRIPTORS 2
 static GHashTable *__socket_pair_hash = NULL;
+static GHashTable *pending_table;
+
+struct pending_list {
+	int clifd;
+	GList *list;
+};
+struct pending_request {
+	int clifd;
+	guint timer;
+	app_pkt_t *pkt;
+	struct ucred cr;
+};
 
 typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
 
@@ -641,6 +653,9 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	char *stat_caller = NULL;
 	char *stat_tag = NULL;
 	rua_stat_pkt_t *rua_stat_item = NULL;
+	int pid = -1;
+	struct pending_list *list;
+	struct pending_request *req;
 
 	kb = bundle_decode(pkt->data, pkt->len);
 	if (kb == NULL) {
@@ -649,6 +664,21 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	}
 
 	appid = bundle_get_val(kb, AUL_K_APPID);
+	/* TODO: check multiple */
+	if (appid && strcmp(appid, "org.example.launchtest")) {
+		pid = _status_app_is_running(appid, cr->uid);
+		list = (struct pending_list *)g_hash_table_lookup(
+				pending_table, GINT_TO_POINTER(pid));
+		if (list) {
+			req = calloc(1, sizeof(struct pending_request));
+			req->clifd = clifd;
+			req->pkt = calloc(1, AUL_PKT_HEADER_SIZE + pkt->len + 1);
+			memcpy(req->pkt, pkt, AUL_PKT_HEADER_SIZE + pkt->len + 1);
+			memcpy(&req->cr, cr, sizeof(struct ucred));
+			list->list = g_list_append(list->list, req);
+			return 0;
+		}
+	}
 	if (cr->uid < REGULAR_UID_MIN) {
 		target_uid = bundle_get_val(kb, AUL_K_TARGET_UID);
 		if (target_uid != NULL) {
@@ -671,6 +701,14 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	} else {
 		ret = _start_app(appid, kb, pkt->cmd, cr->pid, cr->uid, clifd);
 	}
+
+	/* add pending list to wait app launched successfully */
+	if (pid == -1) {
+		list = calloc(1, sizeof(struct pending_list));
+		list->clifd = clifd;
+		g_hash_table_insert(pending_table, GINT_TO_POINTER(ret), list);
+	}
+
 	if (ret > 0) {
 		item = calloc(1, sizeof(item_pkt_t));
 		if (item == NULL) {
@@ -973,6 +1011,49 @@ static const char *__convert_cmd_to_privilege(int cmd)
 	}
 }
 
+static void __free_pending_request(gpointer data)
+{
+	struct pending_request *req = (struct pending_request *)data;
+
+	free(req->pkt);
+	free(req);
+}
+
+static void __free_pending_list(gpointer data)
+{
+	struct pending_list *list = (struct pending_list *)data;
+
+	g_list_free_full(list->list, __free_pending_request);
+}
+
+static void _process_pending_request(gpointer data, gpointer user_data)
+{
+	struct pending_request *req = (struct pending_request *)data;
+
+	__dispatch_app_start(req->clifd, req->pkt, &req->cr);
+}
+
+int _request_reply_for_pending_request(int pid)
+{
+	gpointer result;
+	struct pending_list *plist;
+
+	result = g_hash_table_lookup(pending_table, GINT_TO_POINTER(pid));
+	if (result == NULL)
+		return -1;
+
+	plist = (struct pending_list *)result;
+
+	__send_result_to_client(plist->clifd, pid);
+	g_hash_table_steal(pending_table, GINT_TO_POINTER(pid));
+
+	g_list_foreach(plist->list, _process_pending_request, (gpointer)pid);
+
+	__free_pending_list((gpointer)plist);
+
+	return 0;
+}
+
 static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_GET_SOCKET_PAIR] =  __dispatch_get_socket_pair,
 	[APP_START] =  __dispatch_app_start,
@@ -1101,6 +1182,7 @@ int _request_init(void)
 	GSource *src;
 
 	__socket_pair_hash = g_hash_table_new_full(g_str_hash,  g_str_equal, free, free);
+	pending_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, __free_pending_list);
 
 	fd = __create_sock_activation();
 	if (fd == -1) {
