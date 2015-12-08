@@ -734,7 +734,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
 	char *caller_appid;
-	int delay_reply = 0;
 	int lpid;
 	int callee_status = -1;
 	gboolean can_attach = FALSE;
@@ -825,8 +824,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			aul_send_app_resume_request_signal(pid, appid, pkg_id, component_type);
 			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0)
 				pid = ret;
-			else
-				delay_reply = 1;
 		}
 	} else {
 		if (callee_status == STATUS_DYING && pid > 0) {
@@ -834,7 +831,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			if (ret == -1)
 				_W("send SIGKILL: %s", strerror(errno));
 		}
-
 		hwacc = appinfo_get_value(ai, AIT_HWACC);
 		bundle_add(kb, AUL_K_HWACC, hwacc);
 		bundle_add(kb, AUL_K_EXEC, app_path);
@@ -859,9 +855,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			}
 		}
 	}
-
-	if (!delay_reply)
-		__real_send(fd, pid);
 
 	return pid;
 }
