@@ -25,10 +25,14 @@
 #include <glib.h>
 #include <aul.h>
 #include <string.h>
+#include <linux/limits.h>
+
+#include <gio/gio.h>
 
 #include "amd_config.h"
 #include "amd_status.h"
 #include "amd_appinfo.h"
+#include "amd_request.h"
 #include "aul_util.h"
 #include "simple_util.h"
 #include "app_sock.h"
@@ -457,6 +461,52 @@ int _status_get_pkgid_bypid(int fd, int pid)
 		free(pkt);
 
 	close(fd);
+
+	return 0;
+}
+
+static void __socket_monitor_cb(GFileMonitor *monitor, GFile *file,
+		GFile *other_file, GFileMonitorEvent event_type,
+		gpointer user_data)
+{
+	char *path;
+	char *p;
+	int pid;
+
+	if (event_type != G_FILE_MONITOR_EVENT_CREATED)
+		return;
+
+	path = g_file_get_path(file);
+	p = strrchr(path, '/');
+	pid = atoi(p + 1);
+
+	if (pid < 1)
+		return;
+
+	_request_reply_for_pending_request(pid);
+
+	g_free(path);
+}
+
+int _status_init(void)
+{
+	char buf[PATH_MAX];
+	GFile *file;
+	GFileMonitor *monitor;
+	GError *err = NULL;
+
+	snprintf(buf, sizeof(buf), "/run/user/%d", getuid());
+	file = g_file_new_for_path(buf);
+	if (file == NULL)
+		return -1;
+
+	monitor = g_file_monitor_directory(file, G_FILE_MONITOR_NONE,
+			NULL, &err);
+	if (monitor == NULL)
+		return -1;
+
+	g_signal_connect(monitor, "changed", G_CALLBACK(__socket_monitor_cb),
+			NULL);
 
 	return 0;
 }
