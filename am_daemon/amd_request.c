@@ -24,6 +24,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <dlfcn.h>
 #include <poll.h>
@@ -57,13 +58,30 @@
 #define PRIVILEGE_APPMANAGER_KILL_BGAPP "http://tizen.org/privilege/appmanager.kill.bgapp"
 
 #define MAX_NR_OF_DESCRIPTORS 2
+#define PENDING_REQUEST_TIMEOUT 5000 /* msec */
+
 static GHashTable *__socket_pair_hash = NULL;
+static GHashTable *pending_table;
+
+struct pending_item {
+	int clifd;
+	int pid;
+	guint timer;
+	GList *pending_list;
+};
+
+struct request {
+	int clifd;
+	app_pkt_t *pkt;
+	struct ucred cr;
+};
 
 typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
 
 
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
+static gboolean __timeout_pending_item(gpointer user_data);
 
 static int __send_message(int sock, const struct iovec *vec, int vec_size, const int *desc, int nr_desc)
 {
@@ -642,6 +660,8 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	char *stat_caller = NULL;
 	char *stat_tag = NULL;
 	rua_stat_pkt_t *rua_stat_item = NULL;
+	bool pending = false;
+	struct pending_item *pending_item;
 
 	kb = bundle_decode(pkt->data, pkt->len);
 	if (kb == NULL) {
@@ -658,7 +678,7 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 			if (strcmp(state, "offline") &&
 			    strcmp(state, "closing")) {
 				ret = _start_app(appid, kb, pkt->cmd, cr->pid,
-						t_uid, clifd);
+						t_uid, clifd, &pending);
 			} else {
 				_E("uid:%d session is %s", t_uid, state);
 				__real_send(clifd, AUL_R_ERROR);
@@ -667,11 +687,24 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 		} else {
 			_E("request from root, treat as global user");
 			ret = _start_app(appid, kb, pkt->cmd, cr->pid,
-					GLOBAL_USER, clifd);
+					GLOBAL_USER, clifd, &pending);
 		}
 	} else {
-		ret = _start_app(appid, kb, pkt->cmd, cr->pid, cr->uid, clifd);
+		ret = _start_app(appid, kb, pkt->cmd, cr->pid, cr->uid, clifd,
+				&pending);
 	}
+
+	/* add pending list to wait app launched successfully */
+	if (pending) {
+		pending_item = calloc(1, sizeof(struct pending_item));
+		pending_item->clifd = clifd;
+		pending_item->pid = ret;
+		pending_item->timer = g_timeout_add(PENDING_REQUEST_TIMEOUT,
+				__timeout_pending_item, (gpointer)pending_item);
+		g_hash_table_insert(pending_table, GINT_TO_POINTER(ret),
+				pending_item);
+	}
+
 	if (ret > 0) {
 		item = calloc(1, sizeof(item_pkt_t));
 		if (item == NULL) {
@@ -1062,6 +1095,178 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[AGENT_DEAD_SIGNAL] = __dispatch_agent_dead_signal,
 };
 
+static void __free_request(gpointer data)
+{
+	struct request *req = (struct request *)data;
+
+	free(req->pkt);
+	free(req);
+}
+
+static void __free_pending_item(struct pending_item *item)
+{
+	g_list_free_full(item->pending_list, __free_request);
+	if (g_main_context_find_source_by_user_data(NULL, item))
+		g_source_remove(item->timer);
+	free(item);
+}
+
+static void __process_pending_request(gpointer data, gpointer user_data)
+{
+	struct request *req = (struct request *)data;
+
+	dispatch_table[req->pkt->cmd](req->clifd, req->pkt, &req->cr);
+}
+
+static void __timeout_pending_request(gpointer data, gpointer user_data)
+{
+	struct request *req = (struct request *)data;
+
+	__send_result_to_client(req->clifd, -1);
+}
+
+static gboolean __timeout_pending_item(gpointer user_data)
+{
+	struct pending_item *item = (struct pending_item *)user_data;
+
+	__send_result_to_client(item->clifd, item->pid);
+	g_list_foreach(item->pending_list, __timeout_pending_request, NULL);
+
+	g_hash_table_remove(pending_table, GINT_TO_POINTER(item->pid));
+	__free_pending_item(item);
+
+	return FALSE;
+}
+
+int _request_flush_pending_request(int pid)
+{
+	struct pending_item *item;
+
+	item = (struct pending_item *)g_hash_table_lookup(
+			pending_table, GINT_TO_POINTER(pid));
+	if (item == NULL)
+		return -1;
+
+	__timeout_pending_item((gpointer)item);
+
+	return 0;
+}
+
+int _request_reply_for_pending_request(int pid)
+{
+	struct pending_item *item;
+
+	item = (struct pending_item *)g_hash_table_lookup(
+			pending_table, GINT_TO_POINTER(pid));
+	if (item == NULL)
+		return -1;
+
+	__send_result_to_client(item->clifd, pid);
+	g_hash_table_remove(pending_table, GINT_TO_POINTER(pid));
+	g_list_foreach(item->pending_list, __process_pending_request, NULL);
+
+	__free_pending_item(item);
+
+	return 0;
+}
+
+static struct request *__get_request(int clifd, app_pkt_t *pkt,
+		struct ucred cr)
+{
+	struct request *req;
+
+	req = malloc(sizeof(struct request));
+	if (req == NULL)
+		return NULL;
+
+	req->clifd = clifd;
+	req->pkt = calloc(1, AUL_PKT_HEADER_SIZE + pkt->len + 1);
+	memcpy(req->pkt, pkt, AUL_PKT_HEADER_SIZE + pkt->len + 1);
+	memcpy(&req->cr, &cr, sizeof(struct ucred));
+
+	return req;
+}
+
+static int __check_app_is_running(struct request *req)
+{
+	bundle *b;
+	char *str;
+	int pid;
+	int ret = 0;
+
+	b = bundle_decode(req->pkt->data, req->pkt->len);
+	if (b == NULL)
+		return -1;
+
+	if (bundle_get_str(b, AUL_K_APPID, &str)) {
+		_E("cannot get target pid");
+		bundle_free(b);
+		return -1;
+	}
+
+	switch (req->pkt->cmd) {
+	case APP_RESUME_BY_PID:
+	case APP_TERM_BY_PID:
+	case APP_TERM_BY_PID_WITHOUT_RESTART:
+	case APP_KILL_BY_PID:
+	case APP_TERM_REQ_BY_PID:
+	case APP_TERM_BY_PID_ASYNC:
+	case APP_TERM_BGAPP_BY_PID:
+	case APP_PAUSE_BY_PID:
+		/* get pid */
+		pid = atoi(str);
+		if (_status_app_get_appid_bypid(pid))
+			ret = pid;
+		break;
+	default:
+		pid = _status_app_is_running(str, req->cr.uid);
+		if (pid > 0)
+			ret = pid;
+	}
+
+	bundle_free(b);
+
+	return ret;
+}
+
+static int __check_request(struct request *req)
+{
+	int pid;
+	struct pending_item *item;
+
+	/* TODO: categorize commands */
+	if (req->pkt->cmd != APP_START && req->pkt->cmd != APP_OPEN &&
+			req->pkt->cmd != APP_RESUME &&
+			req->pkt->cmd != APP_RESUME_BY_PID &&
+			req->pkt->cmd != APP_TERM_BY_PID &&
+			req->pkt->cmd != APP_TERM_BY_PID_WITHOUT_RESTART &&
+			req->pkt->cmd != APP_START_RES &&
+			req->pkt->cmd != APP_KILL_BY_PID &&
+			req->pkt->cmd != APP_TERM_REQ_BY_PID &&
+			req->pkt->cmd != APP_TERM_BY_PID_ASYNC &&
+			req->pkt->cmd != APP_TERM_BGAPP_BY_PID &&
+			req->pkt->cmd != APP_PAUSE &&
+			req->pkt->cmd != APP_PAUSE_BY_PID)
+		return 0;
+
+	pid = __check_app_is_running(req);
+	if (pid < 0)
+		return -1;
+	else if (pid == 0)
+		return 0;
+
+	if (_status_get_app_info_status(pid, req->cr.uid) == STATUS_DYING)
+		return 0;
+
+	item = g_hash_table_lookup(pending_table, GINT_TO_POINTER(pid));
+	if (item == NULL)
+		return 0;
+
+	item->pending_list = g_list_append(item->pending_list, req);
+
+	return 1;
+}
+
 static gboolean __request_handler(gpointer data)
 {
 	GPollFD *gpollfd = (GPollFD *) data;
@@ -1071,10 +1276,18 @@ static gboolean __request_handler(gpointer data)
 	int clifd;
 	struct ucred cr;
 	const char *privilege;
+	struct request *req;
 
 	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
 		return FALSE;
+	}
+
+	req = __get_request(clifd, pkt, cr);
+	if (req == NULL) {
+		close(clifd);
+		free(pkt);
+		return TRUE;
 	}
 
 	if (cr.uid >= REGULAR_UID_MIN) {
@@ -1085,10 +1298,22 @@ static gboolean __request_handler(gpointer data)
 				_E("request has been denied by smack");
 				ret = -EILLEGALACCESS;
 				__real_send(clifd, ret);
+				__free_request(req);
 				free(pkt);
 				return TRUE;
 			}
 		}
+	}
+
+	ret = __check_request(req);
+	if (ret < 0) {
+		__real_send(clifd, ret);
+		__free_request(req);
+		free(pkt);
+		return TRUE;
+	} else if (ret > 0) {
+		free(pkt);
+		return TRUE;
 	}
 
 	if (pkt->cmd >= 0 && pkt->cmd < APP_CMD_MAX && dispatch_table[pkt->cmd]) {
@@ -1098,6 +1323,7 @@ static gboolean __request_handler(gpointer data)
 		_E("Invalid packet or not supported command");
 		close(clifd);
 	}
+	__free_request(req);
 	free(pkt);
 
 	return TRUE;
@@ -1146,6 +1372,7 @@ int _request_init(void)
 	GSource *src;
 
 	__socket_pair_hash = g_hash_table_new_full(g_str_hash,  g_str_equal, free, free);
+	pending_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
 	fd = __create_sock_activation();
 	if (fd == -1) {

@@ -370,6 +370,7 @@ static int __app_dead_handler(int pid, void *data)
 
 	__remove_item_running_list(pid, getuid());
 	_status_remove_app_info_list(pid, getuid());
+	_request_flush_pending_request(pid);
 	aul_send_app_terminated_signal(pid);
 
 	if (restart)
@@ -477,6 +478,7 @@ static int __init(void)
 
 	restart_tbl = g_hash_table_new(g_str_hash, g_str_equal);
 	_request_init();
+	_status_init();
 	app_group_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,

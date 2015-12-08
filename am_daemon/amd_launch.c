@@ -19,6 +19,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <signal.h>
 #include <bundle.h>
 #include <aul.h>
@@ -92,9 +93,11 @@ static void __set_stime(bundle *kb)
 
 int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 {
+	bool dummy;
+
 	__set_stime(kb);
 	bundle_add(kb, AUL_K_APPID, appid);
-	return  _start_app(appid, kb, APP_START, getpid(), uid, -1);
+	return  _start_app(appid, kb, APP_START, getpid(), uid, -1, &dummy);
 }
 
 int _start_app_local(uid_t uid, const char *appid)
@@ -719,7 +722,7 @@ int _get_pid_of_last_launched_ui_app()
 }
 
 int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
-		uid_t caller_uid, int fd)
+		uid_t caller_uid, int fd, bool *pending)
 {
 	int ret;
 	const struct appinfo *ai;
@@ -736,7 +739,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
 	char *caller_appid;
-	int delay_reply = 0;
 	int lpid;
 	int callee_status = -1;
 	gboolean can_attach = FALSE;
@@ -824,12 +826,13 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		if (caller_pid == pid) {
 			SECURE_LOGD("caller process & callee process is same.[%s:%d]", appid, pid);
 			pid = -ELOCALLAUNCH_ID;
+			__real_send(fd, pid);
 		} else {
 			aul_send_app_resume_request_signal(pid, appid, pkg_id, component_type);
-			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0)
+			if ((ret = __nofork_processing(cmd, pid, kb, fd)) < 0) {
 				pid = ret;
-			else
-				delay_reply = 1;
+				__real_send(fd, pid);
+			}
 		}
 	} else {
 		if (callee_status == STATUS_DYING && pid > 0) {
@@ -850,8 +853,10 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			pad_type = DEBUG_LAUNCHPAD_SOCK;
 
 		pid = app_agent_send_cmd(caller_uid, pad_type, PAD_CMD_LAUNCH, kb);
-		if (pid > 0)
+		if (pid > 0) {
+			*pending = true;
 			aul_send_app_launch_request_signal(pid, appid, pkg_id, component_type);
+		}
 	}
 
 	if (pid > 0) {
@@ -866,9 +871,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 			}
 		}
 	}
-
-	if (!delay_reply)
-		__real_send(fd, pid);
 
 	return pid;
 }
