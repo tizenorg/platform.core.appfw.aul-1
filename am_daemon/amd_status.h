@@ -35,7 +35,7 @@ char *_status_app_get_appid_bypid(int pid);
 int _status_send_running_appinfo_v2(int fd); //depcrecated
 int _status_get_appid_bypid(int fd, int pid);
 int _status_get_pkgid_bypid(int fd, int pid);
-
+int _status_init(void);
 
 
 //TODO : remove
