@@ -477,6 +477,7 @@ static int __init(void)
 
 	restart_tbl = g_hash_table_new(g_str_hash, g_str_equal);
 	_request_init();
+	_status_init();
 	app_group_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
