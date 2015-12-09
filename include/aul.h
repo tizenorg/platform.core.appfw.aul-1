@@ -1916,6 +1916,19 @@ int aul_add_loader(const char *loader_path);
 */
 int aul_remove_loader(int loader_id);
 
+/**
+ * @par Description
+ *	This API gets specified application process id.
+ * @par Purpose:
+ *	The purpose of this API is to get the pid of specified application.
+ *
+ * @param[in]	appid	application name
+ * @return	callee's pid if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only available in User Session.
+ */
+int aul_app_get_pid(const char *appid);
 
 #ifdef __cplusplus
 	}

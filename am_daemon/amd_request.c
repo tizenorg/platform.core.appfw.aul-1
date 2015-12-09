@@ -1055,6 +1055,7 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_GET_STATUS] = __dispatch_app_get_status,
 	[APP_ADD_LOADER] = __dispatch_app_add_loader,
 	[APP_REMOVE_LOADER] = __dispatch_app_remove_loader,
+	[APP_GET_PID] = __dispatch_app_is_running,
 	[AMD_RELOAD_APPINFO] = __dispatch_amd_reload_appinfo,
 	[AGENT_DEAD_SIGNAL] = __dispatch_agent_dead_signal,
 };

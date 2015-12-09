@@ -70,6 +70,7 @@ enum app_cmd {
 	APP_GET_SOCKET_PAIR,
 	APP_ADD_LOADER,
 	APP_REMOVE_LOADER,
+	APP_GET_PID,
 
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
