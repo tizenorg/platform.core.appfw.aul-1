@@ -702,7 +702,8 @@ int _send_hint_for_visibility(uid_t uid)
 
 	b = bundle_create();
 
-	ret = app_agent_send_cmd(uid, PAD_CMD_VISIBILITY, b);
+	ret = app_agent_send_cmd(uid, LAUNCHPAD_PROCESS_POOL_SOCK,
+			PAD_CMD_VISIBILITY, b);
 
 	if (b)
 		bundle_free(b);
@@ -740,6 +741,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	gboolean can_attach = FALSE;
 	gboolean new_process = FALSE;
 	app_group_launch_mode launch_mode;
+	const char *pad_type = LAUNCHPAD_PROCESS_POOL_SOCK;
 
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
@@ -842,7 +844,11 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_PKGID, pkg_id);
 		bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool);
 		bundle_add(kb, AUL_K_COMP_TYPE, component_type);
-		pid = app_agent_send_cmd(caller_uid, cmd, kb);
+
+		if (bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE)
+			pad_type = DEBUG_LAUNCHPAD_SOCK;
+
+		pid = app_agent_send_cmd(caller_uid, pad_type, cmd, kb);
 		if (pid > 0)
 			aul_send_app_launch_request_signal(pid, appid, pkg_id, component_type);
 	}
