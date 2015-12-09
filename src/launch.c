@@ -207,33 +207,34 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 }
 
 /**
- * @brief	encode kb and send it to 'pid'
- * @param[in]	pid		receiver's pid
+ * @brief	encode kb and send it to launchpad
+ * @param[in]	uid		receiver's uid
+ * @param[in]   pad_type	launchpad type
  * @param[in]	cmd		message's status (APP_START | APP_RESULT)
  * @param[in]	kb		data
  */
-SLPAPI int app_agent_send_cmd(int uid, int cmd, bundle *kb)
+SLPAPI int app_agent_send_cmd(int uid, const char *pad_type, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_agent_send_raw(uid, cmd, kb_data, datalen)) < 0)
+	if ((res = __app_agent_send_raw(uid, pad_type, cmd, kb_data, datalen)) < 0)
 		res = __get_aul_error(res);
 	free(kb_data);
 
 	return res;
 }
 
-SLPAPI int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb)
+SLPAPI int app_agent_send_cmd_with_noreply(int uid, const char *pad_type, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw_with_noreply(uid, cmd, kb_data, datalen)) < 0)
+	if ((res = __app_agent_send_raw_with_noreply(uid, pad_type, cmd, kb_data, datalen)) < 0)
 		res = __get_aul_error(res);
 	free(kb_data);
 
