@@ -135,6 +135,8 @@ systemctl daemon-reload
 %{_bindir}/app_launcher
 %{_bindir}/appgroup_info
 %{_bindir}/launch_app
+%{_bindir}/appid2pid
+%{_bindir}/launch_debug
 %{_datadir}/aul/miregex/*
 %{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
