@@ -842,7 +842,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_PKGID, pkg_id);
 		bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool);
 		bundle_add(kb, AUL_K_COMP_TYPE, component_type);
-		pid = app_agent_send_cmd(caller_uid, cmd, kb);
+		pid = app_agent_send_cmd(caller_uid, PAD_CMD_LAUNCH, kb);
 		if (pid > 0)
 			aul_send_app_launch_request_signal(pid, appid, pkg_id, component_type);
 	}
