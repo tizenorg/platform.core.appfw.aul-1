@@ -200,7 +200,7 @@ int __create_sock_activation(void)
 	return -1;
 }
 
-int __create_agent_client_sock(int uid)
+int __create_agent_client_sock(int uid, const char *pad_type)
 {
 	int fd = -1;
 	struct sockaddr_un saddr = { 0, };
@@ -223,7 +223,7 @@ int __create_agent_client_sock(int uid)
 	}
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/.launchpad-process-pool-sock", uid);
+	snprintf(saddr.sun_path, UNIX_PATH_MAX, "/run/user/%d/%s", uid, pad_type);
  retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
@@ -604,7 +604,8 @@ retry_recv:
 	return res;
 }
 
-int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen)
+int __app_agent_send_raw(int uid, const char *pad_type,
+		int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
@@ -619,7 +620,7 @@ int __app_agent_send_raw(int uid, int cmd, unsigned char *kb_data, int datalen)
 
 	_D("uid(%d) : cmd(%d)", uid, cmd);
 
-	fd = __create_agent_client_sock(uid);
+	fd = __create_agent_client_sock(uid, pad_type);
 	if (fd < 0)
 		return -ECOMM;
 
@@ -666,7 +667,8 @@ retry_recv:
 }
 
 
-int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, int datalen)
+int __app_agent_send_raw_with_noreply(int uid, const char *pad_type,
+		int cmd, unsigned char *kb_data, int datalen)
 {
 	int fd;
 	int len;
@@ -681,7 +683,7 @@ int __app_agent_send_raw_with_noreply(int uid, int cmd, unsigned char *kb_data, 
 
 	_D("uid(%d) : cmd(%d)", uid, cmd);
 
-	fd = __create_agent_client_sock(uid);
+	fd = __create_agent_client_sock(uid, pad_type);
 	if (fd < 0)
 		return -ECOMM;
 

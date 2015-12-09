@@ -16,3 +16,13 @@ add_executable(open_app
                 open_app.c)
 target_link_libraries(open_app aul ${pkgs_LDFLAGS} "-pie")
 INSTALL(TARGETS open_app DESTINATION bin)
+
+add_executable(appid2pid
+                appid2pid.c)
+target_link_libraries(appid2pid aul ${pkgs_LDFLAGS} "-pie")
+INSTALL(TARGETS appid2pid DESTINATION bin)
+
+add_executable(launch_debug
+                launch_debug.c)
+target_link_libraries(launch_debug aul ${pkgs_LDFLAGS} "-pie")
+INSTALL(TARGETS launch_debug DESTINATION bin)
