@@ -25,6 +25,8 @@
 
 #include <glib.h>
 
+#include "app_launchpad_types.h"
+
 int aul_initialize();
 int aul_register_init_callback(
 	int (*aul_handler)(aul_type type, bundle *, void *), void *data);
@@ -46,8 +48,8 @@ int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data);
 
-int app_agent_send_cmd(int uid, int cmd, bundle *kb);
-int app_agent_send_cmd_with_noreply(int uid, int cmd, bundle *kb);
+int app_agent_send_cmd(int uid, const char *pad_type, int cmd, bundle *kb);
+int app_agent_send_cmd_with_noreply(int uid, const char *pad_type, int cmd, bundle *kb);
 int app_subapp_terminate_request(void);
 int __call_aul_handler(aul_type type, bundle *kb);
 gboolean __aul_glib_handler(gpointer data);
