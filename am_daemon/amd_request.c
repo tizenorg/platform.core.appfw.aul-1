@@ -378,7 +378,6 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	caller = (char *)bundle_get_val(kb, AUL_K_CALLER_APPID);
 	callee = (char *)bundle_get_val(kb, AUL_K_CALLEE_APPID);
 	datacontrol_type = (char *)bundle_get_val(kb, "DATA_CONTOL_TYPE");
-	bundle_free(kb);
 
 	socket_pair_key_len = strlen(caller) + strlen(callee) + 2;
 
@@ -400,9 +399,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 
 			if (handles)
 				free(handles);
-			if (socket_pair_key)
-				free(socket_pair_key);
-			return -1;
+			goto err_out;
 		}
 
 		if (handles[0] == -1) {
@@ -411,9 +408,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 
 			if (handles)
 				free(handles);
-			if (socket_pair_key)
-				free(socket_pair_key);
-			return -1;
+			goto err_out;
 		}
 		g_hash_table_insert(__socket_pair_hash, strdup(socket_pair_key),
 				handles);
@@ -436,6 +431,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 			if (msglen < 0) {
 				_E("Error[%d]: while sending message\n", -msglen);
 				__send_result_to_client(clifd, -1);
+				g_hash_table_remove(__socket_pair_hash, socket_pair_key);
 				goto err_out;
 			}
 			close(handles[0]);
@@ -450,6 +446,7 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 			if (msglen < 0) {
 				_E("Error[%d]: while sending message\n", -msglen);
 				__send_result_to_client(clifd, -1);
+				g_hash_table_remove(__socket_pair_hash, socket_pair_key);
 				goto err_out;
 			}
 			close(handles[1]);
@@ -463,13 +460,16 @@ static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct uc
 	SECURE_LOGD("send_message msglen : [%d]\n", msglen);
 	if (socket_pair_key)
 		free(socket_pair_key);
+	if (kb)
+		bundle_free(kb);
 
 	return 0;
 
 err_out:
-	g_hash_table_remove(__socket_pair_hash, socket_pair_key);
 	if (socket_pair_key)
 		free(socket_pair_key);
+	if (kb)
+		bundle_free(kb);
 
 	return -1;
 }
