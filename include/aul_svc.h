@@ -88,7 +88,6 @@ extern "C" {
 /** AUL_SVC DATA TYPE*/
 #define AUL_SVC_DATA_RETURN_RESULT   "http://tizen.org/appcontrol/data/return_result"
 
-
 /** AUL SVC internal private key */
 #define AUL_SVC_K_URI_R_INFO        "__AUL_SVC_URI_R_INFO__"
 
@@ -112,6 +111,7 @@ extern "C" {
 #define AUL_SVC_K_SHIFT_WINDOW "__K_SHIFT_WINDOW"
 #define AUL_SVC_K_RECYCLE "__K_RECYCLE"
 
+#define PAD_LOADER_ID_DIRECT	1
 
 /**
  * @brief Return values in appsvc.
@@ -1089,8 +1089,16 @@ int aul_svc_request_transient_app(bundle *b, int callee_wid,
 
 int aul_svc_subscribe_launch_result(bundle *b, const char *event);
 
-/*
- * This API is only for Appfw internally.
+/**
+ * @par Description:
+ * This function sets loader ID into bundle.
+ *
+ * @param[in] b Bundle object
+ * @param[in] loader_id Loader ID from aul_add_loader() or PAD_LOADER_ID_DIRECT to launch apps without loader
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @see aul_add_loader, aul_remove_loader
+ * @remarks This API is only for Appfw internally.
  */
 int aul_svc_set_loader_id(bundle *b, int loader_id);
 
