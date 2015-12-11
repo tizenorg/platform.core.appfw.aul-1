@@ -110,6 +110,9 @@ extern "C" {
 #define AUL_SVC_K_REROUTE "__K_REROUTE__"
 #define AUL_SVC_K_SHIFT_WINDOW "__K_SHIFT_WINDOW"
 #define AUL_SVC_K_RECYCLE "__K_RECYCLE"
+#define AUL_SVC_K_RUA_PKGNAME "__K_RUA_PKGNAME"
+#define AUL_SVC_K_RUA_APPPATH "__K_RUA_APPPATH"
+
 
 #define PAD_LOADER_ID_DIRECT	1
 
@@ -1101,6 +1104,37 @@ int aul_svc_subscribe_launch_result(bundle *b, const char *event);
  * @remarks This API is only for Appfw internally.
  */
 int aul_svc_set_loader_id(bundle *b, int loader_id);
+
+/**
+ * @par Description:
+ * This function delete rua history.
+ *
+ * @param[in] b Bundle object Target Package name or app path. If NULL or has no value, delete all rua history.
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @see None
+ * @remarks This API is only for Appfw internally.
+ *
+ * @par Sample code:
+ * @code
+#include <aul_svc.h>
+
+...
+{
+    int r;
+    bundle *b = bundle_create();
+    if (pkg_name)
+        bundle_add_str(b, AUL_SVC_K_RUA_PKGNAME, pkg_name);
+    else if (app_path)
+        bundle_add_str(b, AUL_SVC_K_RUA_APPPATH, app_path);
+
+    r = aul_svc_delete_rua_history(b);
+}
+
+ * @endcode
+ **/
+int aul_svc_delete_rua_history(bundle *b);
+
 
 #ifdef __cplusplus
 }
