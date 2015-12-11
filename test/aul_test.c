@@ -435,6 +435,14 @@ static int get_status_pid()
 	return 0;
 }
 
+static int get_pid()
+{
+	static int num = 0;
+
+	printf("[aul_app_get_pid %d test] %s \n", num++, gargv[2]);
+	return aul_app_get_pid(gargv[2]);;
+}
+
 static int update_running_list()
 {
 	aul_running_list_update(gargv[2], gargv[3], gargv[4]);
@@ -596,6 +604,8 @@ static test_func_t test_func[] = {
 		"[usage] reload"},
 	{"get_status_pid", get_status_pid, "aul_app_get_status_bypid test",
 		"[usage] get_status_pid <pid>"},
+	{"get_pid", get_pid, "aul_app_get_pid test",
+		"[usage] get_pid <appid>"},
 };
 
 int callfunc(char *testname)

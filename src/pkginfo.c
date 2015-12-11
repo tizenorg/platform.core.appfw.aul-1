@@ -39,6 +39,19 @@ typedef struct _internal_param_t {
 static const char *__appid = NULL;
 static const char *__pkgid = NULL;
 
+SLPAPI int aul_app_get_pid(const char *appid)
+{
+	int ret = 0;
+
+	if (appid == NULL)
+		return -1;
+
+	ret = __app_send_raw(AUL_UTIL_PID, APP_GET_PID, (unsigned char *)appid,
+			strlen(appid));
+
+	return ret;
+}
+
 SLPAPI int aul_app_is_running(const char *appid)
 {
 	int ret = 0;
