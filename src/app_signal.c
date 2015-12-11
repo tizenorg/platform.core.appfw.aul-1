@@ -35,6 +35,9 @@ static void *_app_dead_data;
 static int (*_app_launch_handler) (int pid, void *data);
 static void *_app_launch_data;
 
+static int (*_app_launch_handler2) (int pid, const char *app_id, void *data);
+static void *_app_launch_data2;
+
 static int (*_booting_done_handler) (int pid, void *data);
 static void *_booting_done_data;
 
@@ -131,14 +134,20 @@ __dbus_signal_filter_session(DBusConnection *conn, DBusMessage *message,
 			_app_dead_handler(pid, _app_dead_data);
 	} else if (dbus_message_is_signal(
 	  message, interface, AUL_DBUS_APPLAUNCH_SIGNAL)) {
-		if (dbus_message_get_args(message, &error, DBUS_TYPE_UINT32,
-		     &pid, DBUS_TYPE_INVALID) == FALSE) {
+		const char *app_id = NULL;
+		if (dbus_message_get_args(message, &error,
+					DBUS_TYPE_UINT32, &pid,
+					DBUS_TYPE_STRING, &app_id,
+					DBUS_TYPE_INVALID) == FALSE) {
 			_E("Failed to get data: %s", error.message);
 			dbus_error_free(&error);
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 		}
 		if (_app_launch_handler)
 			_app_launch_handler(pid, _app_launch_data);
+
+		if (_app_launch_handler2)
+			_app_launch_handler2(pid, app_id, _app_launch_data2);
 	}
 
 	return DBUS_HANDLER_RESULT_HANDLED;
@@ -267,7 +276,7 @@ SLPAPI int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
-	} else if (_app_launch_handler == NULL) {
+	} else if (_app_launch_handler == NULL && _app_launch_handler2 == NULL) {
 		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
 			_E("error app signal fini");
 			return AUL_R_ERROR;
@@ -286,7 +295,7 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 			_E("error app signal init");
 			return AUL_R_ERROR;
 		}
-	} else if (_app_dead_handler == NULL) {
+	} else if (_app_launch_handler2 == NULL && _app_dead_handler == NULL) {
 		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
 			_E("error app signal fini");
 			return AUL_R_ERROR;
@@ -298,6 +307,27 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 	return AUL_R_OK;
 }
 
+SLPAPI int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), void *data)
+{
+	if (func) {
+_E("LMK, aul_listen_app_launch_signal_v2");
+		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
+			_E("error app signal init");
+			return AUL_R_ERROR;
+		}
+	} else if (_app_launch_handler == NULL && _app_dead_handler == NULL) {
+_E("LMK, _app_dead_handler, _app_launch_handler is NULL");
+		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
+			_E("error app signal fini");
+			return AUL_R_ERROR;
+		}
+	}
+
+	_app_launch_handler2 = func;
+	_app_launch_data2 = data;
+
+	return AUL_R_OK;
+}
 SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 {
 	if (func && !_booting_done_handler) {
