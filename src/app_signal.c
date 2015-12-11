@@ -382,7 +382,7 @@ SLPAPI int aul_listen_app_status_signal(int (*func) (int, int, void *), void *da
 			_E("error app signal fini");
 			return AUL_R_ERROR;
 		}
-	} else {
+	} else if (!_status_handler) {
 		if (__app_dbus_signal_remove_rule(system_conn, RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE) != 0)
 			return AUL_R_ERROR;
 	}
