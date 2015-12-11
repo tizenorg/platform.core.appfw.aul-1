@@ -31,6 +31,8 @@
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_svc.h"
+#include "aul_util.h"
+#include "app_sock.h"
 #include "aul_svc_db.h"
 #include "simple_util.h"
 #include "aul_svc_priv_key.h"
@@ -1348,5 +1350,33 @@ SLPAPI int aul_svc_set_loader_id(bundle *b, int loader_id)
 
 	snprintf(tmp, sizeof(tmp),"%d", loader_id);
 	return __set_bundle(b, AUL_K_LOADER_ID, tmp);
+}
+
+SLPAPI int aul_svc_delete_rua_history(bundle *b)
+{
+
+	app_pkt_t *ret = NULL;
+	bundle_raw *br = NULL;
+	int datalen = 0;
+	int result = 0;
+
+	if (b != NULL)
+		bundle_encode(b, &br, &datalen);
+
+	ret = __app_send_cmd_with_result(AUL_UTIL_PID, APP_REMOVE_HISTORY, br,
+			datalen);
+
+	if (ret != NULL) {
+		if (ret->len > 0) {
+			memcpy(&result, ret->data, ret->len);
+		} else {
+			if (br != NULL)
+				free(br);
+			return -1;
+		}
+	}
+	if (br != NULL)
+		free(br);
+	return result;
 }
 
