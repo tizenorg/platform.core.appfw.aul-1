@@ -31,6 +31,7 @@
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_svc.h"
+#include "app_sock.h"
 #include "aul_svc_db.h"
 #include "simple_util.h"
 #include "aul_svc_priv_key.h"

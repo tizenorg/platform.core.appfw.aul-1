@@ -625,6 +625,21 @@ err_out:
 	return -1;
 }
 
+static int __dispatch_remove_history(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+/*
+	int result = 0;
+	bundle *b = NULL;
+	b = bundle_decode(pkt->data, pkt->len);
+	result = rua_delete_history_from_db(b);
+	bundle_free(b);
+
+	__send_result_data(clifd, APP_REMOVE_HISTORY,
+			(unsigned char *)&result, sizeof(int));
+*/
+	return 0;
+}
+
 static int __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	bundle *b;
@@ -1141,6 +1156,7 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_CANCEL] = __dispatch_app_result,
 	[APP_KILL_BY_PID] = __dispatch_app_term,
 	[APP_ADD_HISTORY] = NULL,
+	[APP_REMOVE_HISTORY] = __dispatch_remove_history,
 	[APP_RUNNING_INFO] = __dispatch_app_running_info,
 	[APP_RUNNING_INFO_RESULT] = NULL,
 	[APP_IS_RUNNING] = __dispatch_app_is_running,

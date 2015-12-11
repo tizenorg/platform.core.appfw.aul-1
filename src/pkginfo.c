@@ -255,3 +255,31 @@ SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 	return aul_app_get_pkgid_bypid_for_uid(pid, pkgid, len, getuid());
 }
 
+SLPAPI int aul_delete_rua_history(bundle *b)
+{
+	app_pkt_t *ret = NULL;
+	bundle_raw *br = NULL;
+	int datalen = 0;
+	int result = 0;
+
+	/* b can be NULL if b is NULL delete all rua history */
+	if (b != NULL)
+		bundle_encode(b, &br, &datalen);
+
+	ret = __app_send_cmd_with_result(AUL_UTIL_PID, APP_REMOVE_HISTORY, br,
+			datalen);
+
+	if (ret != NULL) {
+		if (ret->len > 0) {
+			memcpy(&result, ret->data, ret->len);
+		} else {
+			if (br != NULL)
+				free(br);
+			return -1;
+		}
+	}
+	if (br != NULL)
+		free(br);
+	return result;
+}
+
