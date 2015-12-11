@@ -7,5 +7,7 @@
 		<filesystem path="/usr/bin/aul_test" exec_label="User" />
 		<filesystem path="/usr/bin/open_app" exec_label="User" />
 		<filesystem path="/usr/bin/launch_app" exec_label="User" />
+		<filesystem path="/usr/bin/launch_debug" exec_label="User" />
+		<filesystem path="/usr/bin/appid2pid" exec_label="User" />
 	</assign>
 </manifest>

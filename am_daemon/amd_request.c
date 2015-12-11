@@ -950,7 +950,8 @@ static int __dispatch_app_add_loader(int clifd, const app_pkt_t *pkt, struct ucr
 
 	snprintf(tmpbuf, sizeof(tmpbuf), "%d", getpgid(cr->pid));
 	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
-	ret = app_agent_send_cmd(cr->uid, PAD_CMD_ADD_LOADER, kb);
+	ret = app_agent_send_cmd(cr->uid, LAUNCHPAD_PROCESS_POOL_SOCK,
+			PAD_CMD_ADD_LOADER, kb);
 	bundle_free(kb);
 	__send_result_to_client(clifd, ret);
 
@@ -968,7 +969,8 @@ static int __dispatch_app_remove_loader(int clifd, const app_pkt_t *pkt, struct 
 		return -1;
 	}
 
-	ret = app_agent_send_cmd(cr->uid, PAD_CMD_REMOVE_LOADER, kb);
+	ret = app_agent_send_cmd(cr->uid, LAUNCHPAD_PROCESS_POOL_SOCK,
+			PAD_CMD_REMOVE_LOADER, kb);
 	bundle_free(kb);
 	__send_result_to_client(clifd, ret);
 
