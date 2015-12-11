@@ -79,7 +79,21 @@ int _status_add_app_info_list(const char *appid, const char *app_path, int pid, 
 	return 0;
 }
 
-int _status_update_app_info_list(int pid, int status, uid_t uid)
+static gboolean __app_terminate_timer_cb(void *data)
+{
+	int pid = (int)data;
+	int ret = 0;
+
+	_D("pid(%d)", pid);
+
+	ret = kill(pid, SIGKILL);
+	if (ret == -1)
+		_W("send SIGKILL: %s", strerror(errno));
+
+	return FALSE;
+}
+
+int _status_update_app_info_list(int pid, int status, uid_t uid, gboolean force)
 {
 	GSList *iter = NULL;
 	app_status_info_t *info_t = NULL;
@@ -88,11 +102,15 @@ int _status_update_app_info_list(int pid, int status, uid_t uid)
 		info_t = (app_status_info_t *)iter->data;
 		if ((pid == info_t->pid) && ((info_t->uid == uid) || (info_t->uid == 0))) {
 			info_t->status = status;
+			if (status == STATUS_DYING) {
+				if (info_t->pad_pid != DEBUG_LAUNCHPAD_PID)
+					g_timeout_add_seconds(5, __app_terminate_timer_cb, (void *)info_t->pid);
+			}
 			break;
 		}
 	}
 
-	app_group_set_status(pid, status, false);
+	app_group_set_status(pid, status, force);
 
 	return 0;
 }

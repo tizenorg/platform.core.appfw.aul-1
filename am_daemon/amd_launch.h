@@ -40,5 +40,9 @@ int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb);
 int _get_pid_of_last_launched_ui_app();
 int _send_hint_for_visibility(uid_t uid);
 
+int _launch_init(void);
+void _amd_suspend_add_timer(int pid, const struct appinfo* ai);
+void _amd_suspend_remove_timer(pid_t pid);
+
 
 #endif /* __AUL_AMD_LAUNCH_H_ */
