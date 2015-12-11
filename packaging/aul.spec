@@ -40,6 +40,7 @@ BuildRequires:  pkgconfig(cynara-session)
 BuildRequires:  pkgconfig(capi-system-info)
 BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(db-util)
 %if %{with wayland}
 BuildRequires:  pkgconfig(ecore-wayland)
 BuildRequires:  pkgconfig(wayland-client)

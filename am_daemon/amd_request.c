@@ -33,10 +33,12 @@
 #include <aul.h>
 #include <bundle.h>
 #include <rua.h>
+#include <db-util.h>
 #include <rua_stat.h>
 #include <tzplatform_config.h>
 #include <systemd/sd-login.h>
 
+#include "aul_svc.h"
 #include "amd_config.h"
 #include "simple_util.h"
 #include "app_sock.h"
@@ -49,6 +51,7 @@
 #include "amd_cynara.h"
 #include "launch.h"
 
+#define QUERY_MAXLEN    4096
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 #define REGULAR_UID_MIN     5000
 
@@ -472,6 +475,68 @@ err_out:
 		bundle_free(kb);
 
 	return -1;
+}
+
+static int __dispatch_remove_history(int clifd, const app_pkt_t *pkt, struct ucred *cr)
+{
+
+	_E("remove history");
+	bundle *b = NULL;
+	char *buf = NULL;
+	int r;
+	sqlite3 *db = NULL;
+
+	char *pkg_name = NULL;
+	char *app_path = NULL;
+	char *errmsg = NULL;
+	int result = 0;
+
+	char query[QUERY_MAXLEN];
+	char defname[FILENAME_MAX];
+	const char *rua_db_path = tzplatform_getenv(TZ_USER_DB);
+	if (rua_db_path == NULL) {
+		_E("fail to get rua_db_path");
+		result = -1;
+		goto out;
+	}
+	snprintf(defname, sizeof(defname), "%s/.rua.db", rua_db_path);
+	r = db_util_open_with_options(defname, &db, SQLITE_OPEN_READWRITE, NULL);
+	if (r) {
+		_E("fail to open rua db");
+		result = -1;
+		goto out;
+	}
+
+	b = bundle_decode(pkt->data, pkt->len);
+	bundle_get_str(b, AUL_SVC_K_RUA_PKGNAME, &pkg_name);
+	bundle_get_str(b, AUL_SVC_K_RUA_APPPATH, &app_path);
+
+	if (pkg_name != NULL)
+		snprintf(query, QUERY_MAXLEN, "delete from rua_history where pkg_name = '%s';", pkg_name);
+	else if (app_path != NULL)
+		snprintf(query, QUERY_MAXLEN, "delete from rua_history where app_path = '%s';", app_path);
+	else
+		snprintf(query, QUERY_MAXLEN, "delete from rua_history;");
+
+	r = sqlite3_exec(db, query, NULL, NULL, &errmsg);
+
+	if (r != SQLITE_OK) {
+		_E("fail to exec delete query %s : %s", query, errmsg);
+		sqlite3_free(errmsg);
+		result = -1;
+		goto out;
+	}
+
+out:
+	if (b != NULL)
+		bundle_free(b);
+	if (db != NULL)
+		db_util_close(db);
+
+	__send_result_data(clifd, APP_GROUP_GET_LEADER_PIDS,
+			(unsigned char *)&result, sizeof(int));
+
+	return 0;
 }
 
 static int __dispatch_app_group_get_window(int clifd, const app_pkt_t *pkt, struct ucred *cr)
@@ -1026,6 +1091,7 @@ static app_cmd_dispatch_func dispatch_table[APP_CMD_MAX] = {
 	[APP_CANCEL] = __dispatch_app_result,
 	[APP_KILL_BY_PID] = __dispatch_app_term,
 	[APP_ADD_HISTORY] = NULL,
+	[APP_REMOVE_HISTORY] = __dispatch_remove_history,
 	[APP_RUNNING_INFO] = __dispatch_app_running_info,
 	[APP_RUNNING_INFO_RESULT] = NULL,
 	[APP_IS_RUNNING] = __dispatch_app_is_running,

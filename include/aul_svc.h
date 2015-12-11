@@ -110,6 +110,9 @@ extern "C" {
 #define AUL_SVC_K_REROUTE "__K_REROUTE__"
 #define AUL_SVC_K_SHIFT_WINDOW "__K_SHIFT_WINDOW"
 #define AUL_SVC_K_RECYCLE "__K_RECYCLE"
+#define AUL_SVC_K_RUA_PKGNAME "__K_RUA_PKGNAME"
+#define AUL_SVC_K_RUA_APPPATH "__K_RUA_APPPATH"
+
 
 #define PAD_LOADER_ID_DIRECT	1
 
@@ -1101,6 +1104,8 @@ int aul_svc_subscribe_launch_result(bundle *b, const char *event);
  * @remarks This API is only for Appfw internally.
  */
 int aul_svc_set_loader_id(bundle *b, int loader_id);
+
+int aul_svc_delete_rua_history(bundle *b);
 
 #ifdef __cplusplus
 }
