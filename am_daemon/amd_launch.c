@@ -93,6 +93,7 @@ static void __set_stime(bundle *kb)
 int _start_app_local_with_bundle(uid_t uid, const char *appid, bundle *kb)
 {
 	__set_stime(kb);
+	bundle_add(kb, AUL_K_APPID, appid);
 	return  _start_app(appid, kb, APP_START, getpid(), uid, -1);
 }
 
