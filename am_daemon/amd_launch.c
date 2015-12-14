@@ -57,7 +57,7 @@
 
 #define AUL_PR_NAME         16
 
-// SDK related defines
+/* SDK related defines */
 #define PATH_APP_ROOT tzplatform_getenv(TZ_USER_APP)
 #define PATH_GLOBAL_APP_ROOT tzplatform_getenv(TZ_SYS_RW_APP)
 #define PATH_DATA "/data"
@@ -221,7 +221,7 @@ int _term_app(int pid, int clifd)
 		}
 	}
 
-	if ( (ret = __app_send_raw_with_delay_reply(pid, APP_TERM_BY_PID,
+	if ((ret = __app_send_raw_with_delay_reply(pid, APP_TERM_BY_PID,
 			(unsigned char *)&dummy, 0)) < 0) {
 		_D("terminate packet send error - use SIGKILL");
 		if (_send_to_sigkill(pid) < 0) {
@@ -243,7 +243,7 @@ int _term_req_app(int pid, int clifd)
 	int dummy;
 	int ret;
 
-	if ( (ret = __app_send_raw_with_delay_reply(pid, APP_TERM_REQ_BY_PID,
+	if ((ret = __app_send_raw_with_delay_reply(pid, APP_TERM_REQ_BY_PID,
 			(unsigned char *)&dummy, 0)) < 0) {
 		_D("terminate req send error");
 		__real_send(clifd, ret);
@@ -321,9 +321,8 @@ static void __real_send(int clifd, int ret)
 		return;
 
 	if (send(clifd, &ret, sizeof(int), MSG_NOSIGNAL) < 0) {
-		if (errno == EPIPE) {
+		if (errno == EPIPE)
 			_E("send failed due to EPIPE.\n");
-		}
 		_E("send fail to client");
 	}
 
@@ -394,11 +393,10 @@ static gboolean __reply_handler(gpointer data)
 	}
 	close(fd);
 
-	if (res < 0) {
+	if (res < 0)
 		__real_send(clifd, res);
-	} else {
+	else
 		__real_send(clifd, pid);
-	}
 
 	_D("listen fd : %d , send fd : %d, pid : %d", fd, clifd, pid);
 
@@ -499,16 +497,17 @@ static int __compare_signature(const struct appinfo *ai, int cmd,
 	int ret;
 
 	permission = appinfo_get_value(ai, AIT_PERM);
-	if (permission && strncmp(permission, "signature", 9) == 0 ) {
-		if (caller_uid != 0 && (cmd == APP_START || cmd == APP_START_RES)) {
+	if (permission && strncmp(permission, "signature", 9) == 0) {
+		if (caller_uid != 0
+				&& (cmd == APP_START || cmd == APP_START_RES)) {
 			const struct appinfo *caller_ai;
 			const char *preload;
 			pkgmgrinfo_cert_compare_result_type_e compare_result;
 
 			caller_ai = appinfo_find(caller_uid, caller_appid);
 			preload = appinfo_get_value(caller_ai, AIT_PRELOAD);
-			if (preload && strncmp(preload, "true", 4) != 0 ) {
-				//is admin is global
+			if (preload && strncmp(preload, "true", 4) != 0) {
+				/* is admin is global */
 				if (caller_uid != GLOBAL_USER)
 					pkgmgrinfo_pkginfo_compare_usr_app_cert_info(caller_appid,
 						appid, caller_uid, &compare_result);
@@ -554,7 +553,7 @@ static int __get_pid_for_app_group(const char *appid, int pid, int caller_uid, b
 			*new_process = TRUE;
 		}
 
-		if (app_group_can_start_app(appid, kb, can_attach, lpid, launch_mode) != 0 ) {
+		if (app_group_can_start_app(appid, kb, can_attach, lpid, launch_mode) != 0) {
 			_E("can't make group info");
 			return -EILLEGALACCESS;
 		}
@@ -601,7 +600,7 @@ static int __tep_mount(char *mnt_path[])
 	}
 
 	msg = dbus_message_new_method_call(TEP_BUS_NAME, TEP_OBJECT_PATH,
-	                                   TEP_INTERFACE_NAME, TEP_MOUNT_METHOD);
+			TEP_INTERFACE_NAME, TEP_MOUNT_METHOD);
 	if (!msg) {
 		_E("dbus_message_new_method_call(%s:%s-%s)", TEP_OBJECT_PATH,
 		   TEP_INTERFACE_NAME, TEP_MOUNT_METHOD);
@@ -609,9 +608,9 @@ static int __tep_mount(char *mnt_path[])
 	}
 
 	if (!dbus_message_append_args(msg,
-	                              DBUS_TYPE_STRING, &mnt_path[0],
-	                              DBUS_TYPE_STRING, &mnt_path[1],
-	                              DBUS_TYPE_INVALID)) {
+				DBUS_TYPE_STRING, &mnt_path[0],
+				DBUS_TYPE_STRING, &mnt_path[1],
+				DBUS_TYPE_INVALID)) {
 		_E("Ran out of memory while constructing args\n");
 		func_ret = -1;
 		goto func_out;
@@ -622,13 +621,15 @@ static int __tep_mount(char *mnt_path[])
 		func_ret = -1;
 		goto func_out;
 	}
-func_out :
+
+func_out:
 	dbus_message_unref(msg);
+
 	return func_ret;
 }
 
-static void __send_mount_request(const struct appinfo *ai, const char *tep_name,
-                                 bundle *kb)
+static void __send_mount_request(const struct appinfo *ai,
+		const char *tep_name, bundle *kb)
 {
 	SECURE_LOGD("tep name is: %s", tep_name);
 	char *mnt_path[2] = {NULL, };
@@ -648,17 +649,17 @@ static void __send_mount_request(const struct appinfo *ai, const char *tep_name,
 	if (installed_storage != NULL) {
 		SECURE_LOGD("storage: %s", installed_storage);
 		if (strncmp(installed_storage, "internal", 8) == 0) {
-			snprintf(tep_path, PATH_MAX, "%s/%s/res/%s", path_app_root, pkgid,
-			         tep_name);
+			snprintf(tep_path, PATH_MAX, "%s/%s/res/%s",
+					path_app_root, pkgid, tep_name);
 			mnt_path[1] = strdup(tep_path);
 			snprintf(tep_path, PATH_MAX, "%s/%s/res/tep", path_app_root, pkgid);
 			mnt_path[0] = strdup(tep_path);
 		} else if (strncmp(installed_storage, "external", 8) == 0) {
-			snprintf(tep_path, PATH_MAX, "%step/%s", PREFIX_EXTERNAL_STORAGE_PATH,
-			         tep_name);
+			snprintf(tep_path, PATH_MAX, "%step/%s",
+					PREFIX_EXTERNAL_STORAGE_PATH, tep_name);
 			mnt_path[1] = strdup(tep_path);
 			snprintf(tep_path, PATH_MAX, "%step/tep-access",
-			         PREFIX_EXTERNAL_STORAGE_PATH); /* TODO : keeping tep/tep-access for now for external storage */
+					PREFIX_EXTERNAL_STORAGE_PATH); /* TODO : keeping tep/tep-access for now for external storage */
 			mnt_path[0] = strdup(tep_path);
 		}
 

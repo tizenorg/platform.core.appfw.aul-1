@@ -97,7 +97,7 @@ SLPAPI int aul_get_mime_description(const char *mimetype, char *desc, int len)
 	if (founded != NULL)
 		snprintf(desc, len, "%s", founded);
 	else {
-		/* TODO : should to try to extract from 
+		/* TODO : should to try to extract from
 		   share mime info's comment */
 		return AUL_R_ERROR;
 	}
@@ -175,9 +175,8 @@ SLPAPI int aul_get_mime_from_file(const char *filename, char *mimetype, int len)
 		return AUL_R_EINVAL;
 
 	mime = xdg_mime_get_mime_type_for_file(filename, 0);
-	if (strcmp(mime, "application/octet-stream") == 0) {
+	if (strcmp(mime, "application/octet-stream") == 0)
 		mime = xdg_mime_get_mime_type_from_file_name(filename);
-	}
 
 	snprintf(mimetype, len, "%s", mime);
 	return AUL_R_OK;

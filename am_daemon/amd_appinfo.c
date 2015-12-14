@@ -156,7 +156,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	}
 
 	c->val[_AI_FILE] = strdup(appid);
-	c->val[_AI_NAME] = strdup(appid); //TODO :
+	c->val[_AI_NAME] = strdup(appid);
 
 	if (pkgmgrinfo_appinfo_get_component(handle, &component)) {
 		_E("failed to get component");
@@ -165,7 +165,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	}
 
 	if (component == PMINFO_UI_APP) {
-		c->val[_AI_COMP] = strdup("ui"); //TODO :
+		c->val[_AI_COMP] = strdup("ui");
 		if (pkgmgrinfo_appinfo_is_multiple(handle, &multiple)) {
 			_E("failed to get multiple");
 			_free_appinfo(c);
@@ -255,7 +255,7 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	else
 		c->val[_AI_POOL] = strdup("true");
 
-	if (pkgmgrinfo_pkginfo_get_tep_name((pkgmgrinfo_pkginfo_h)info->extra_data, &tep_name)){
+	if (pkgmgrinfo_pkginfo_get_tep_name((pkgmgrinfo_pkginfo_h)info->extra_data, &tep_name)) {
 		_E("failed to get tep_name");
 		c->val[_AI_TEP] = NULL;
 	} else {
@@ -510,7 +510,7 @@ int appinfo_init(void)
 	struct user_appinfo *global_appinfo;
 
 	fp = fopen("/proc/cmdline", "r");
-	if (fp == NULL){
+	if (fp == NULL) {
 		_E("appinfo init failed: %s", strerror(errno));
 		return -1;
 	}

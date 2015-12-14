@@ -118,7 +118,7 @@ static gint __resource_manager_comp(gconstpointer a, gconstpointer b)
 static gint __compare_path(gconstpointer a, gconstpointer b)
 {
 	char tmp_path[MAX_PATH] = {0, };
-	resource_node_list_t *tmp_node_info= (resource_node_list_t *)a;
+	resource_node_list_t *tmp_node_info = (resource_node_list_t *)a;
 
 	snprintf(tmp_path, MAX_PATH - 1, "%s%s", res_path, tmp_node_info->folder);
 	return strncmp(tmp_path, (char *)b, strlen(tmp_path));
@@ -243,66 +243,60 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 	}
 
 	switch (node_attr) {
-		case NODE_ATTR_SCREEN_DPI:
-			if (screen_dpi == -1)
-				screen_dpi =__get_dpi();
-			if (screen_dpi != atoi(val))
-				*invalid = true;
-			break;
-
-		case NODE_ATTR_SCREEN_DPI_RANGE:
-			sscanf(val, "%s %d %s %d", from, &min, to, &max);
-			if (screen_dpi == -1)
-				screen_dpi =__get_dpi();
-			if (!(min <= screen_dpi && screen_dpi <= max))
-				*invalid = true;
-			break;
-
-		case NODE_ATTR_SCREEN_WIDTH_RANGE:
-			sscanf(val, "%s %d %s %d", from, &min, to, &max);
-			if (screen_width == -1)
-				screen_width = __get_screen_width();
-			if (!(min <= screen_width && screen_width <= max))
-				*invalid = true;
-			break;
-
-		case NODE_ATTR_SCREEN_LARGE:
-			if (!(strcmp(val, "true")))
-				t_val = true;
+	case NODE_ATTR_SCREEN_DPI:
+		if (screen_dpi == -1)
+			screen_dpi = __get_dpi();
+		if (screen_dpi != atoi(val))
+			*invalid = true;
+		break;
+	case NODE_ATTR_SCREEN_DPI_RANGE:
+		sscanf(val, "%s %d %s %d", from, &min, to, &max);
+		if (screen_dpi == -1)
+			screen_dpi = __get_dpi();
+		if (!(min <= screen_dpi && screen_dpi <= max))
+			*invalid = true;
+		break;
+	case NODE_ATTR_SCREEN_WIDTH_RANGE:
+		sscanf(val, "%s %d %s %d", from, &min, to, &max);
+		if (screen_width == -1)
+			screen_width = __get_screen_width();
+		if (!(min <= screen_width && screen_width <= max))
+			*invalid = true;
+		break;
+	case NODE_ATTR_SCREEN_LARGE:
+		if (!(strcmp(val, "true")))
+			t_val = true;
+		else
+			t_val = false;
+		if (screen_size_large == -1) {
+			ret_bool = __get_screen_large();
+			if (ret_bool)
+				screen_size_large = 1;
 			else
-				t_val = false;
-			if (screen_size_large == -1) {
-				ret_bool = __get_screen_large();
-				if (ret_bool)
-					screen_size_large = 1;
-				else
-					screen_size_large = 0;
-			}
-			if (((bool)screen_size_large) != t_val)
-				*invalid = true;
-			break;
+				screen_size_large = 0;
+		}
+		if (((bool)screen_size_large) != t_val)
+			*invalid = true;
+		break;
+	case NODE_ATTR_SCREEN_BPP:
+		if (screen_bpp == -1)
+			screen_bpp = __get_screen_bpp();
+		if (screen_bpp != atoi(val))
+			*invalid = true;
+		break;
+	case NODE_ATTR_PLATFORM_VER:
+		if (version == NULL)
+			version = __get_platform_version();
+		if (strcmp(version, val))
+			*invalid = true;
+		break;
+	case NODE_ATTR_LANGUAGE:
+		if (cur_language == NULL)
+			cur_language = vconf_get_str(VCONFKEY_LANGSET);
 
-		case NODE_ATTR_SCREEN_BPP:
-			if (screen_bpp == -1)
-				screen_bpp = __get_screen_bpp();
-			if (screen_bpp != atoi(val))
-				*invalid = true;
-			break;
-
-		case NODE_ATTR_PLATFORM_VER:
-			if (version == NULL)
-				version = __get_platform_version();
-			if (strcmp(version, val))
-				*invalid = true;
-			break;
-
-		case NODE_ATTR_LANGUAGE:
-			if (cur_language == NULL)
-					cur_language = vconf_get_str(VCONFKEY_LANGSET);
-
-			if (strncmp(cur_language, val, strlen(val)))
-				*invalid = true;
-			break;
+		if (strncmp(cur_language, val, strlen(val)))
+			*invalid = true;
+		break;
 	}
 }
 
@@ -320,33 +314,27 @@ static void __bundle_iterator_get_best_node(const char *key, const char *val,
 	}
 
 	switch (node_attr) {
-		case NODE_ATTR_SCREEN_DPI:
-			*weight += WEIGHT_SCREEN_DPI;
-			break;
-
-		case NODE_ATTR_SCREEN_DPI_RANGE:
-			*weight += WEIGHT_SCREEN_DPI_RANGE;
-			break;
-
-		case NODE_ATTR_SCREEN_WIDTH_RANGE:
-			*weight += WEIGHT_SCREEN_WIDTH_RANGE;
-			break;
-
-		case NODE_ATTR_SCREEN_LARGE:
-			*weight += WEIGHT_SCREEN_LARGE;
-			break;
-
-		case NODE_ATTR_SCREEN_BPP:
-			*weight += WEIGHT_SCREEN_BPP;
-			break;
-
-		case NODE_ATTR_PLATFORM_VER:
-			*weight += WEIGHT_PLATFORM_VERSION;
-			break;
-
-		case NODE_ATTR_LANGUAGE:
-			*weight += WEIGHT_LANGUAGE;
-			break;
+	case NODE_ATTR_SCREEN_DPI:
+		*weight += WEIGHT_SCREEN_DPI;
+		break;
+	case NODE_ATTR_SCREEN_DPI_RANGE:
+		*weight += WEIGHT_SCREEN_DPI_RANGE;
+		break;
+	case NODE_ATTR_SCREEN_WIDTH_RANGE:
+		*weight += WEIGHT_SCREEN_WIDTH_RANGE;
+		break;
+	case NODE_ATTR_SCREEN_LARGE:
+		*weight += WEIGHT_SCREEN_LARGE;
+		break;
+	case NODE_ATTR_SCREEN_BPP:
+		*weight += WEIGHT_SCREEN_BPP;
+		break;
+	case NODE_ATTR_PLATFORM_VER:
+		*weight += WEIGHT_PLATFORM_VERSION;
+		break;
+	case NODE_ATTR_LANGUAGE:
+		*weight += WEIGHT_LANGUAGE;
+		break;
 	}
 }
 
@@ -373,21 +361,18 @@ static const char *__get_cache(aul_resource_e type,
 		return NULL;
 	} else {
 		switch (type) {
-			case AUL_RESOURCE_TYPE_IMAGE:
-				rsc_type = RSC_GROUP_TYPE_IMAGE;
-				break;
-
-			case AUL_RESOURCE_TYPE_LAYOUT:
-				rsc_type = RSC_GROUP_TYPE_LAYOUT;
-				break;
-
-			case AUL_RESOURCE_TYPE_SOUND:
-				rsc_type = RSC_GROUP_TYPE_SOUND;
-				break;
-
-			case AUL_RESOURCE_TYPE_BIN:
-				rsc_type = RSC_GROUP_TYPE_BIN;
-				break;
+		case AUL_RESOURCE_TYPE_IMAGE:
+			rsc_type = RSC_GROUP_TYPE_IMAGE;
+			break;
+		case AUL_RESOURCE_TYPE_LAYOUT:
+			rsc_type = RSC_GROUP_TYPE_LAYOUT;
+			break;
+		case AUL_RESOURCE_TYPE_SOUND:
+			rsc_type = RSC_GROUP_TYPE_SOUND;
+			break;
+		case AUL_RESOURCE_TYPE_BIN:
+			rsc_type = RSC_GROUP_TYPE_BIN;
+			break;
 		}
 	}
 
@@ -498,21 +483,18 @@ static void __put_cache(aul_resource_e type, const char *id,
 		return;
 	} else {
 		switch (type) {
-			case AUL_RESOURCE_TYPE_IMAGE:
-				rsc_type = RSC_GROUP_TYPE_IMAGE;
-				break;
-
-			case AUL_RESOURCE_TYPE_LAYOUT:
-				rsc_type = RSC_GROUP_TYPE_LAYOUT;
-				break;
-
-			case AUL_RESOURCE_TYPE_SOUND:
-				rsc_type = RSC_GROUP_TYPE_SOUND;
-				break;
-
-			case AUL_RESOURCE_TYPE_BIN:
-				rsc_type = RSC_GROUP_TYPE_BIN;
-				break;
+		case AUL_RESOURCE_TYPE_IMAGE:
+			rsc_type = RSC_GROUP_TYPE_IMAGE;
+			break;
+		case AUL_RESOURCE_TYPE_LAYOUT:
+			rsc_type = RSC_GROUP_TYPE_LAYOUT;
+			break;
+		case AUL_RESOURCE_TYPE_SOUND:
+			rsc_type = RSC_GROUP_TYPE_SOUND;
+			break;
+		case AUL_RESOURCE_TYPE_BIN:
+			rsc_type = RSC_GROUP_TYPE_BIN;
+			break;
 		}
 	}
 
@@ -565,21 +547,18 @@ static resource_group_t *__find_group(resource_data_t *data,
 		return NULL;
 	} else {
 		switch (type) {
-			case AUL_RESOURCE_TYPE_IMAGE:
-				rsc_type = RSC_GROUP_TYPE_IMAGE;
-				break;
-
-			case AUL_RESOURCE_TYPE_LAYOUT:
-				rsc_type = RSC_GROUP_TYPE_LAYOUT;
-				break;
-
-			case AUL_RESOURCE_TYPE_SOUND:
-				rsc_type = RSC_GROUP_TYPE_SOUND;
-				break;
-
-			case AUL_RESOURCE_TYPE_BIN:
-				rsc_type = RSC_GROUP_TYPE_BIN;
-				break;
+		case AUL_RESOURCE_TYPE_IMAGE:
+			rsc_type = RSC_GROUP_TYPE_IMAGE;
+			break;
+		case AUL_RESOURCE_TYPE_LAYOUT:
+			rsc_type = RSC_GROUP_TYPE_LAYOUT;
+			break;
+		case AUL_RESOURCE_TYPE_SOUND:
+			rsc_type = RSC_GROUP_TYPE_SOUND;
+			break;
+		case AUL_RESOURCE_TYPE_BIN:
+			rsc_type = RSC_GROUP_TYPE_BIN;
+			break;
 		}
 	}
 
@@ -724,13 +703,11 @@ static int __close(resource_manager_t *handle)
 	}
 
 	__invalidate_cache();
-	if (handle->cache != NULL) {
+	if (handle->cache != NULL)
 		g_hash_table_destroy(handle->cache);
-	}
 
-	if (handle->data != NULL) {
+	if (handle->data != NULL)
 		pkgmgrinfo_resource_close(handle->data);
-	}
 
 	free(handle);
 
@@ -822,11 +799,11 @@ static aul_resource_e __get_resource_type(char *type)
 
 	if (strcmp(type, RSC_GROUP_TYPE_IMAGE) == 0)
 		return AUL_RESOURCE_TYPE_IMAGE;
-	else if(strcmp(type, RSC_GROUP_TYPE_LAYOUT) == 0)
+	else if (strcmp(type, RSC_GROUP_TYPE_LAYOUT) == 0)
 		return AUL_RESOURCE_TYPE_LAYOUT;
-	else if(strcmp(type, RSC_GROUP_TYPE_SOUND) == 0)
+	else if (strcmp(type, RSC_GROUP_TYPE_SOUND) == 0)
 		return AUL_RESOURCE_TYPE_SOUND;
-	else if(strcmp(type, RSC_GROUP_TYPE_BIN) == 0)
+	else if (strcmp(type, RSC_GROUP_TYPE_BIN) == 0)
 		return AUL_RESOURCE_TYPE_BIN;
 	else
 		return -1;
@@ -906,9 +883,9 @@ static int __make_list(void)
 		group_type = tmp_group->type;
 		node_list = tmp_group->node_list;
 		memset(folder, '\0', MAX_PATH);
-		snprintf(folder, MAX_PATH - 1, "%s/",tmp_group->folder);
+		snprintf(folder, MAX_PATH - 1, "%s/", tmp_group->folder);
 
-		/*make struct and put it into all node list*/
+		/* make struct and put it into all node list */
 		tmp_node_struct = (resource_node_list_t *)calloc(1, sizeof(resource_node_list_t));
 		if (tmp_node_struct == NULL) {
 			LOGE("calloc failed");
@@ -924,7 +901,7 @@ static int __make_list(void)
 			if (tmp_node == NULL)
 				return AUL_RESOURCE_ERROR_IO_ERROR;
 
-			/*retrieve language value from each node*/
+			/* retrieve language value from each node */
 			b = tmp_node->attr;
 			if (b == NULL)
 				return AUL_RESOURCE_ERROR_IO_ERROR;
@@ -933,9 +910,9 @@ static int __make_list(void)
 				g_hash_table_add(supported_lang_list, strdup(node_lang));
 
 			memset(folder, '\0', MAX_PATH);
-			snprintf(folder, MAX_PATH - 1, "%s/",tmp_node->folder);
+			snprintf(folder, MAX_PATH - 1, "%s/", tmp_node->folder);
 
-			/*make struct and put it into all node list*/
+			/* make struct and put it into all node list */
 			tmp_node_struct = (resource_node_list_t *)calloc(1, sizeof(resource_node_list_t));
 			if (tmp_node_struct == NULL) {
 				LOGE("calloc failed");

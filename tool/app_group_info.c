@@ -20,9 +20,9 @@ static void print_idle_info(void)
 			printf("  pid : %d\n", pids[i]);
 			ret = aul_app_get_appid_bypid(pids[i], appid_buf, sizeof(appid_buf) - 1);
 
-			if (ret != AUL_R_OK) {
+			if (ret != AUL_R_OK)
 				appid_buf[0] = '\0';
-			}
+
 			printf("  appid : %s\n", appid_buf);
 		}
 
@@ -49,29 +49,26 @@ static int print_info(void)
 	printf("App group count : %d\n", group_cnt);
 	printf("\n");
 
-	if(group_cnt == 0){
+	if (group_cnt == 0) {
 		printf("No app groups\n");
 		goto FINISH;
 	}
 
-	for(group_num = 0; group_num < group_cnt; group_num++){
+	for (group_num = 0; group_num < group_cnt; group_num++) {
 		aul_app_group_get_group_pids(leader_pids[group_num], &member_cnt, &member_pids);
 
 		printf("< Group : %d >\n", group_num + 1);
 		printf("member cnt : %d\n", member_cnt);
 		printf("\n");
 
-		for(member_num = 0; member_num < member_cnt; member_num++){
+		for (member_num = 0; member_num < member_cnt; member_num++) {
 			ret = aul_app_get_appid_bypid(member_pids[member_num], appid_buf, sizeof(appid_buf) - 1);
-
-			if(ret != AUL_R_OK){
+			if (ret != AUL_R_OK)
 				appid_buf[0] = '\0';
-			}
 
 			ret = aul_app_get_pkgid_bypid(member_pids[member_num], pkgid_buf, sizeof(pkgid_buf) - 1);
-			if(ret != AUL_R_OK){
+			if (ret != AUL_R_OK)
 				pkgid_buf[0] = '\0';
-			}
 
 			win_id = aul_app_group_get_window(member_pids[member_num]);
 			fg = aul_app_group_get_fg_flag(member_pids[member_num]);
@@ -95,11 +92,10 @@ static int print_info(void)
 	}
 
 FINISH:
-
-	if(leader_pids != NULL)
+	if (leader_pids != NULL)
 		free(leader_pids);
 
-	if(leader_pids != NULL)
+	if (leader_pids != NULL)
 		free(member_pids);
 
 	return 0;

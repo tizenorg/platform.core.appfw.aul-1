@@ -343,7 +343,7 @@ static gboolean __add_history_handler(gpointer user_data)
 		rec.pkg_name = pkt->appid;
 		rec.app_path = app_path;
 
-		if(pkt->len > 0)
+		if (pkt->len > 0)
 			rec.arg = pkt->data;
 
 		SECURE_LOGD("add rua history %s %s", rec.pkg_name, rec.app_path);

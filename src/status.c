@@ -65,9 +65,8 @@ SLPAPI  int aul_app_get_status_bypid(int pid)
 {
 	int ret;
 
-	if (pid == getpid()) {
+	if (pid == getpid())
 		return app_status;
-	}
 
 	ret = __app_send_raw(AUL_UTIL_PID, APP_GET_STATUS, (unsigned char *)&pid, sizeof(pid));
 
@@ -81,10 +80,10 @@ SLPAPI int aul_add_status_local_cb(int (*func)(int status, void *data), void *da
 	if (func == NULL)
 		return -1;
 
-	// check known callback
+	/* check known callback */
 	while (cb) {
 		if (cb && cb->handler == func && cb->data == data) {
-			// already in list
+			/* already in list */
 			return 0;
 		}
 		cb = cb->next;
