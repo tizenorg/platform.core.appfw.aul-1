@@ -39,9 +39,20 @@
 #include "menu_db_util.h"
 #include "amd_app_group.h"
 
-GSList *app_status_info_list = NULL;
+typedef struct _app_status_info_t{
+	char appid[MAX_PACKAGE_STR_SIZE];
+	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
+	int status;
+	int pid;
+	int pad_pid;
+	bool is_subapp;
+	uid_t uid;
+} app_status_info_t;
 
-int _status_add_app_info_list(const char *appid, const char *app_path, int pid, int pad_pid, uid_t uid)
+static GSList *app_status_info_list = NULL;
+
+int _status_add_app_info_list(const char *appid, const char *app_path, int pid,
+				int pad_pid, bool is_subapp, uid_t uid)
 {
 	GSList *iter;
 	GSList *iter_next;
@@ -71,6 +82,7 @@ int _status_add_app_info_list(const char *appid, const char *app_path, int pid, 
 	info_t->status = STATUS_LAUNCHING;
 	info_t->pid = pid;
 	info_t->pad_pid = pad_pid;
+	info_t->is_subapp = is_subapp;
 	info_t->uid = uid;
 	app_status_info_list = g_slist_append(app_status_info_list, info_t);
 
@@ -159,7 +171,8 @@ int _status_app_is_running(const char *appid, uid_t uid)
 
 	for (iter = app_status_info_list; iter != NULL; iter = g_slist_next(iter)) {
 		info_t = (app_status_info_t *)iter->data;
-		if ((strncmp(appid, info_t->appid, MAX_PACKAGE_STR_SIZE) == 0) && (info_t->uid == uid))
+		if ((strncmp(appid, info_t->appid, MAX_PACKAGE_STR_SIZE) == 0)
+			&& (info_t->uid == uid) && !info_t->is_subapp)
 			return info_t->pid;
 	}
 
@@ -229,6 +242,20 @@ int _status_send_running_appinfo(int fd, uid_t uid)
 	return 0;
 }
 
+static inline int __find_pid_by_appid(const char *dname, const char *appid,
+		void *priv, uid_t uid)
+{
+	int pid = 0;
+
+	if (strncmp(appid, (char *)priv, MAX_LOCAL_BUFSZ-1) == 0) {
+		pid = atoi(dname);
+		if (pid != getpgid(pid) || app_group_is_sub_app(pid))
+			pid = 0;
+	}
+
+	return pid;
+}
+
 int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 {
 	int ret;
@@ -241,7 +268,7 @@ int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 	if (ai == NULL)
 		return -1;
 
-	ret = __proc_iter_appid(NULL, (void *)appid);
+	ret = __proc_iter_appid(__find_pid_by_appid, (void *)appid);
 
 	return ret;
 }
@@ -273,41 +300,6 @@ static int __get_pkginfo(const char *dname, const char *appid, void *priv, uid_t
  out:
 	if (menu_info != NULL)
 		_free_app_info_from_db(menu_info);
-	return 0;
-}
-
-int _status_send_running_appinfo_v2(int fd)
-{
-	app_pkt_t *pkt = NULL;
-	int len;
-	char buf[AUL_SOCK_MAXBUFF] = {0 ,};
-
-	__proc_iter_appid(__get_pkginfo, buf);
-	len = strlen(buf);
-
-	pkt = (app_pkt_t *)malloc(AUL_PKT_HEADER_SIZE + len);
-	if (!pkt) {
-		_E("malloc fail");
-		close(fd);
-		return 0;
-	}
-
-	pkt->cmd = APP_RUNNING_INFO_RESULT;
-	pkt->len = len;
-	memcpy(pkt->data, buf, len);
-
-	if ((len = send(fd, pkt, pkt->len + AUL_PKT_HEADER_SIZE, 0))
-			!= pkt->len + AUL_PKT_HEADER_SIZE) {
-		if (errno == EPIPE)
-			_E("send failed due to EPIPE.\n");
-		_E("send fail to client");
-	}
-
-	if(pkt)
-		free(pkt);
-
-	close(fd);
-
 	return 0;
 }
 

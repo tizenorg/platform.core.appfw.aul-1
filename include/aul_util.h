@@ -41,15 +41,6 @@
 			l = l_next,                     \
 			l_next = g_slist_next(l))
 
-typedef struct _app_status_info_t{
-	char appid[MAX_PACKAGE_STR_SIZE];
-	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
-	int status;
-	int pid;
-	int pad_pid;
-	uid_t uid;
-} app_status_info_t;
-
 int _add_app_status_info_list(char *appid, int pid, uid_t uid);
 int _update_app_status_info_list(int pid, int status, uid_t uid);
 int _remove_app_status_info_list(int pid, uid_t uid);

@@ -528,7 +528,8 @@ static int __compare_signature(const struct appinfo *ai, int cmd,
 }
 
 static int __get_pid_for_app_group(const char *appid, int pid, int caller_uid, bundle* kb,
-		int *lpid, gboolean *can_attach, gboolean *new_process, app_group_launch_mode* launch_mode)
+		int *lpid, gboolean *can_attach, gboolean *new_process,
+		app_group_launch_mode* launch_mode, bool *is_subapp)
 {
 	int st = -1;
 	int found_pid = -1;
@@ -536,6 +537,9 @@ static int __get_pid_for_app_group(const char *appid, int pid, int caller_uid, b
 
 	if (app_group_is_group_app(kb)) {
 		pid = -1;
+		*is_subapp = true;
+	} else {
+		*is_subapp = false;
 	}
 
 	if (pid > 0)
@@ -745,6 +749,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	gboolean new_process = FALSE;
 	app_group_launch_mode launch_mode;
 	const char *pad_type = LAUNCHPAD_PROCESS_POOL_SOCK;
+	bool is_subapp = false;
 
 	snprintf(tmpbuf, MAX_PID_STR_BUFSZ, "%d", caller_pid);
 	bundle_add(kb, AUL_K_CALLER_PID, tmpbuf);
@@ -808,7 +813,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	component_type = appinfo_get_value(ai, AIT_COMP);
 	if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
 		pid = __get_pid_for_app_group(appid, pid, caller_uid, kb,
-				&lpid, &can_attach, &new_process, &launch_mode);
+				&lpid, &can_attach, &new_process, &launch_mode, &is_subapp);
 		if (pid == -EILLEGALACCESS) {
 			__real_send(fd, pid);
 			return pid;
@@ -860,7 +865,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	}
 
 	if (pid > 0) {
-		_status_add_app_info_list(appid, app_path, pid, LAUNCHPAD_PID, caller_uid);
+		_status_add_app_info_list(appid, app_path, pid, LAUNCHPAD_PID, is_subapp, caller_uid);
 		if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
 			if (new_process) {
 				_D("add app group info");
