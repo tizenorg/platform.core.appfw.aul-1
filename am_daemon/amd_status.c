@@ -39,7 +39,7 @@
 #include "menu_db_util.h"
 #include "amd_app_group.h"
 
-typedef struct _app_status_info_t{
+typedef struct _app_status_info_t {
 	char appid[MAX_PACKAGE_STR_SIZE];
 	char app_path[MAX_PACKAGE_APP_PATH_SIZE];
 	int status;
@@ -60,8 +60,8 @@ int _status_add_app_info_list(const char *appid, const char *app_path, int pid,
 
 	GSLIST_FOREACH_SAFE(app_status_info_list, iter, iter_next) {
 		info_t = (app_status_info_t *)iter->data;
-		if(pid == info_t->pid) {
-			if(uid == info_t->uid)
+		if (pid == info_t->pid) {
+			if (uid == info_t->uid)
 				return 0;
 			else {
 				/* PID is unique so if it is exist but user value is not correct remove it. */
@@ -139,7 +139,7 @@ int _status_remove_app_info_list(int pid, uid_t uid)
 
 	GSLIST_FOREACH_SAFE(app_status_info_list, iter, iter_next) {
 		info_t = (app_status_info_t *)iter->data;
-		if((pid == info_t->pid) && ((info_t->uid == uid) || (info_t->uid == 0))) {
+		if ((pid == info_t->pid) && ((info_t->uid == uid) || (info_t->uid == 0))) {
 			app_status_info_list = g_slist_remove(app_status_info_list, info_t);
 			free(info_t);
 			break;

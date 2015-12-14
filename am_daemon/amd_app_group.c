@@ -23,6 +23,7 @@
 #include <Ecore_Wayland.h>
 #include <wayland-client.h>
 #include <tizen-extension-client-protocol.h>
+
 static struct tizen_policy *tz_policy;
 
 static void _reg_handle_global(void *data, struct wl_registry *reg,
@@ -94,7 +95,7 @@ static void __attach_window(int parent_wid, int child_wid)
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
-	//ecore_x_icccm_transient_for_set(child_wid, parent_wid);
+	/* ecore_x_icccm_transient_for_set(child_wid, parent_wid); */
 #endif
 }
 
@@ -123,7 +124,7 @@ static void __detach_window(int child_wid)
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
-	//ecore_x_icccm_transient_for_unset(child_wid);
+	/* ecore_x_icccm_transient_for_unset(child_wid); */
 #endif
 }
 
@@ -148,8 +149,7 @@ static gboolean __hash_table_cb(gpointer key, gpointer value,
 
 	while (itr != NULL) {
 		app_group_context_t *ac = (app_group_context_t*) itr->data;
-
-		if (ac->pid == pid) {
+		if (ac && ac->pid == pid) {
 			free(ac);
 			list = g_list_remove_link(list, itr);
 			if (g_list_length(list) == 0) {
@@ -186,9 +186,8 @@ static GList* __find_removable_apps(int from)
 				continue;
 			}
 
-			if (found) {
+			if (found)
 				list = g_list_append(list, GINT_TO_POINTER(gpids[j]));
-			}
 		}
 
 		if (gpids != NULL)
@@ -232,8 +231,7 @@ static void __set_fg_flag(int cpid, int flag, gboolean force)
 		GList *list = (GList*) value;
 		GList *i = g_list_first(list);
 		app_group_context_t *ac = (app_group_context_t*) i->data;
-
-		if (ac->pid == lpid) {
+		if (ac && ac->pid == lpid) {
 
 			while (i != NULL) {
 				ac = (app_group_context_t*) i->data;
@@ -291,8 +289,7 @@ static gboolean __is_visible(int cpid)
 		GList *list = (GList*) value;
 		GList *i = g_list_first(list);
 		app_group_context_t *ac = (app_group_context_t*) i->data;
-
-		if (ac->pid == lpid) {
+		if (ac && ac->pid == lpid) {
 			while (i != NULL) {
 				ac = (app_group_context_t*) i->data;
 
@@ -329,21 +326,17 @@ static gboolean __can_attach_window(bundle *b, const char *appid, app_group_laun
 		*launch_mode = APP_GROUP_LAUNCH_MODE_SINGLETON;
 
 	switch (*launch_mode) {
-		case APP_GROUP_LAUNCH_MODE_CALLER:
-		case APP_GROUP_LAUNCH_MODE_SINGLETON:
-			_D("launch mode from db is caller or singleton");
-
-			bundle_get_str(b, APP_SVC_K_LAUNCH_MODE, &str);
-			if (str != NULL && strncmp(str, "group", 5) == 0) {
+	case APP_GROUP_LAUNCH_MODE_CALLER:
+	case APP_GROUP_LAUNCH_MODE_SINGLETON:
+		_D("launch mode from db is caller or singleton");
+		bundle_get_str(b, APP_SVC_K_LAUNCH_MODE, &str);
+		if (str != NULL && strncmp(str, "group", 5) == 0)
 				return TRUE;
-			}
-			break;
-
-		case APP_GROUP_LAUNCH_MODE_GROUP:
-			return TRUE;
-
-		case APP_GROUP_LAUNCH_MODE_SINGLE:
-			return FALSE;
+		break;
+	case APP_GROUP_LAUNCH_MODE_GROUP:
+		return TRUE;
+	case APP_GROUP_LAUNCH_MODE_SINGLE:
+		return FALSE;
 	}
 
 	return FALSE;
@@ -374,10 +367,9 @@ static int __get_previous_pid(int pid)
 		int previous_pid = -1;
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && c->pid == pid)
 				return previous_pid;
-			}
+
 			previous_pid = ac->pid;
 			i = g_list_next(i);
 		}
@@ -392,7 +384,7 @@ static int __get_caller_pid(bundle *kb)
 	int pid;
 
 	pid_str = bundle_get_val(kb, AUL_K_ORG_CALLER_PID);
-	if(pid_str)
+	if (pid_str)
 		goto end;
 
 	pid_str = bundle_get_val(kb, AUL_K_CALLER_PID);
@@ -413,8 +405,7 @@ static app_group_context_t* __detach_context_from_recycle_bin(int pid)
 
 	while (iter) {
 		app_group_context_t *ac = (app_group_context_t*) iter->data;
-
-		if (ac->pid == pid) {
+		if (ac && ac->pid == pid) {
 			recycle_bin = g_list_remove_link(recycle_bin, iter);
 			return ac;
 		}
@@ -479,9 +470,8 @@ static void __group_remove(int pid)
 	g_hash_table_foreach_remove(app_group_hash, __hash_table_cb,
 			GINT_TO_POINTER(pid));
 
-	if (ppid != -1) {
+	if (ppid != -1)
 		app_group_set_status(ppid, -1, false);
-	}
 }
 
 static app_group_context_t* __get_context(int pid)
@@ -496,10 +486,9 @@ static app_group_context_t* __get_context(int pid)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid)
 				return ac;
-			}
+
 			i = g_list_next(i);
 		}
 	}
@@ -561,11 +550,11 @@ static void __do_recycle(app_group_context_t *context)
 		aul_send_app_status_change_signal(context->pid, appid, pkgid,
 						STATUS_BACKGROUND,
 						APP_TYPE_UI);
-//		_status_find_service_apps(context->pid, STATUS_BG, __prepare_to_suspend_services, true);
+		/* _status_find_service_apps(context->pid, STATUS_BG, __prepare_to_suspend_services, true); */
 		context->fg = 0;
 	}
 	recycle_bin = g_list_append(recycle_bin, context);
-//	_revoke_temporary_permission(context->pid);
+	/* _revoke_temporary_permission(context->pid); */
 }
 
 void app_group_init()
@@ -614,8 +603,7 @@ int app_group_set_window(int pid, int wid)
 		int previous_wid = 0;
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid) {
 				ac->wid = wid;
 				if (previous_wid != 0)
 					__attach_window(previous_wid, wid);
@@ -685,9 +673,8 @@ gboolean app_group_is_group_app(bundle* kb)
 				strncmp(mode, "singleton", 9) == 0)) {
 		bundle_get_str(kb, APP_SVC_K_LAUNCH_MODE, &str);
 
-		if (str != NULL && strncmp(str, "group", 5) == 0) {
+		if (str != NULL && strncmp(str, "group", 5) == 0)
 			return TRUE;
-		}
 	} else if (mode != NULL && strncmp(mode, "group", 5) == 0) {
 		return TRUE;
 	}
@@ -735,7 +722,7 @@ gboolean app_group_is_leader_pid(int pid)
 
 	app_group_get_leader_pids(&cnt, &pids);
 
-	for (i=0; i<cnt; i++) {
+	for (i = 0; i < cnt; i++) {
 		if (pid == pids[i]) {
 			free(pids);
 			return TRUE;
@@ -902,8 +889,7 @@ int app_group_get_status(int pid)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid)
+			if (ac && ac->pid == pid)
 				return  ac->status;
 
 			i = g_list_next(i);
@@ -924,8 +910,7 @@ int app_group_set_status(int pid, int status, gboolean force)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid) {
 				if (status > 0)
 					ac->status = status;
 				GList *last = g_list_last(list);
@@ -970,10 +955,9 @@ int app_group_get_fg_flag(int pid)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid)
 				return ac->fg;
-			}
+
 			i = g_list_next(i);
 		}
 	}
@@ -1002,8 +986,7 @@ int app_group_set_hint(int pid, bundle *kb)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid) {
 				if (str_leader != NULL && strcmp(str_leader, "true") == 0)
 					ac->can_be_leader = 1;
 				if (str_reroute != NULL && strcmp(str_reroute, "true") == 0)
@@ -1039,8 +1022,7 @@ int app_group_find_second_leader(int lpid)
 void app_group_remove_leader_pid(int lpid)
 {
 	GList *list = (GList*)g_hash_table_lookup(app_group_hash,
-	              GINT_TO_POINTER(lpid));
-
+			GINT_TO_POINTER(lpid));
 	if (list != NULL) {
 		GList *next = g_list_next(list);
 
@@ -1068,9 +1050,8 @@ int app_group_can_start_app(const char *appid, bundle *b, gboolean *can_attach,
 		*can_attach = TRUE;
 
 		val = bundle_get_val(b, AUL_K_ORG_CALLER_PID);
-		if (val == NULL) {
+		if (val == NULL)
 			val = bundle_get_val(b, AUL_K_CALLER_PID);
-		}
 
 		if (val == NULL) {
 			_E("no caller pid");
@@ -1170,10 +1151,9 @@ int app_group_can_reroute(int pid)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid)
 				return ac->reroute;
-			}
+
 			i = g_list_next(i);
 		}
 	}
@@ -1212,15 +1192,14 @@ void app_group_lower(int pid, int *exit)
 
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid) {
 				if (ac->can_shift) {
 					__detach_window(ac->wid);
 					ac->can_shift = 0;
 #ifdef WAYLAND
 					ecore_wl_window_lower((Ecore_Wl_Window *)ac->wid);
 #else
-					//ecore_x_window_lower(ac->wid);
+					/* ecore_x_window_lower(ac->wid); */
 #endif
 				}
 				return;
@@ -1288,10 +1267,8 @@ int app_group_find_pid_from_recycle_bin(const char *appid)
 	while (iter) {
 		app_group_context_t *ac = (app_group_context_t*) iter->data;
 		const char *appid_from_bin = _status_app_get_appid_bypid(ac->pid);
-
-		if (appid && appid_from_bin && strcmp(appid, appid_from_bin) == 0) {
+		if (appid && appid_from_bin && strcmp(appid, appid_from_bin) == 0)
 			return ac->pid;
-		}
 
 		iter = g_list_next(iter);
 	}

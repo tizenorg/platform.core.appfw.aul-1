@@ -86,7 +86,7 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
-	for ( pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
+	for (pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
 		token = strtok_r(pkt_data, ";", &saveptr1);
 		if (token == NULL)
 			break;
