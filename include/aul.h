@@ -1363,6 +1363,42 @@ int aul_listen_app_launch_signal(int (*func) (int, void *), void *data);
 
 /**
  * @par Description:
+ *	This API sets callback fuction that will be called when applications are launched.
+ * @par Purpose:
+ *	This API's purpose is to listen the application launching event.
+ *	In general, task manager Application need this API.
+ *
+ * @param[in]	func		callback function
+ * @param[in]	data		user data
+ * @return	0 if success, negative value if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @see
+ *	aul_listen_app_dead_signal
+ * @code
+ * #include <aul.h>
+ *
+ * int app_launch_handler(int pid, const char *app_id, void *data)
+ * {
+ * 	printf("===> %s : %d, %s\n", __FUNCTION__, pid, app_id);
+ * 	return 0;
+ * }
+ *
+ * void dead_listen()
+ * {
+ *	aul_listen_app_launch_signal(app_launch_handler, NULL);
+ * }
+ *
+ * @endcode
+ * @remark
+ *	This API is only available in User Session.
+ *
+ */
+int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), void *data);
+
+/**
+ * @par Description:
  *	This API gets status of specified application process id.
  * @par Purpose:
  *	This API's purpose is to get the application's status.
