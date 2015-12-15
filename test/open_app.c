@@ -54,11 +54,11 @@ int launch(int debug_option)
 {
 	int pid;
 
-	if(!debug_option)
+	if (!debug_option)
 		pid = aul_open_app(gargv[1]);
 	else {
 		kb = create_internal_bundle();
-		if (NULL == kb) {
+		if (kb == NULL) {
 			printf("bundle creation fail\n");
 			return -1;
 		}
@@ -77,7 +77,7 @@ static int __launch_app_dead_handler(int pid, void *data)
 {
 	int listen_pid = (intptr_t)data;
 
-	if(listen_pid == pid)
+	if (listen_pid == pid)
 		g_main_loop_quit(mainloop);
 
 	return 0;
@@ -96,7 +96,7 @@ static gboolean run_func(void *data)
 	if (kb) {
 		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
 
-		if (str && strcmp(str, "SYNC") == 0 )
+		if (str && strcmp(str, "SYNC") == 0)
 			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
 		else
 			g_main_loop_quit(mainloop);
@@ -114,7 +114,7 @@ static gboolean run_func(void *data)
 
 int main(int argc, char **argv)
 {
-	if ((argc < 2)||(argc > 3)) {
+	if ((argc < 2) || (argc > 3)) {
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -122,8 +122,8 @@ int main(int argc, char **argv)
 	gargc = argc;
 	gargv = argv;
 
-	if(argc == 3) {
-		if( (strcmp(argv[2],"-d")  != 0 ) && (strcmp(argv[1],"-d")  != 0 ) ) {
+	if (argc == 3) {
+		if ((strcmp(argv[2], "-d") != 0) && (strcmp(argv[1], "-d") != 0)) {
 			printf("additionnal argument should be -d to enable debugging\n");
 			print_usage(argv[0]);
 			exit(EXIT_FAILURE);

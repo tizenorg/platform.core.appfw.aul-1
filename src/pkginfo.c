@@ -82,11 +82,10 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 		return AUL_R_EINVAL;
 
 	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_RUNNING_INFO, NULL, 0);
-
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
-	for ( pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
+	for (pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
 		token = strtok_r(pkt_data, ";", &saveptr1);
 		if (token == NULL)
 			break;
