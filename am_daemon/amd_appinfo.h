@@ -41,6 +41,7 @@ enum appinfo_type {
 	AIT_BG_CATEGORY,
 	AIT_LAUNCH_MODE,
 	AIT_GLOBAL,
+	AIT_EFFECTIVE_APPID,
 	AIT_MAX
 };
 
