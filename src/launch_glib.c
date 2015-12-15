@@ -154,9 +154,9 @@ SLPAPI int aul_launch_argv_handler(int argc, char **argv)
 		return AUL_R_ENOINIT;
 
 	b = bundle_import_from_argv(argc, argv);
-	if (b == NULL) {
+	if (b == NULL)
 		_E("bundle for APP_START is NULL");
-	}
+
 	if (g_idle_add(__app_start_internal, b) > 0)
 		return AUL_R_OK;
 	else
@@ -168,9 +168,9 @@ SLPAPI int aul_launch_local(bundle *b)
 	if (!aul_is_initialized())
 		return AUL_R_ENOINIT;
 
-	if (b == NULL) {
+	if (b == NULL)
 		_E("bundle for APP_START is NULL");
-	}
+
 	if (g_idle_add(__app_start_internal, b) > 0)
 		return AUL_R_OK;
 	else

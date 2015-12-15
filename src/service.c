@@ -1346,7 +1346,7 @@ SLPAPI int aul_svc_set_loader_id(bundle *b, int loader_id)
 		return AUL_SVC_RET_EINVAL;
 	}
 
-	snprintf(tmp, sizeof(tmp),"%d", loader_id);
+	snprintf(tmp, sizeof(tmp), "%d", loader_id);
 	return __set_bundle(b, AUL_K_LOADER_ID, tmp);
 }
 

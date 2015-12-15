@@ -83,15 +83,13 @@ int app_start(bundle *kb)
 
 	_app_start_res_prepare(kb);
 	__call_aul_handler(AUL_START, kb);
-	// Handle the DataControl callback
+	/* Handle the DataControl callback */
 	str = bundle_get_val(kb, AUL_K_DATA_CONTROL_TYPE);
-	if (str != NULL && strcmp(str, "CORE") == 0)
-	{
+	if (str != NULL && strcmp(str, "CORE") == 0) {
 		if (__dc_handler != NULL)
-		{
-			__dc_handler(kb, 0, NULL); // bundle, request_id, data
-		}
+			__dc_handler(kb, 0, NULL); /* bundle, request_id, data */
 	}
+
 	return 0;
 }
 
@@ -165,44 +163,45 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 	int res = AUL_R_OK;
 
 	res = bundle_encode(kb, &kb_data, &datalen);
-	if (res != BUNDLE_ERROR_NONE) {
+	if (res != BUNDLE_ERROR_NONE)
 		return AUL_R_EINVAL;
-	}
+
 	if ((res = __app_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, ret_fd)) < 0) {
 		switch (res) {
-			case -EINVAL:
-				res = AUL_R_EINVAL;
-				break;
-			case -ECOMM:
-				res = AUL_R_ECOMM;
-				break;
-			case -EAGAIN:
-				res = AUL_R_ETIMEOUT;
-				break;
-			case -ELOCALLAUNCH_ID:
-				res = AUL_R_LOCAL;
-				break;
-			case -EILLEGALACCESS:
-				res = AUL_R_EILLACC;
-				break;
-			case -ETERMINATING:
-				res = AUL_R_ETERMINATING;
-				break;
-			case -ENOLAUNCHPAD:
-				res = AUL_R_ENOLAUNCHPAD;
-				break;
+		case -EINVAL:
+			res = AUL_R_EINVAL;
+			break;
+		case -ECOMM:
+			res = AUL_R_ECOMM;
+			break;
+		case -EAGAIN:
+			res = AUL_R_ETIMEOUT;
+			break;
+		case -ELOCALLAUNCH_ID:
+			res = AUL_R_LOCAL;
+			break;
+		case -EILLEGALACCESS:
+			res = AUL_R_EILLACC;
+			break;
+		case -ETERMINATING:
+			res = AUL_R_ETERMINATING;
+			break;
+		case -ENOLAUNCHPAD:
+			res = AUL_R_ENOLAUNCHPAD;
+			break;
 #ifdef _APPFW_FEATURE_APP_CONTROL_LITE
-			case -EUGLOCAL_LAUNCH:
-				res = AUL_R_UG_LOCAL;
-				break;
+		case -EUGLOCAL_LAUNCH:
+			res = AUL_R_UG_LOCAL;
+			break;
 #endif
-			case -EREJECTED:
-				res = AUL_R_EREJECTED;
-				break;
-			default:
-				res = AUL_R_ERROR;
+		case -EREJECTED:
+			res = AUL_R_EREJECTED;
+			break;
+		default:
+			res = AUL_R_ERROR;
 		}
 	}
+
 	free(kb_data);
 
 	return res;
@@ -317,9 +316,9 @@ static int __app_launch_local(bundle *b)
 	if (!aul_is_initialized())
 		return AUL_R_ENOINIT;
 
-	if (b == NULL) {
+	if (b == NULL)
 		_E("bundle for APP_START is NULL");
-	}
+
 	if (g_idle_add(__app_start_internal, b) > 0)
 		return AUL_R_OK;
 	else
@@ -340,39 +339,40 @@ int app_request_to_launchpad_with_fd(int cmd, const char *appid, bundle *kb, int
 {
 	int must_free = 0;
 	int ret = 0;
+	bundle *b;
 
 	SECURE_LOGD("launch request : %s", appid);
 	if (kb == NULL) {
 		kb = bundle_create();
 		must_free = 1;
-	} else
+	} else {
 		__clear_internal_key(kb);
+	}
 
 	ret = __app_send_cmd_with_fd(AUL_UTIL_PID, uid, cmd, kb, fd);
 
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
 		_E("app_request_to_launchpad : Same Process Send Local");
-		bundle *b;
 
 		switch (cmd) {
-			case APP_START:
-			case APP_START_RES:
-				b = bundle_dup(kb);
-				ret = __app_launch_local(b);
-				break;
-			case APP_OPEN:
-			case APP_RESUME:
-			case APP_RESUME_BY_PID:
-				ret = __app_resume_local();
-				break;
-			default:
-				_E("no support packet");
+		case APP_START:
+		case APP_START_RES:
+			b = bundle_dup(kb);
+			ret = __app_launch_local(b);
+			break;
+		case APP_OPEN:
+		case APP_RESUME:
+		case APP_RESUME_BY_PID:
+			ret = __app_resume_local();
+			break;
+		default:
+			_E("no support packet");
 		}
 
 	}
 
-	/*   cleanup */
+	/* cleanup */
 	if (must_free)
 		bundle_free(kb);
 
@@ -393,13 +393,15 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 {
 	int must_free = 0;
 	int ret = 0;
+	bundle *b;
 
 	SECURE_LOGD("launch request : %s", appid);
 	if (kb == NULL) {
 		kb = bundle_create();
 		must_free = 1;
-	} else
+	} else {
 		__clear_internal_key(kb);
+	}
 
 	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
@@ -408,21 +410,20 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
 		_E("app_request_to_launchpad : Same Process Send Local");
-		bundle *b;
 
 		switch (cmd) {
-			case APP_START:
-			case APP_START_RES:
-				b = bundle_dup(kb);
-				ret = __app_launch_local(b);
-				break;
-			case APP_OPEN:
-			case APP_RESUME:
-			case APP_RESUME_BY_PID:
-				ret = __app_resume_local();
-				break;
-			default:
-				_E("no support packet");
+		case APP_START:
+		case APP_START_RES:
+			b = bundle_dup(kb);
+			ret = __app_launch_local(b);
+			break;
+		case APP_OPEN:
+		case APP_RESUME:
+		case APP_RESUME_BY_PID:
+			ret = __app_resume_local();
+			break;
+		default:
+			_E("no support packet");
 		}
 
 	}
@@ -599,10 +600,8 @@ int aul_register_init_callback(
 
 int aul_initialize()
 {
-	if (aul_initialized) {
-		//_E("aul already initialized");
+	if (aul_initialized)
 		return AUL_R_ECANCELED;
-	}
 
 	aul_fd = __create_server_sock(getpid());
 	if (aul_fd < 0) {
@@ -616,12 +615,10 @@ int aul_initialize()
 
 SLPAPI void aul_finalize()
 {
-
 	aul_launch_fini();
 
-	if (aul_initialized) {
+	if (aul_initialized)
 		close(aul_fd);
-	}
 
 	return;
 }
@@ -705,15 +702,15 @@ SLPAPI int aul_terminate_pid(int pid)
 
 SLPAPI int aul_terminate_bgapp_pid(int pid)
 {
-        char pkgname[MAX_PID_STR_BUFSZ];
-        int ret;
+	char pkgname[MAX_PID_STR_BUFSZ];
+	int ret;
 
-        if (pid <= 0)
-                return AUL_R_EINVAL;
+	if (pid <= 0)
+		return AUL_R_EINVAL;
 
-        snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
-        ret = app_request_to_launchpad(APP_TERM_BGAPP_BY_PID, pkgname, NULL);
-        return ret;
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad(APP_TERM_BGAPP_BY_PID, pkgname, NULL);
+	return ret;
 }
 
 SLPAPI int aul_terminate_pid_without_restart(int pid)
@@ -769,22 +766,22 @@ SLPAPI int aul_unset_data_control_provider_cb(void)
 
 SLPAPI void aul_set_preinit_window(void *evas_object)
 {
-        __window_object = evas_object;
+	__window_object = evas_object;
 }
 
 SLPAPI void* aul_get_preinit_window(const char *win_name)
 {
-        return __window_object;
+	return __window_object;
 }
 
 SLPAPI void aul_set_preinit_background(void *evas_object)
 {
-        __bg_object = evas_object;
+	__bg_object = evas_object;
 }
 
 SLPAPI void* aul_get_preinit_background(void)
 {
-        return __bg_object;
+	return __bg_object;
 }
 
 SLPAPI void aul_set_preinit_conformant(void *evas_object)

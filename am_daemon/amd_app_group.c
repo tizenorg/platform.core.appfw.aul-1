@@ -110,7 +110,7 @@ static void __attach_window(int parent_wid, int child_wid)
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
-	//ecore_x_icccm_transient_for_set(child_wid, parent_wid);
+	/* ecore_x_icccm_transient_for_set(child_wid, parent_wid); */
 #endif
 }
 
@@ -139,13 +139,13 @@ static void __detach_window(int child_wid)
 	wl_registry_destroy(reg);
 	wl_display_disconnect(dpy);
 #else
-	//ecore_x_icccm_transient_for_unset(child_wid);
+	/* ecore_x_icccm_transient_for_unset(child_wid); */
 #endif
 }
 
 static gint __comp_pid(gconstpointer a, gconstpointer b)
 {
-	app_group_context_t *ac1 = (app_group_context_t*) a;
+	app_group_context_t *ac1 = (app_group_context_t *)a;
 
 	return ac1->pid - GPOINTER_TO_INT(b);
 }
@@ -159,13 +159,13 @@ static gboolean __hash_table_cb(gpointer key, gpointer value,
 		gpointer user_data)
 {
 	int pid = GPOINTER_TO_INT(user_data);
-	GList *list = (GList*) value;
+	GList *list = (GList *)value;
 	GList *itr = g_list_first(list);
+	app_group_context_t *ac;
 
 	while (itr != NULL) {
-		app_group_context_t *ac = (app_group_context_t*) itr->data;
-
-		if (ac->pid == pid) {
+		ac = (app_group_context_t *)itr->data;
+		if (ac && ac->pid == pid) {
 			free(ac);
 			list = g_list_remove_link(list, itr);
 			if (g_list_length(list) == 0) {
@@ -186,15 +186,14 @@ static GList* __find_removable_apps(int from)
 	int *pids = NULL;
 	GList *list = NULL;
 	gboolean found = FALSE;
+	int i;
+	int j;
+	int *gpids = NULL;
+	int gcnt;
 
 	app_group_get_leader_pids(&cnt, &pids);
 
-	int i, j;
-
 	for (i = 0; i < cnt; i++) {
-		int *gpids = NULL;
-		int gcnt;
-
 		app_group_get_group_pids(pids[i], &gcnt, &gpids);
 		for (j = 0; j < gcnt; j++) {
 			if (gpids[j] == from) {
@@ -202,9 +201,8 @@ static GList* __find_removable_apps(int from)
 				continue;
 			}
 
-			if (found) {
+			if (found)
 				list = g_list_append(list, GINT_TO_POINTER(gpids[j]));
-			}
 		}
 
 		if (gpids != NULL)
@@ -239,26 +237,26 @@ static void __set_fg_flag(int cpid, int flag, gboolean force)
 {
 	int lpid = app_group_get_leader_pid(cpid);
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	const char *appid = NULL;
+	const char *pkgid = NULL;
+	const struct appinfo *ai = NULL;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 /* BG management
 	int bg_category = 0x00;
 */
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-		app_group_context_t *ac = (app_group_context_t*) i->data;
-
-		if (ac->pid == lpid) {
-
+		list = (GList *)value;
+		i = g_list_first(list);
+		ac = (app_group_context_t *)i->data;
+		if (ac && ac->pid == lpid) {
 			while (i != NULL) {
 				ac = (app_group_context_t*) i->data;
-
-				if (ac->fg != flag || force == TRUE) {
-					const char *appid = NULL;
-					const char *pkgid = NULL;
-					const struct appinfo *ai = NULL;
-
+				if ((ac && ac->fg != flag) || force == TRUE) {
 					appid = _status_app_get_appid_bypid(ac->pid);
 					ai = appinfo_find(getuid(), appid);
 					pkgid = appinfo_get_value(ai, AIT_PKGID);
@@ -300,19 +298,21 @@ static gboolean __is_visible(int cpid)
 {
 	int lpid = app_group_get_leader_pid(cpid);
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-		app_group_context_t *ac = (app_group_context_t*) i->data;
-
-		if (ac->pid == lpid) {
+		list = (GList *)value;
+		i = g_list_first(list);
+		ac = (app_group_context_t *)i->data;
+		if (ac && ac->pid == lpid) {
 			while (i != NULL) {
 				ac = (app_group_context_t*) i->data;
-
-				if (ac->status == STATUS_VISIBLE)
+				if (ac && ac->status == STATUS_VISIBLE)
 					return TRUE;
 
 				i = g_list_next(i);
@@ -345,21 +345,18 @@ static gboolean __can_attach_window(bundle *b, const char *appid, app_group_laun
 		*launch_mode = APP_GROUP_LAUNCH_MODE_SINGLETON;
 
 	switch (*launch_mode) {
-		case APP_GROUP_LAUNCH_MODE_CALLER:
-		case APP_GROUP_LAUNCH_MODE_SINGLETON:
-			_D("launch mode from db is caller or singleton");
+	case APP_GROUP_LAUNCH_MODE_CALLER:
+	case APP_GROUP_LAUNCH_MODE_SINGLETON:
+		_D("launch mode from db is caller or singleton");
 
-			bundle_get_str(b, APP_SVC_K_LAUNCH_MODE, &str);
-			if (str != NULL && strncmp(str, "group", 5) == 0) {
-				return TRUE;
-			}
-			break;
-
-		case APP_GROUP_LAUNCH_MODE_GROUP:
+		bundle_get_str(b, APP_SVC_K_LAUNCH_MODE, &str);
+		if (str != NULL && strncmp(str, "group", 5) == 0)
 			return TRUE;
-
-		case APP_GROUP_LAUNCH_MODE_SINGLE:
-			return FALSE;
+		break;
+	case APP_GROUP_LAUNCH_MODE_GROUP:
+		return TRUE;
+	case APP_GROUP_LAUNCH_MODE_SINGLE:
+		return FALSE;
 	}
 
 	return FALSE;
@@ -379,21 +376,24 @@ static gboolean __can_be_leader(bundle *b)
 
 static int __get_previous_pid(int pid)
 {
+	int previous_pid = -1;
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
+		list = (GList *)value;
+		i = g_list_first(list);
 
-		int previous_pid = -1;
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t*)i->data;
+			if (ac && ac->pid == pid)
 				return previous_pid;
-			}
+
 			previous_pid = ac->pid;
 			i = g_list_next(i);
 		}
@@ -408,7 +408,7 @@ static int __get_caller_pid(bundle *kb)
 	int pid;
 
 	pid_str = bundle_get_val(kb, AUL_K_ORG_CALLER_PID);
-	if(pid_str)
+	if (pid_str)
 		goto end;
 
 	pid_str = bundle_get_val(kb, AUL_K_CALLER_PID);
@@ -426,11 +426,11 @@ end:
 static app_group_context_t* __detach_context_from_recycle_bin(int pid)
 {
 	GList *iter = recycle_bin;
+	app_group_context_t *ac;
 
 	while (iter) {
-		app_group_context_t *ac = (app_group_context_t*) iter->data;
-
-		if (ac->pid == pid) {
+		ac = (app_group_context_t *)iter->data;
+		if (ac && ac->pid == pid) {
 			recycle_bin = g_list_remove_link(recycle_bin, iter);
 			return ac;
 		}
@@ -446,10 +446,10 @@ static void __group_add(int leader_pid, int pid, int wid, app_group_launch_mode 
 			int caller_pid, int can_shift, int recycle)
 {
 	app_group_context_t *ac = NULL;
+	GList *list;
 
 	if ((ac = __detach_context_from_recycle_bin(pid)) == NULL) {
 		ac = malloc(sizeof(app_group_context_t));
-
 		if (ac == NULL) {
 			_E("out of memory");
 			return;
@@ -472,7 +472,7 @@ static void __group_add(int leader_pid, int pid, int wid, app_group_launch_mode 
 
 	dead_pid = -1;
 
-	GList *list = (GList*) g_hash_table_lookup(app_group_hash,
+	list = (GList *)g_hash_table_lookup(app_group_hash,
 			GINT_TO_POINTER(leader_pid));
 	if (list != NULL) {
 		if (g_list_find_custom(list, GINT_TO_POINTER(pid), __comp_pid) != NULL) {
@@ -492,30 +492,32 @@ static void __group_add(int leader_pid, int pid, int wid, app_group_launch_mode 
 static void __group_remove(int pid)
 {
 	int ppid = __get_previous_pid(pid);
+
 	g_hash_table_foreach_remove(app_group_hash, __hash_table_cb,
 			GINT_TO_POINTER(pid));
 
-	if (ppid != -1) {
+	if (ppid != -1)
 		app_group_set_status(ppid, -1, false);
-	}
 }
 
 static app_group_context_t* __get_context(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
+		list = (GList *)value;
+		i = g_list_first(list);
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t *)i->data;
+			if (ac && ac->pid == pid)
 				return ac;
-			}
+
 			i = g_list_next(i);
 		}
 	}
@@ -543,9 +545,9 @@ static int __can_reroute(int pid)
 	return 0;
 }
 
-static app_group_context_t* __context_dup(const app_group_context_t *context)
+static app_group_context_t *__context_dup(const app_group_context_t *context)
 {
-	app_group_context_t* dup;
+	app_group_context_t *dup;
 
 	if (!context) {
 		_E("context is NULL.");
@@ -564,11 +566,11 @@ static app_group_context_t* __context_dup(const app_group_context_t *context)
 
 static void __do_recycle(app_group_context_t *context)
 {
-	if (context->fg) {
-		const char *appid = NULL;
-		const char *pkgid = NULL;
-		const struct appinfo *ai = NULL;
+	const char *appid = NULL;
+	const char *pkgid = NULL;
+	const struct appinfo *ai = NULL;
 
+	if (context->fg) {
 		appid = _status_app_get_appid_bypid(context->pid);
 		ai = appinfo_find(getuid(), appid);
 		pkgid = appinfo_get_value(ai, AIT_PKGID);
@@ -577,11 +579,11 @@ static void __do_recycle(app_group_context_t *context)
 		aul_send_app_status_change_signal(context->pid, appid, pkgid,
 						STATUS_BACKGROUND,
 						APP_TYPE_UI);
-//		_status_find_service_apps(context->pid, STATUS_BG, __prepare_to_suspend_services, true);
+		/* _status_find_service_apps(context->pid, STATUS_BG, __prepare_to_suspend_services, true); */
 		context->fg = 0;
 	}
 	recycle_bin = g_list_append(recycle_bin, context);
-//	_revoke_temporary_permission(context->pid);
+	/* _revoke_temporary_permission(context->pid); */
 }
 
 void app_group_init()
@@ -592,9 +594,10 @@ void app_group_init()
 
 void app_group_remove(int pid)
 {
-	__group_remove(pid);
-	app_group_context_t *context = __detach_context_from_recycle_bin(pid);
+	app_group_context_t *context;
 
+	__group_remove(pid);
+	context = __detach_context_from_recycle_bin(pid);
 	if (context)
 		free(context);
 }
@@ -620,25 +623,27 @@ int app_group_get_window(int pid)
 int app_group_set_window(int pid, int wid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	int previous_wid;
+	int caller_wid;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
-		int previous_wid = 0;
+		list = (GList *)value;
+		i = g_list_first(list);
+		previous_wid = 0;
 		while (i != NULL) {
 			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			if (ac && ac->pid == pid) {
 				ac->wid = wid;
 				if (previous_wid != 0)
 					__attach_window(previous_wid, wid);
 
 				if (ac->can_shift && ac->caller_pid > 0) {
-					int caller_wid = app_group_get_window(ac->caller_pid);
-
+					caller_wid = app_group_get_window(ac->caller_pid);
 					if (caller_wid != 0)
 						__attach_window(caller_wid, wid);
 				}
@@ -662,14 +667,14 @@ int app_group_set_window(int pid, int wid)
 
 void app_group_clear_top(int pid)
 {
+	int p;
 	GList *list = __find_removable_apps(pid);
 
 	if (list != NULL) {
 		GList *itr = g_list_last(list);
 
 		while (itr != NULL) {
-			int p = GPOINTER_TO_INT(itr->data);
-
+			p = GPOINTER_TO_INT(itr->data);
 			__detach_window(p);
 			_term_sub_app(p);
 			app_group_remove(p);
@@ -681,13 +686,13 @@ void app_group_clear_top(int pid)
 
 gboolean app_group_is_group_app(bundle* kb)
 {
-	if (kb == NULL)
-		return FALSE;
-
 	char *str = NULL;
 	const char *mode = NULL;
 	char *appid = NULL;
 	const struct appinfo *ai = NULL;
+
+	if (kb == NULL)
+		return FALSE;
 
 	bundle_get_str(kb, AUL_K_APPID, &appid);
 
@@ -701,9 +706,8 @@ gboolean app_group_is_group_app(bundle* kb)
 				strncmp(mode, "singleton", 9) == 0)) {
 		bundle_get_str(kb, APP_SVC_K_LAUNCH_MODE, &str);
 
-		if (str != NULL && strncmp(str, "group", 5) == 0) {
+		if (str != NULL && strncmp(str, "group", 5) == 0)
 			return TRUE;
-		}
 	} else if (mode != NULL && strncmp(mode, "group", 5) == 0) {
 		return TRUE;
 	}
@@ -714,13 +718,14 @@ gboolean app_group_is_group_app(bundle* kb)
 void app_group_get_leader_pids(int *cnt, int **pids)
 {
 	GHashTableIter iter;
-	gpointer key, value;
-
+	gpointer key;
+	gpointer value;
 	int size = g_hash_table_size(app_group_hash);
 	int *leader_pids;
+	int i;
 
 	if (size > 0) {
-		leader_pids = (int*) malloc(sizeof(int) * size);
+		leader_pids = (int*)malloc(sizeof(int) * size);
 		if (leader_pids == NULL) {
 			_E("out of memory");
 			*cnt = 0;
@@ -729,7 +734,7 @@ void app_group_get_leader_pids(int *cnt, int **pids)
 		}
 
 		g_hash_table_iter_init(&iter, app_group_hash);
-		int i = 0;
+		i = 0;
 		while (g_hash_table_iter_next(&iter, &key, &value)) {
 			leader_pids[i] = GPOINTER_TO_INT(key);
 			i++;
@@ -751,7 +756,7 @@ gboolean app_group_is_leader_pid(int pid)
 
 	app_group_get_leader_pids(&cnt, &pids);
 
-	for (i=0; i<cnt; i++) {
+	for (i = 0; i < cnt; i++) {
 		if (pid == pids[i]) {
 			free(pids);
 			return TRUE;
@@ -767,19 +772,24 @@ gboolean app_group_is_leader_pid(int pid)
 void app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	int size;
+	int *pid_array;
+	int j;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
 		if (GPOINTER_TO_INT(key) == leader_pid) {
-			GList *list = (GList*) value;
-			GList *i = g_list_first(list);
-			int size = g_list_length(list);
+			list = (GList *)value;
+			i = g_list_first(list);
+			size = g_list_length(list);
 
 			if (size > 0) {
-				int *pid_array = (int*) malloc(sizeof(int) * size);
-				int j = 0;
-
+				j = 0;
+				pid_array = (int *)malloc(sizeof(int) * size);
 				if (pid_array == NULL) {
 					_E("out of memory");
 					*cnt = 0;
@@ -812,12 +822,16 @@ void app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 gboolean app_group_is_sub_app(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *found;;
+
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *found = NULL;
+		list = (GList *)value;
+		found = NULL;
 
 		if (list != NULL) {
 			if ((found = g_list_find_custom(list, GINT_TO_POINTER(pid), __comp_pid)) != NULL) {
@@ -834,14 +848,19 @@ gboolean app_group_is_sub_app(int pid)
 void app_group_reroute(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *found = NULL;
+	GList *before = NULL;
+	GList *after = NULL;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *found = NULL;
-		GList *before = NULL;
-		GList *after = NULL;
+		list = (GList *)value;
+		found = NULL;
+		before = NULL;
+		after = NULL;
 
 		if (list != NULL) {
 			if ((found = g_list_find_custom(list, GINT_TO_POINTER(pid), __comp_pid)) != NULL) {
@@ -866,15 +885,16 @@ void app_group_reroute(int pid)
 int app_group_get_leader_pid(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
 	int lpid = -1;
 	int again = 0;
 
 repeat:
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-
+		list = (GList *)value;
 		if (list != NULL) {
 			if (g_list_find_custom(list, GINT_TO_POINTER(pid), __comp_pid) != NULL) {
 				lpid = GPOINTER_TO_INT(key);
@@ -909,17 +929,20 @@ void app_group_set_dead_pid(int pid)
 int app_group_get_status(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
+		list = (GList *)value;
+		i = g_list_first(list);
 
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid)
+			ac = (app_group_context_t*) i->data;
+			if (ac && ac->pid == pid)
 				return  ac->status;
 
 			i = g_list_next(i);
@@ -931,30 +954,34 @@ int app_group_get_status(int pid)
 int app_group_set_status(int pid, int status, gboolean force)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
+	GList *last;
+	app_group_context_t *last_ac;
+	char *appid = NULL;
+	const char *pkgid = NULL;
+	const struct appinfo *ai = NULL;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
+		list = (GList *)value;
+		i = g_list_first(list);
 
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t*) i->data;
+			if (ac && ac->pid == pid) {
 				if (status > 0)
 					ac->status = status;
-				GList *last = g_list_last(list);
-				app_group_context_t *last_ac = (app_group_context_t*) last->data;
+				last = g_list_last(list);
+				last_ac = (app_group_context_t *)last->data;
 
 				if (last_ac->wid != 0 || status == STATUS_VISIBLE || force == TRUE) {
 					if (__is_visible(pid)) {
 						__set_fg_flag(pid, 1, force);
 						if (!ac->group_sig && GPOINTER_TO_INT(key) != pid) {
-							char *appid = NULL;
-							const char *pkgid = NULL;
-							const struct appinfo *ai = NULL;
-
 							appid = _status_app_get_appid_bypid(pid);
 							ai = appinfo_find(getuid(), appid);
 							pkgid = appinfo_get_value(ai, AIT_PKGID);
@@ -963,8 +990,9 @@ int app_group_set_status(int pid, int status, gboolean force)
 							aul_send_app_group_signal(GPOINTER_TO_INT(key), pid, pkgid);
 							ac->group_sig = 1;
 						}
-					} else
+					} else {
 						__set_fg_flag(pid, 0, force);
+					}
 				}
 				return 0;
 			}
@@ -977,19 +1005,21 @@ int app_group_set_status(int pid, int status, gboolean force)
 int app_group_get_fg_flag(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
+		list = (GList*) value;
+		i = g_list_first(list);
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t*) i->data;
+			if (ac && ac && ac->pid == pid)
 				return ac->fg;
-			}
+
 			i = g_list_next(i);
 		}
 	}
@@ -1001,6 +1031,12 @@ int app_group_set_hint(int pid, bundle *kb)
 {
 	char *str_leader = NULL;
 	char *str_reroute = NULL;
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	if (kb == NULL)
 		return -1;
@@ -1008,18 +1044,13 @@ int app_group_set_hint(int pid, bundle *kb)
 	bundle_get_str(kb, AUL_SVC_K_CAN_BE_LEADER, &str_leader);
 	bundle_get_str(kb, AUL_SVC_K_REROUTE, &str_reroute);
 
-	GHashTableIter iter;
-	gpointer key, value;
-
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
+		list = (GList *)value;
+		i = g_list_first(list);
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t *)i->data;
+			if (ac && ac->pid == pid) {
 				if (str_leader != NULL && strcmp(str_leader, "true") == 0)
 					ac->can_be_leader = 1;
 				if (str_reroute != NULL && strcmp(str_reroute, "true") == 0)
@@ -1035,14 +1066,14 @@ int app_group_set_hint(int pid, bundle *kb)
 
 int app_group_find_second_leader(int lpid)
 {
-	GList *list = (GList*) g_hash_table_lookup(app_group_hash,
+	app_group_context_t *ac;
+	GList *list = (GList *)g_hash_table_lookup(app_group_hash,
 			GINT_TO_POINTER(lpid));
 	if (list != NULL) {
 		list = g_list_next(list);
-
 		if (list != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) list->data;
-			if (ac->can_be_leader) {
+			ac = (app_group_context_t*) list->data;
+			if (ac && ac->can_be_leader) {
 				_W("found the second leader, lpid: %d, pid: %d", lpid, ac->pid);
 				return ac->pid;
 			}
@@ -1054,18 +1085,20 @@ int app_group_find_second_leader(int lpid)
 
 void app_group_remove_leader_pid(int lpid)
 {
+	app_group_context_t *ac;
+	GList *next;
 	GList *list = (GList*)g_hash_table_lookup(app_group_hash,
-	              GINT_TO_POINTER(lpid));
+			GINT_TO_POINTER(lpid));
 
 	if (list != NULL) {
-		GList *next = g_list_next(list);
-
+		next = g_list_next(list);
 		if (next != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) list->data;
-			free(ac);
+			ac = (app_group_context_t *)list->data;
+			if (ac)
+				free(ac);
 			list = g_list_remove_link(list, list);
 
-			ac = (app_group_context_t*) next->data;
+			ac = (app_group_context_t *)next->data;
 			g_hash_table_insert(app_group_hash, GINT_TO_POINTER(ac->pid), next);
 			g_hash_table_remove(app_group_hash, GINT_TO_POINTER(lpid));
 		}
@@ -1084,9 +1117,8 @@ int app_group_can_start_app(const char *appid, bundle *b, gboolean *can_attach,
 		*can_attach = TRUE;
 
 		val = bundle_get_val(b, AUL_K_ORG_CALLER_PID);
-		if (val == NULL) {
+		if (val == NULL)
 			val = bundle_get_val(b, AUL_K_CALLER_PID);
-		}
 
 		if (val == NULL) {
 			_E("no caller pid");
@@ -1150,17 +1182,16 @@ int app_group_find_singleton(const char *appid, int *found_pid, int *found_lpid)
 	gpointer key = NULL;
 	gpointer value = NULL;
 	char *target = NULL;
+	GList *list;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-
+		list = (GList *)value;
 		while (list != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) list->data;
-
-			if (ac->launch_mode == APP_GROUP_LAUNCH_MODE_SINGLETON) {
+			ac = (app_group_context_t *)list->data;
+			if (ac && ac->launch_mode == APP_GROUP_LAUNCH_MODE_SINGLETON) {
 				target = _status_app_get_appid_bypid(ac->pid);
-
 				if (appid != NULL && target != NULL && strcmp(appid, target) == 0) {
 					*found_pid = ac->pid;
 					*found_lpid = GPOINTER_TO_INT(key);
@@ -1177,19 +1208,21 @@ int app_group_find_singleton(const char *appid, int *found_pid, int *found_lpid)
 int app_group_can_reroute(int pid)
 {
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
+		list = (GList *)value;
+		i = g_list_first(list);
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t *)i->data;
+			if (ac && ac->pid == pid)
 				return ac->reroute;
-			}
+
 			i = g_list_next(i);
 		}
 	}
@@ -1199,9 +1232,16 @@ int app_group_can_reroute(int pid)
 
 void app_group_lower(int pid, int *exit)
 {
+	app_group_context_t *ac;
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	GList *list;
+	GList *i;
+
 	if (app_group_is_sub_app(pid)) {
 		if (__can_recycle(pid) && __can_reroute(pid)) {
-			app_group_context_t *ac = __get_context(pid);
+			ac = __get_context(pid);
 			if (ac) {
 				if (ac->wid != 0)
 					__detach_window(ac->wid);
@@ -1217,53 +1257,50 @@ void app_group_lower(int pid, int *exit)
 		return;
 	}
 
-	GHashTableIter iter;
-	gpointer key, value;
-
 	*exit = 0;
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
-
+		list = (GList *)value;
+		i = g_list_first(list);
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
-				if (ac->can_shift) {
-					__detach_window(ac->wid);
-					ac->can_shift = 0;
+			ac = (app_group_context_t *)i->data;
+			if (ac && ac->can_shift) {
+				__detach_window(ac->wid);
+				ac->can_shift = 0;
 #ifdef WAYLAND
-					ecore_wl_window_lower((Ecore_Wl_Window *)ac->wid);
+				ecore_wl_window_lower((Ecore_Wl_Window *)ac->wid);
 #else
-					//ecore_x_window_lower(ac->wid);
+				/* ecore_x_window_lower(ac->wid); */
 #endif
-				}
-				return;
 			}
-			i = g_list_next(i);
+			return;
 		}
+		i = g_list_next(i);
 	}
 }
 
 void app_group_restart_app(int pid, bundle *b)
 {
+	const char *pid_str;
+	int cwid;
+	GList *list;
+	GList *i;
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	app_group_context_t *ac;
+
 	if (b == NULL)
 		return;
 
-	GHashTableIter iter;
-	gpointer key, value;
-
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
+		list = (GList*) value;
+		i = g_list_first(list);
 
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
-				const char *pid_str;
+			ac = (app_group_context_t *)i->data;
+			if (ac && ac->pid == pid) {
 				ac->caller_pid = __get_caller_pid(b);
 
 				if (ac->can_shift) {
@@ -1277,17 +1314,14 @@ void app_group_restart_app(int pid, bundle *b)
 					ac->can_shift = 1;
 					if (ac->wid != 0) {
 						if (ac->caller_pid > 0) {
-							int cwid = app_group_get_window(ac->caller_pid);
-
+							cwid = app_group_get_window(ac->caller_pid);
 							if (cwid != 0)
 								__attach_window(cwid, ac->wid);
 							else
 								_E("invalid caller wid");
-
-						} else
+						} else {
 							_E("invalid caller pid");
-
-
+						}
 					}
 				}
 				return;
@@ -1299,15 +1333,15 @@ void app_group_restart_app(int pid, bundle *b)
 
 int app_group_find_pid_from_recycle_bin(const char *appid)
 {
+	app_group_context_t *ac;
+	const char *appid_from_bin;
 	GList *iter = recycle_bin;
 
 	while (iter) {
-		app_group_context_t *ac = (app_group_context_t*) iter->data;
-		const char *appid_from_bin = _status_app_get_appid_bypid(ac->pid);
-
-		if (appid && appid_from_bin && strcmp(appid, appid_from_bin) == 0) {
+		ac = (app_group_context_t *)iter->data;
+		appid_from_bin = _status_app_get_appid_bypid(ac->pid);
+		if (appid && appid_from_bin && strcmp(appid, appid_from_bin) == 0)
 			return ac->pid;
-		}
 
 		iter = g_list_next(iter);
 	}
@@ -1319,14 +1353,15 @@ void app_group_get_idle_pids(int *cnt, int **pids)
 {
 	GList *iter = recycle_bin;
 	int idle_cnt = g_list_length(iter);
+	int *idle_pids = NULL;
+	int i = 0;
+	app_group_context_t *ac;
 
 	if (idle_cnt <= 0) {
 		*cnt = 0;
 		*pids = NULL;
 		return;
 	}
-
-	int *idle_pids = NULL;
 
 	idle_pids = malloc(sizeof(int) * idle_cnt);
 	if (idle_pids == NULL) {
@@ -1336,9 +1371,8 @@ void app_group_get_idle_pids(int *cnt, int **pids)
 		return;
 	}
 
-	int i = 0;
 	while (iter) {
-		app_group_context_t *ac = (app_group_context_t*) iter->data;
+		ac = (app_group_context_t *)iter->data;
 		idle_pids[i] = ac->pid;
 		iter = g_list_next(iter);
 		i++;
@@ -1350,23 +1384,26 @@ void app_group_get_idle_pids(int *cnt, int **pids)
 
 int app_group_get_next_caller_pid(int pid)
 {
+	GList *list;
+	GList *i;
 	GHashTableIter iter;
-	gpointer key, value;
+	gpointer key;
+	gpointer value;
+	app_group_context_t *ac;
 
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		GList *list = (GList*) value;
-		GList *i = g_list_first(list);
+		list = (GList*)value;
+		i = g_list_first(list);
 
 		while (i != NULL) {
-			app_group_context_t *ac = (app_group_context_t*) i->data;
-
-			if (ac->pid == pid) {
+			ac = (app_group_context_t *)i->data;
+			if (ac && ac->pid == pid) {
 				i = g_list_next(i);
 				if (i == NULL)
 					return -1;
 
-				ac = (app_group_context_t*) i->data;
+				ac = (app_group_context_t *)i->data;
 				return ac->caller_pid;
 			}
 			i = g_list_next(i);
@@ -1375,5 +1412,3 @@ int app_group_get_next_caller_pid(int pid)
 
 	return -1;
 }
-
-
