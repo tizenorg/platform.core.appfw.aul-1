@@ -219,30 +219,28 @@ static GList* __find_removable_apps(int from)
 
 	return list;
 }
-/*
- *  TODO : BG manangement should be merged
+
 static void __prepare_to_suspend_services(int pid)
 {
-	int dummy;
-	SECURE_LOGD("[__SUSPEND__] pid: %d", pid);
-	__app_send_raw_with_noreply(pid, APP_SUSPEND, (unsigned char *)&dummy, sizeof(int));
+	//int dummy;
+	//SECURE_LOGD("[__SUSPEND__] pid: %d", pid);
+	//__app_send_raw_with_noreply(pid, APP_SUSPEND, (unsigned char *)&dummy, sizeof(int));
 }
 
 static void __prepare_to_wake_services(int pid)
 {
-	int dummy;
-	SECURE_LOGD("[__SUSPEND__] pid: %d", pid);
-	__app_send_raw_with_noreply(pid, APP_WAKE, (unsigned char *)&dummy, sizeof(int));
+	//int dummy;
+	//SECURE_LOGD("[__SUSPEND__] pid: %d", pid);
+	//__app_send_raw_with_noreply(pid, APP_WAKE, (unsigned char *)&dummy, sizeof(int));
 }
-*/
+
 static void __set_fg_flag(int cpid, int flag, gboolean force)
 {
 	int lpid = app_group_get_leader_pid(cpid);
 	GHashTableIter iter;
 	gpointer key, value;
-/* BG management
 	int bg_category = 0x00;
-*/
+
 	g_hash_table_iter_init(&iter, app_group_hash);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
 		GList *list = (GList*) value;
@@ -262,9 +260,8 @@ static void __set_fg_flag(int cpid, int flag, gboolean force)
 					appid = _status_app_get_appid_bypid(ac->pid);
 					ai = appinfo_find(getuid(), appid);
 					pkgid = appinfo_get_value(ai, AIT_PKGID);
-/* BG management
 					bg_category = (bool)appinfo_get_value(ai, AIT_BG_CATEGORY);
-*/
+
 					if (flag) {
 						_D("send_signal FG %s", appid);
 
@@ -272,20 +269,18 @@ static void __set_fg_flag(int cpid, int flag, gboolean force)
 										pkgid,
 										STATUS_FOREGROUND,
 										APP_TYPE_UI);
-/* BG management
 						if (!bg_category)
-							_status_find_service_apps(ac->pid, STATUS_VISIBLE, __prepare_to_wake_services, false);
-*/
+							_status_find_service_apps(ac->pid, getuid(), STATUS_VISIBLE, __prepare_to_wake_services, false);
+
 					} else {
 						_D("send_signal BG %s", appid);
 						aul_send_app_status_change_signal(ac->pid, appid,
 										pkgid,
 										STATUS_BACKGROUND,
 										APP_TYPE_UI);
-/* BG management
 						if (!bg_category)
-							_status_find_service_apps(ac->pid, STATUS_BG, __prepare_to_suspend_services, true);
-*/
+							_status_find_service_apps(ac->pid, getuid(), STATUS_BG, __prepare_to_suspend_services, true);
+
 					}
 					ac->fg = flag;
 				}
@@ -577,7 +572,7 @@ static void __do_recycle(app_group_context_t *context)
 		aul_send_app_status_change_signal(context->pid, appid, pkgid,
 						STATUS_BACKGROUND,
 						APP_TYPE_UI);
-//		_status_find_service_apps(context->pid, STATUS_BG, __prepare_to_suspend_services, true);
+		_status_find_service_apps(context->pid, getuid(), STATUS_BG, __prepare_to_suspend_services, true);
 		context->fg = 0;
 	}
 	recycle_bin = g_list_append(recycle_bin, context);

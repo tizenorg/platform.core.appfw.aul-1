@@ -24,7 +24,6 @@ struct appinfo;
 
 enum appinfo_type {
 	AIT_NAME,
-	AIT_COMP,
 	AIT_EXEC,
 	AIT_TYPE,
 	AIT_ONBOOT, /* start on boot: boolean */
@@ -36,15 +35,19 @@ enum appinfo_type {
 	AIT_PRELOAD,
 	AIT_STATUS,
 	AIT_POOL,
+	AIT_COMPTYPE,
 	AIT_TEP,
 	AIT_STORAGE_TYPE,
+	AIT_BG_CATEGORY,
 	AIT_LAUNCH_MODE,
 	AIT_GLOBAL,
 	AIT_MAX
 };
 
-#define APP_TYPE_UI		"ui"
-#define APP_TYPE_SERVICE	"svc"
+#define APP_TYPE_SERVICE	"svcapp"
+#define APP_TYPE_UI		"uiapp"
+#define APP_TYPE_WIDGET		"widgetapp"
+#define APP_TYPE_WATCH		"watchapp"
 
 int appinfo_init(void);
 void appinfo_fini(void);
