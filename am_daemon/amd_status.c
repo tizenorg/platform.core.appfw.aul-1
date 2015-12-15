@@ -273,36 +273,6 @@ int _status_app_is_running_v2(const char *appid, uid_t caller_uid)
 	return ret;
 }
 
-static int __get_pkginfo(const char *dname, const char *appid, void *priv, uid_t uid)
-{
-	app_info_from_db *menu_info = NULL;
-	char *r_info;
-	char *app_path;
-
-	r_info = (char *)priv;
-	if (appid == NULL)
-		goto out;
-
-	if ((menu_info = _get_app_info_from_db_by_appid_user(appid, uid)) == NULL)
-		goto out;
-	else {
-		app_path = _get_app_path(menu_info);
-		if (app_path == NULL)
-			goto out;
-		strncat(r_info, dname, 8);
-		strncat(r_info, ":", 1);
-		strncat(r_info, appid, MAX_PACKAGE_STR_SIZE);
-		strncat(r_info, ":", 1);
-		strncat(r_info, app_path, MAX_PACKAGE_APP_PATH_SIZE);
-		strncat(r_info, ";", 1);
-	}
-
- out:
-	if (menu_info != NULL)
-		_free_app_info_from_db(menu_info);
-	return 0;
-}
-
 static int __get_appid_bypid(int pid, char *appid, int len)
 {
 	char *result;

@@ -19,10 +19,10 @@
  *
  */
 #include <stdlib.h>
-
-#include <aul.h>
 #include <bundle.h>
+#include <bundle_internal.h>
 
+#include "aul.h"
 #include "aul_util.h"
 #include "app_sock.h"
 #include "aul_api.h"

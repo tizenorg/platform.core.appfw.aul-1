@@ -23,8 +23,8 @@
 #ifndef __APP_PKT_H_
 #define __APP_PKT_H_
 
-#include <unistd.h>
 #define __USE_GNU
+#include <unistd.h>
 #include <sys/socket.h>
 #include <linux/un.h>
 
