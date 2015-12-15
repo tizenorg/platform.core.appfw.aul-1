@@ -132,7 +132,7 @@ static char *__convert_apptype(const char *type)
 static int __read_background_category(const char *category_name, void *user_data)
 {
 	struct appinfo *c = user_data;
-	int category = (int)(c->val[_AI_BG_CATEGORY]);
+	int category = (intptr_t)(c->val[_AI_BG_CATEGORY]);
 
 	if (!category_name)
 		return 0;
@@ -143,19 +143,19 @@ static int __read_background_category(const char *category_name, void *user_data
 	}
 
 	if (strncmp(category_name, "media", strlen("media")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_MEDIA);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_MEDIA));
 	else if (strncmp(category_name, "download", strlen("download")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_DOWNLOAD);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_DOWNLOAD));
 	else if (strncmp(category_name, "background-network", strlen("background-network")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_BACKGROUND_NETWORK);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_BACKGROUND_NETWORK));
 	else if (strncmp(category_name, "location", strlen("location")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_LOCATION);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_LOCATION));
 	else if (strncmp(category_name, "sensor", strlen("sensor")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_SENSOR);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_SENSOR));
 	else if (strncmp(category_name, "iot-communication", strlen("iot-communication")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_IOT_COMMUNICATION);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_IOT_COMMUNICATION));
 	else if (strncmp(category_name, "system", strlen("system")) == 0)
-		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_SYSTEM);
+		c->val[_AI_BG_CATEGORY] = (char *)((intptr_t)(category | _BACKGROUND_CATEGORY_SYSTEM));
 
 	return 0;
 }

@@ -401,7 +401,7 @@ void _status_find_service_apps(int pid, uid_t uid, enum app_status status, void 
 		svc_info_t = (app_status_info_t *)svc_list->data;
 		if (svc_info_t) {
 			ai = appinfo_find(uid, svc_info_t->appid);
-			bg_allowed = (int)appinfo_get_value(ai, AIT_BG_CATEGORY);
+			bg_allowed = (intptr_t)appinfo_get_value(ai, AIT_BG_CATEGORY);
 			if (!bg_allowed) {
 				send_event_to_svc_core(svc_info_t->pid);
 				/* TODO: APIs should be prepared
@@ -448,7 +448,7 @@ void _status_check_service_only(int pid, uid_t uid, void (*send_event_to_svc_cor
 		appid = _status_app_get_appid_bypid(pid);
 		if (appid) {
 			ai = appinfo_find(uid, appid);
-			bg_allowed = (int)appinfo_get_value(ai, AIT_BG_CATEGORY);
+			bg_allowed = (intptr_t)appinfo_get_value(ai, AIT_BG_CATEGORY);
 
 			if (!bg_allowed) {
 				send_event_to_svc_core(pid);
