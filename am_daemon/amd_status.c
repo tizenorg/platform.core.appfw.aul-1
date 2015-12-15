@@ -44,10 +44,10 @@ typedef struct _pkg_status_info_t {
 	char *pkgid;
 	int status;
 	GSList *ui_list;
-        GSList *svc_list;
+	GSList *svc_list;
 } pkg_status_info_t;
 
-typedef struct _app_status_info_t{
+typedef struct _app_status_info_t {
 	char *appid;
 	char *app_path;
 	char *pkgid;

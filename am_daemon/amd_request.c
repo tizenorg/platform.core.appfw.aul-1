@@ -324,6 +324,40 @@ static int __app_process_by_pid(int cmd,
 	return ret;
 }
 
+static void __set_effective_appid(uid_t uid, bundle *kb)
+{
+	const struct appinfo *ai;
+	const struct appinfo *effective_ai;
+	const char *appid;
+	const char *effective_appid;
+	const char *pkgid;
+	const char *effective_pkgid;
+
+	appid = bundle_get_val(kb, AUL_K_APPID);
+	if (appid == NULL)
+		return;
+
+	ai = appinfo_find(uid, appid);
+	if (ai == NULL)
+		return;
+
+	effective_appid = appinfo_get_value(ai, AIT_EFFECTIVE_APPID);
+	if (effective_appid == NULL)
+		return;
+
+	effective_ai = appinfo_find(uid, effective_appid);
+	if (effective_ai == NULL)
+		return;
+
+	pkgid = appinfo_get_value(ai, AIT_PKGID);
+	effective_pkgid = appinfo_get_value(effective_ai, AIT_PKGID);
+	if (pkgid && effective_pkgid && strcmp(pkgid, effective_pkgid) == 0) {
+		_D("use effective appid instead of the real appid");
+		bundle_del(kb, AUL_K_APPID);
+		bundle_add(kb, AUL_K_APPID, effective_appid);
+	}
+}
+
 static gboolean __add_history_handler(gpointer user_data)
 {
 	struct rua_rec rec;
@@ -337,7 +371,6 @@ static gboolean __add_history_handler(gpointer user_data)
 		return FALSE;
 
 	if (!pkt->is_group_app) {
-
 		ai = (struct appinfo *)appinfo_find(pkt->uid, pkt->appid);;
 		app_path = (char *)appinfo_get_value(ai, AIT_EXEC);
 
@@ -671,6 +704,8 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 		close(clifd);
 		return -1;
 	}
+
+	__set_effective_appid(cr->uid, kb);
 
 	appid = bundle_get_val(kb, AUL_K_APPID);
 	if (cr->uid < REGULAR_UID_MIN) {
