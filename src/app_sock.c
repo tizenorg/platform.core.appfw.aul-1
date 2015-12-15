@@ -19,7 +19,7 @@
  *
  */
 
-
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>

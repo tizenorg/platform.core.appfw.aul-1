@@ -30,6 +30,7 @@
 
 #include <pkgmgr-info.h>
 #include <bundle.h>
+#include <bundle_internal.h>
 
 #include "aul.h"
 

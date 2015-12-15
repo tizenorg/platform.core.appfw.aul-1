@@ -19,10 +19,11 @@
  *
  */
 
-
+#define _GNU_SOURCE
 #include <glib.h>
 #include <poll.h>
 #include <bundle.h>
+#include <bundle_internal.h>
 #include "aul.h"
 #include "aul_api.h"
 #include "launch.h"

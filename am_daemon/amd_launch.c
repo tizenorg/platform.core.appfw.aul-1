@@ -19,9 +19,11 @@
  *
  */
 
+#define _GNU_SOURCE
 #include <stdbool.h>
 #include <signal.h>
 #include <bundle.h>
+#include <bundle_internal.h>
 #include <aul.h>
 #include <glib.h>
 #include <string.h>

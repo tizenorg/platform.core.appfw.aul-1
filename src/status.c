@@ -18,10 +18,13 @@
  * limitations under the License.
  *
  */
+
+#define _GNU_SOURCE
 #include <stdlib.h>
 
 #include <aul.h>
 #include <bundle.h>
+#include <bundle_internal.h>
 
 #include "aul_util.h"
 #include "app_sock.h"

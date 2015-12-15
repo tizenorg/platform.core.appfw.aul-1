@@ -23,10 +23,10 @@
 #ifndef __APP_PKT_H_
 #define __APP_PKT_H_
 
+#define _GNU_SOURCE
 #include <unistd.h>
-#define __USE_GNU
 #include <sys/socket.h>
-#include <linux/un.h>
+#include <sys/un.h>
 
 enum app_cmd {
 	APP_START = 0,
@@ -89,6 +89,7 @@ enum app_cmd {
 #define ETERMINATING 126
 #define ENOLAUNCHPAD 125
 #define EREJECTED 123
+#define UNIX_PATH_MAX 108
 
 #define PAD_CMD_LAUNCH		0
 #define PAD_CMD_VISIBILITY	10

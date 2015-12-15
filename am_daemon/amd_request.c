@@ -18,6 +18,8 @@
  * limitations under the License.
  *
  */
+
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -33,6 +35,7 @@
 
 #include <aul.h>
 #include <bundle.h>
+#include <bundle_internal.h>
 #include <rua.h>
 #include <rua_stat.h>
 #include <tzplatform_config.h>

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#define _GNU_SOURCE
 #include <malloc.h>
 #include <cynara-client.h>
 #include <cynara-creds-socket.h>

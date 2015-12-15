@@ -19,7 +19,7 @@
  *
  */
 
-
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -30,6 +30,8 @@
 #include <dirent.h>
 #include <glib.h>
 #include <dbus/dbus.h>
+
+#include <bundle_internal.h>
 
 #include "aul.h"
 #include "aul_api.h"

@@ -19,7 +19,7 @@
  *
  */
 
-
+#define _GNU_SOURCE
 #include "miregex.h"
 #include "simple_util.h"
 #include <sys/types.h>

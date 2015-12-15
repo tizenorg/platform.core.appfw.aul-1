@@ -27,6 +27,8 @@
 #include <string.h>
 #include <glib.h>
 
+#include <bundle_internal.h>
+
 #include "aul.h"
 
 #define ROOT_UID 0

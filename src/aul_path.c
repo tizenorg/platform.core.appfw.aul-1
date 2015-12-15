@@ -15,6 +15,7 @@
  *
  */
 
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <linux/limits.h>
 
