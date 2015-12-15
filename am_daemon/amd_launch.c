@@ -812,7 +812,7 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	if (!multiple || strncmp(multiple, "false", 5) == 0)
 		pid = _status_app_is_running(appid, caller_uid);
 
-	component_type = appinfo_get_value(ai, AIT_COMP);
+	component_type = appinfo_get_value(ai, AIT_COMPTYPE);
 	if (strncmp(component_type, APP_TYPE_UI, strlen(APP_TYPE_UI)) == 0) {
 		pid = __get_pid_for_app_group(appid, pid, caller_uid, kb,
 				&lpid, &can_attach, &new_process, &launch_mode, &is_subapp);

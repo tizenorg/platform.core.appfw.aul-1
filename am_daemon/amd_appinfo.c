@@ -46,7 +46,6 @@ struct user_appinfo {
 enum _appinfo_idx {
 	_AI_FILE = 0, /* service filename */
 	_AI_NAME,
-	_AI_COMP,
 	_AI_EXEC,
 	_AI_TYPE,
 	_AI_ONBOOT,
@@ -58,46 +57,41 @@ enum _appinfo_idx {
 	_AI_PRELOAD,
 	_AI_STATUS,
 	_AI_POOL,
+	_AI_COMPTYPE,
 	_AI_TEP,
 	_AI_STORAGE_TYPE,
+	_AI_BG_CATEGORY,
 	_AI_LAUNCH_MODE,
 	_AI_GLOBAL,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
 
+typedef int (*appinfo_add_handler_cb)(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data);
+
 struct appinfo_t {
 	char *name;
 	enum appinfo_type type;
+	appinfo_add_handler_cb add;
 };
 
-static struct appinfo_t _appinfos[] = {
-	[_AI_NAME] = { "Name", AIT_NAME, },
-	[_AI_COMP] = { "Component", AIT_COMP, },
-	[_AI_EXEC] = { "Exec", AIT_EXEC, },
-	[_AI_TYPE] = { "PkgType", AIT_TYPE, },
-	[_AI_ONBOOT] = { "StartOnBoot", AIT_ONBOOT, },
-	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, },
-	[_AI_MULTI] = { "Multiple", AIT_MULTI, },
-	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, },
-	[_AI_PERM] = { "PermissionType", AIT_PERM, },
-	[_AI_PKGID] = { "PackageId", AIT_PKGID, },
-	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, },
-	[_AI_STATUS] = { "Status", AIT_STATUS, },
-	[_AI_POOL] = { "ProcessPool", AIT_POOL, },
-	[_AI_TEP] = {"Tep", AIT_TEP},
-	[_AI_STORAGE_TYPE] = {"StorageType", AIT_STORAGE_TYPE},
-	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE },
-	[_AI_GLOBAL] = {"global", AIT_GLOBAL },
+enum _background_category {
+	_BACKGROUND_CATEGORY_MEDIA =				0x01,
+	_BACKGROUND_CATEGORY_DOWNLOAD =				0x02,
+	_BACKGROUND_CATEGORY_BACKGROUND_NETWORK =	0x04,
+	_BACKGROUND_CATEGORY_LOCATION =				0x08,
+	_BACKGROUND_CATEGORY_SENSOR =				0x10,
+	_BACKGROUND_CATEGORY_IOT_COMMUNICATION =	0x20,
+	_BACKGROUND_CATEGORY_SYSTEM =				0x40
 };
 
 struct appinfo {
 	char *val[_AI_MAX];
 };
 
-int gles = 1;
+static int gles = 1;
 
-static void _free_appinfo(gpointer data)
+static void __free_appinfo(gpointer data)
 {
 	struct appinfo *c = data;
 	int i;
@@ -105,13 +99,15 @@ static void _free_appinfo(gpointer data)
 	if (!c)
 		return;
 
-	for (i = 0; i < sizeof(c->val)/sizeof(c->val[0]); i++)
-		free(c->val[i]);
+	for (i = 0; i < sizeof(c->val)/sizeof(c->val[0]); i++) {
+		if (i != _AI_BG_CATEGORY && c->val[i] != NULL)
+			free(c->val[i]);
+	}
 
 	free(c);
 }
 
-static void _free_user_appinfo(gpointer data)
+static void __free_user_appinfo(gpointer data)
 {
 	struct user_appinfo *info = (struct user_appinfo *)data;
 
@@ -133,33 +129,335 @@ static char *__convert_apptype(const char *type)
 	return NULL;
 }
 
-static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *data)
+static int __read_background_category(const char *category_name, void *user_data)
 {
+	struct appinfo *c = user_data;
+	int category = (int)(c->val[_AI_BG_CATEGORY]);
+
+	if (!category_name)
+		return 0;
+
+	if (strncmp(category_name, "disable", strlen("disable")) == 0) {
+		c->val[_AI_BG_CATEGORY] = 0x00;
+		return -1;
+	}
+
+	if (strncmp(category_name, "media", strlen("media")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_MEDIA);
+	else if (strncmp(category_name, "download", strlen("download")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_DOWNLOAD);
+	else if (strncmp(category_name, "background-network", strlen("background-network")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_BACKGROUND_NETWORK);
+	else if (strncmp(category_name, "location", strlen("location")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_LOCATION);
+	else if (strncmp(category_name, "sensor", strlen("sensor")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_SENSOR);
+	else if (strncmp(category_name, "iot-communication", strlen("iot-communication")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_IOT_COMMUNICATION);
+	else if (strncmp(category_name, "system", strlen("system")) == 0)
+		c->val[_AI_BG_CATEGORY] = (char *)(category | _BACKGROUND_CATEGORY_SYSTEM);
+
+	return 0;
+}
+
+static int __appinfo_add_name(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *appid = NULL;
+
+	if (pkgmgrinfo_appinfo_get_appid(handle, &appid) != PMINFO_R_OK) {
+		_E("fail to get appinfo");
+		return -1;
+	}
+
+	info->val[_AI_NAME] = strdup(appid);
+
+	return 0;
+}
+
+static int __appinfo_add_exec(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *exec = NULL;
+
+	if (pkgmgrinfo_appinfo_get_exec(handle, &exec) != PMINFO_R_OK) {
+		_E("failed to get exec");
+		return -1;
+	}
+
+	info->val[_AI_EXEC] = strdup(exec);
+
+	return 0;
+}
+
+static int __appinfo_add_type(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *type = NULL;
+
+	if (pkgmgrinfo_appinfo_get_apptype(handle, &type) != PMINFO_R_OK) {
+		_E("failed to get apptype");
+		return -1;
+	}
+
+	info->val[_AI_TYPE] = __convert_apptype(type);
+
+	return 0;
+}
+
+static int __appinfo_add_onboot(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	bool onboot = false;
+
+	if (pkgmgrinfo_appinfo_is_onboot(handle, &onboot) != PMINFO_R_OK) {
+		_E("failed to get onboot");
+		return -1;
+	}
+
+	info->val[_AI_ONBOOT] = strdup(onboot ? "true" : "false");
+
+	return 0;
+}
+
+static int __appinfo_add_restart(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	bool restart = false;
+
+	if (pkgmgrinfo_appinfo_is_autorestart(handle, &restart) != PMINFO_R_OK) {
+		_E("failed to get restart");
+		return -1;
+	}
+
+	info->val[_AI_RESTART] = strdup(restart ? "true" : "false");
+
+	return 0;
+}
+
+static int __appinfo_add_multi(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	bool multiple = false;
+
+	if (pkgmgrinfo_appinfo_is_multiple(handle, &multiple) != PMINFO_R_OK) {
+		_E("failed to get multiple");
+		return -1;
+	}
+
+	info->val[_AI_MULTI] = strdup(multiple ? "true" : "false");
+
+	return 0;
+}
+
+static int __appinfo_add_hwacc(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	pkgmgrinfo_app_hwacceleration hwacc;
+
+	if (pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc)) {
+		_E("failed to get hwacc");
+		return -1;
+	}
+
+	info->val[_AI_HWACC] = strdup(
+				(gles == 0 ||
+				 hwacc == PMINFO_HWACCELERATION_NOT_USE_GL) ?
+				"NOT_USE" :
+				(hwacc == PMINFO_HWACCELERATION_USE_GL) ?
+				"USE" :
+				"SYS");
+
+	return 0;
+}
+
+static int __appinfo_add_perm(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	pkgmgrinfo_permission_type permission;
+
+	if (pkgmgrinfo_appinfo_get_permission_type(handle,
+		&permission) != PMINFO_R_OK) {
+		_E("failed to get permission type");
+		return -1;
+	}
+
+	info->val[_AI_PERM] = strdup(
+				(permission == PMINFO_PERMISSION_SIGNATURE) ?
+				"signature" :
+				(permission == PMINFO_PERMISSION_PRIVILEGE) ?
+				"privilege" :
+				"normal");
+
+	return 0;
+}
+
+static int __appinfo_add_pkgid(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *pkgid = NULL;
+
+	if (pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid) != PMINFO_R_OK) {
+		_E("failed to get pkgid");
+		return -1;
+	}
+
+	info->val[_AI_PKGID] = strdup(pkgid);
+
+	return 0;
+}
+
+static int __appinfo_add_preload(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	bool preload = false;
+
+	if (pkgmgrinfo_appinfo_is_preload(handle, &preload) != PMINFO_R_OK) {
+		_E("failed to get preload");
+		return -1;
+	}
+
+	info->val[_AI_PRELOAD] = strdup(preload ? "true" : "false");
+
+	return 0;
+}
+
+static int __appinfo_add_status(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	info->val[_AI_STATUS] = strdup("installed");
+
+	return 0;
+}
+
+static int __appinfo_add_pool(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	bool process_pool = false;
+
+	if (pkgmgrinfo_appinfo_is_process_pool(handle, &process_pool) != PMINFO_R_OK) {
+		_E("failed to get process_pool");
+		return -1;
+	}
+
+	info->val[_AI_POOL] = strdup(process_pool ? "true" : "false");
+
+	return 0;
+}
+
+static int __appinfo_add_comptype(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *component_type = NULL;
+
+	if (pkgmgrinfo_appinfo_get_component_type(handle,
+		&component_type) != PMINFO_R_OK) {
+		_E("failed to get component type");
+		return -1;
+	}
+
+	info->val[_AI_COMPTYPE] = strdup(component_type);
+
+	return 0;
+}
+
+static int __appinfo_add_tep(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *tep_name = NULL;
+	struct user_appinfo *user_data = (struct user_appinfo *)data;
+
+	if (pkgmgrinfo_pkginfo_get_tep_name((pkgmgrinfo_pkginfo_h)user_data->extra_data,
+						&tep_name) != PMINFO_R_OK) {
+		_E("failed to get tep_name");
+		info->val[_AI_TEP] = NULL;
+	} else {
+		info->val[_AI_TEP] = strdup(tep_name);
+	}
+
+	return 0;
+}
+
+static int __appinfo_add_storage_type(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	pkgmgrinfo_installed_storage installed_storage;
+
+	if (pkgmgrinfo_appinfo_get_installed_storage_location(handle,
+		&installed_storage) == PMINFO_R_OK) {
+		if (installed_storage == PMINFO_INTERNAL_STORAGE)
+			info->val[_AI_STORAGE_TYPE] = strdup("internal");
+		else if (installed_storage == PMINFO_EXTERNAL_STORAGE)
+			info->val[_AI_STORAGE_TYPE] = strdup("external");
+	} else {
+		info->val[_AI_STORAGE_TYPE] = strdup("internal");
+	}
+
+	return 0;
+}
+
+static int __appinfo_add_bg_category(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	info->val[_AI_BG_CATEGORY] = 0x0;
+	if (pkgmgrinfo_appinfo_foreach_background_category(handle,
+		__read_background_category, info) != PMINFO_R_OK) {
+		_E("Failed to get background category");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int __appinfo_add_launch_mode(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *mode = NULL;
+
+	if (pkgmgrinfo_appinfo_get_launch_mode(handle, &mode) != PMINFO_R_OK) {
+		_E("failed to get launch_mode");
+		return -1;
+	}
+
+	info->val[_AI_LAUNCH_MODE] = strdup(mode ? mode : "single");
+
+	return 0;
+}
+
+static int __appinfo_add_global(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	bool is_global = false;
+	struct user_appinfo *user_data = (struct user_appinfo *)data;
+
+	if (pkgmgrinfo_pkginfo_is_for_all_users((pkgmgrinfo_pkginfo_h)user_data->extra_data,
+						&is_global) != PMINFO_R_OK) {
+		_E("get pkginfo failed");
+		return -1;
+	}
+
+	info->val[_AI_GLOBAL] = strdup(is_global ? "true" : "false");
+
+	return 0;
+}
+
+static struct appinfo_t _appinfos[] = {
+	[_AI_NAME] = { "Name", AIT_NAME, __appinfo_add_name },
+	[_AI_EXEC] = { "Exec", AIT_EXEC, __appinfo_add_exec },
+	[_AI_TYPE] = { "PkgType", AIT_TYPE, __appinfo_add_type },
+	[_AI_ONBOOT] = { "StartOnBoot", AIT_ONBOOT, __appinfo_add_onboot },
+	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, __appinfo_add_restart },
+	[_AI_MULTI] = { "Multiple", AIT_MULTI, __appinfo_add_multi },
+	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, __appinfo_add_hwacc },
+	[_AI_PERM] = { "PermissionType", AIT_PERM, __appinfo_add_perm },
+	[_AI_PKGID] = { "PackageId", AIT_PKGID, __appinfo_add_pkgid },
+	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, __appinfo_add_preload },
+	[_AI_STATUS] = { "Status", AIT_STATUS, __appinfo_add_status },
+	[_AI_POOL] = { "ProcessPool", AIT_POOL, __appinfo_add_pool },
+	[_AI_COMPTYPE] = { "ComponentType", AIT_COMPTYPE, __appinfo_add_comptype },
+	[_AI_TEP] = {"Tep", AIT_TEP, __appinfo_add_tep},
+	[_AI_STORAGE_TYPE] = {"StorageType", AIT_STORAGE_TYPE, __appinfo_add_storage_type },
+	[_AI_BG_CATEGORY] = { "BackgroundCategory", AIT_BG_CATEGORY, __appinfo_add_bg_category },
+	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE, __appinfo_add_launch_mode },
+	[_AI_GLOBAL] = {"global", AIT_GLOBAL, __appinfo_add_global },
+};
+
+static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle,
+					void *data)
+{
+	int i;
 	struct appinfo *c;
 	struct user_appinfo *info = (struct user_appinfo *)data;
-	char *exec;
-	char *type;
 	char *appid;
-	char *pkgid;
-	char *mode;
-	bool multiple;
-	bool onboot;
-	bool restart;
-	bool preload;
-	bool process_pool = false;
-	bool is_global = false;
-	char *tep_name = NULL;
-
-	pkgmgrinfo_installed_storage installed_storage;
-	pkgmgrinfo_app_hwacceleration hwacc;
-	pkgmgrinfo_app_component component;
-	pkgmgrinfo_permission_type permission;
 
 	if (!handle) {
 		_E("null app handle");
 		return -1;
 	}
-	if (pkgmgrinfo_appinfo_get_appid(handle, &appid)) {
+
+	if (pkgmgrinfo_appinfo_get_appid(handle, &appid) != PMINFO_R_OK) {
 		_E("fail to get appinfo");
 		return -1;
 	}
@@ -173,139 +471,16 @@ static int __app_info_insert_handler (const pkgmgrinfo_appinfo_h handle, void *d
 	}
 
 	c->val[_AI_FILE] = strdup(appid);
-	c->val[_AI_NAME] = strdup(appid); //TODO :
 
-	if (pkgmgrinfo_appinfo_get_component(handle, &component)) {
-		_E("failed to get component");
-		_free_appinfo(c);
-		return -1;
-	}
-
-	if (component == PMINFO_UI_APP) {
-		c->val[_AI_COMP] = strdup("ui"); //TODO :
-		if (pkgmgrinfo_appinfo_is_multiple(handle, &multiple)) {
-			_E("failed to get multiple");
-			_free_appinfo(c);
+	for (i = 0; i<_AI_MAX; i++) {
+		if (_appinfos[i].add && _appinfos[i].add(handle, c, info) < 0) {
+			__free_appinfo(c);
 			return -1;
 		}
-		c->val[_AI_MULTI] = strdup(multiple ? "true" : "false");
-		if (pkgmgrinfo_appinfo_is_preload(handle, &preload)) {
-			_E("failed to get preload");
-			_free_appinfo(c);
-			return -1;
-		}
-		c->val[_AI_PRELOAD] = strdup(preload ? "true" : "false");
-		if (pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc)) {
-			_E("failed to get hwacc");
-			_free_appinfo(c);
-			return -1;
-		}
-		c->val[_AI_HWACC] = strdup(
-				(gles == 0 ||
-				 hwacc == PMINFO_HWACCELERATION_NOT_USE_GL) ?
-				"NOT_USE" :
-				(hwacc == PMINFO_HWACCELERATION_USE_GL) ?
-				"USE" :
-				"SYS");
-		c->val[_AI_ONBOOT] = strdup("false");
-		c->val[_AI_RESTART] = strdup("false");
-	} else {
-		c->val[_AI_COMP] = strdup("svc");
-		c->val[_AI_MULTI] = strdup("false");
-		c->val[_AI_PRELOAD] = strdup("false");
-		c->val[_AI_HWACC] = strdup("NOT_USE");
-		if (pkgmgrinfo_appinfo_is_onboot(handle, &onboot)) {
-			_E("failed to get onboot");
-			_free_appinfo(c);
-			return -1;
-		}
-		c->val[_AI_ONBOOT] = strdup(onboot ? "true" : "false");
-		if (pkgmgrinfo_appinfo_is_autorestart(handle, &restart)) {
-			_E("failed to get restart");
-			_free_appinfo(c);
-			return -1;
-		}
-		c->val[_AI_RESTART] = strdup(restart ? "true" : "false");
 	}
 
-	if (pkgmgrinfo_appinfo_get_exec(handle, &exec)) {
-		_E("failed to get exec");
-		_free_appinfo(c);
-		return -1;
-	}
-	c->val[_AI_EXEC] = strdup(exec);
-
-	if (pkgmgrinfo_appinfo_get_apptype(handle, &type)) {
-		_E("failed to get apptype");
-		_free_appinfo(c);
-		return -1;
-	}
-	c->val[_AI_TYPE] = __convert_apptype(type);
-
-	if (pkgmgrinfo_appinfo_get_permission_type(handle, &permission)) {
-		_E("failed to get permission type");
-		_free_appinfo(c);
-		return -1;
-	}
-	c->val[_AI_PERM] = strdup(
-			(permission == PMINFO_PERMISSION_SIGNATURE) ?
-			"signature" :
-			(permission == PMINFO_PERMISSION_PRIVILEGE) ?
-			"privilege" :
-			"normal");
-	if (pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid)) {
-		_E("failed to get pkgid");
-		_free_appinfo(c);
-		return -1;
-	}
-	c->val[_AI_PKGID] = strdup(pkgid);
-	c->val[_AI_STATUS] = strdup("installed");
-
-	if (pkgmgrinfo_appinfo_is_process_pool(handle, &process_pool)) {
-		_E("failed to get process_pool");
-		_free_appinfo(c);
-		return -1;
-	}
-
-	if (process_pool == false)
-		c->val[_AI_POOL] = strdup("false");
-	else
-		c->val[_AI_POOL] = strdup("true");
-
-	if (pkgmgrinfo_pkginfo_get_tep_name((pkgmgrinfo_pkginfo_h)info->extra_data, &tep_name)){
-		_E("failed to get tep_name");
-		c->val[_AI_TEP] = NULL;
-	} else {
-		c->val[_AI_TEP] = strdup(tep_name);
-	}
-
-	if (pkgmgrinfo_pkginfo_is_for_all_users((pkgmgrinfo_pkginfo_h)info->extra_data, &is_global)) {
-		_E("get pkginfo failed");
-		return -1;
-	}
-
-	if (is_global)
-		c->val[_AI_GLOBAL] = strdup("true");
-	else
-		c->val[_AI_GLOBAL] = strdup("false");
-
-	if (pkgmgrinfo_appinfo_get_installed_storage_location(handle, &installed_storage) == PMINFO_R_OK) {
-		if (installed_storage == PMINFO_INTERNAL_STORAGE)
-			c->val[_AI_STORAGE_TYPE] = strdup("internal");
-		else if (installed_storage == PMINFO_EXTERNAL_STORAGE)
-			c->val[_AI_STORAGE_TYPE] = strdup("external");
-	} else {
-		c->val[_AI_STORAGE_TYPE] = strdup("internal");
-	}
-
-	if (pkgmgrinfo_appinfo_get_launch_mode(handle, &mode)) {
-		_E("failed to get launch_mode");
-		_free_appinfo(c);
-		return -1;
-	}
-	c->val[_AI_LAUNCH_MODE] = strdup(mode ? mode : "single");
-
-	SECURE_LOGD("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMP], c->val[_AI_TYPE]);
+	SECURE_LOGD("%s : %s : %s", c->val[_AI_FILE], c->val[_AI_COMPTYPE],
+		c->val[_AI_TYPE]);
 
 	g_hash_table_insert(info->tbl, c->val[_AI_FILE], c);
 
@@ -337,7 +512,7 @@ static int __pkg_list_cb(pkgmgrinfo_pkginfo_h handle, void *user_data)
 	return 0;
 }
 
-static void _remove_user_appinfo(uid_t uid)
+static void __remove_user_appinfo(uid_t uid)
 {
 	g_hash_table_remove(user_tbl, GINT_TO_POINTER(uid));
 }
@@ -355,7 +530,7 @@ static void __handle_onboot(void *user_data, const char *appid,
 	}
 }
 
-static struct user_appinfo *_add_user_appinfo(uid_t uid)
+static struct user_appinfo *__add_user_appinfo(uid_t uid)
 {
 	int r;
 	struct user_appinfo *info;
@@ -368,7 +543,7 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 
 	info->uid = uid;
 	info->tbl = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
-			_free_appinfo);
+			__free_appinfo);
 	if (info->tbl == NULL) {
 		_E("out of memory");
 		free(info);
@@ -379,7 +554,7 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 
 	r = pkgmgrinfo_pkginfo_get_usr_list(__pkg_list_cb, info, info->uid);
 	if (r != PMINFO_R_OK) {
-		_remove_user_appinfo(uid);
+		__remove_user_appinfo(uid);
 		return NULL;
 	}
 
@@ -394,7 +569,7 @@ static struct user_appinfo *_add_user_appinfo(uid_t uid)
 	return info;
 }
 
-static struct user_appinfo *_find_user_appinfo(uid_t uid)
+static struct user_appinfo *__find_user_appinfo(uid_t uid)
 {
 	return g_hash_table_lookup(user_tbl, GINT_TO_POINTER(uid));
 }
@@ -438,11 +613,11 @@ static gboolean __appinfo_remove_cb(gpointer key, gpointer value, gpointer data)
 	return FALSE;
 }
 
-static void _appinfo_delete_on_event(uid_t uid, const char *pkgid)
+static void __appinfo_delete_on_event(uid_t uid, const char *pkgid)
 {
 	struct user_appinfo *info;
 
-	info = _find_user_appinfo(uid);
+	info = __find_user_appinfo(uid);
 	if (info == NULL) {
 		_E("cannot find appinfo for uid %d", uid);
 		return;
@@ -452,7 +627,7 @@ static void _appinfo_delete_on_event(uid_t uid, const char *pkgid)
 			(gpointer)pkgid);
 }
 
-static void _appinfo_insert_on_event(uid_t uid, const char *pkgid)
+static void __appinfo_insert_on_event(uid_t uid, const char *pkgid)
 {
 	appinfo_insert(uid, pkgid);
 	appinfo_foreach(uid, __handle_onboot, (void *)(intptr_t)uid);
@@ -488,12 +663,12 @@ static int __package_event_cb(uid_t target_uid, int req_id,
 			return 0;
 
 		if (!strcasecmp(op, "uninstall")) {
-			_appinfo_delete_on_event(target_uid, pkgid);
+			__appinfo_delete_on_event(target_uid, pkgid);
 		} else if (!strcasecmp(op, "install")) {
-			_appinfo_insert_on_event(target_uid, pkgid);
+			__appinfo_insert_on_event(target_uid, pkgid);
 		} else if (!strcasecmp(op, "update")) {
-			_appinfo_delete_on_event(target_uid, pkgid);
-			_appinfo_insert_on_event(target_uid, pkgid);
+			__appinfo_delete_on_event(target_uid, pkgid);
+			__appinfo_insert_on_event(target_uid, pkgid);
 		}
 
 		g_hash_table_remove(pkg_pending, pkgid);
@@ -502,7 +677,7 @@ static int __package_event_cb(uid_t target_uid, int req_id,
 	return 0;
 }
 
-static int _init_package_event_handler(void)
+static int __init_package_event_handler(void)
 {
 	pc = pkgmgr_client_new(PC_LISTENING);
 	if (pc == NULL)
@@ -514,7 +689,7 @@ static int _init_package_event_handler(void)
 	return 0;
 }
 
-static void _fini_package_event_handler(void)
+static void __fini_package_event_handler(void)
 {
 	pkgmgr_client_free(pc);
 }
@@ -540,7 +715,7 @@ int appinfo_init(void)
 	fclose(fp);
 
 	user_tbl = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
-			_free_user_appinfo);
+			__free_user_appinfo);
 	if (user_tbl == NULL)
 		return -1;
 
@@ -550,13 +725,13 @@ int appinfo_init(void)
 		return -1;
 
 
-	global_appinfo = _add_user_appinfo(GLOBAL_USER);
+	global_appinfo = __add_user_appinfo(GLOBAL_USER);
 	if (global_appinfo == NULL) {
 		appinfo_fini();
 		return -1;
 	}
 
-	if (_init_package_event_handler()) {
+	if (__init_package_event_handler()) {
 		appinfo_fini();
 		return -1;
 	}
@@ -568,7 +743,7 @@ void appinfo_fini(void)
 {
 	g_hash_table_destroy(user_tbl);
 	g_hash_table_destroy(pkg_pending);
-	_fini_package_event_handler();
+	__fini_package_event_handler();
 }
 
 struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
@@ -577,9 +752,9 @@ struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 	struct appinfo *ai;
 
 	/* search from user table */
-	info = _find_user_appinfo(caller_uid);
+	info = __find_user_appinfo(caller_uid);
 	if (info == NULL) {
-		info = _add_user_appinfo(caller_uid);
+		info = __add_user_appinfo(caller_uid);
 		if (info == NULL)
 			return NULL;
 	}
@@ -592,7 +767,7 @@ struct appinfo *appinfo_find(uid_t caller_uid, const char *appid)
 		return NULL;
 
 	/* search again from global table */
-	info = _find_user_appinfo(GLOBAL_USER);
+	info = __find_user_appinfo(GLOBAL_USER);
 	if (info == NULL) {
 		_E("cannot find global appinfo table!");
 		return NULL;
@@ -606,9 +781,9 @@ int appinfo_insert(uid_t uid, const char *pkgid)
 	struct user_appinfo *info;
 	pkgmgrinfo_pkginfo_h handle;
 
-	info = _find_user_appinfo(uid);
+	info = __find_user_appinfo(uid);
 	if (info == NULL) {
-		info = _add_user_appinfo(uid);
+		info = __add_user_appinfo(uid);
 		if (info == NULL)
 			_E("load appinfo for uid %d failed", uid);
 		return 0;
@@ -633,7 +808,7 @@ int appinfo_insert(uid_t uid, const char *pkgid)
 	return 0;
 }
 
-static void _reload_appinfo(gpointer key, gpointer value, gpointer user_data)
+static void __reload_appinfo(gpointer key, gpointer value, gpointer user_data)
 {
 	int r;
 	struct user_appinfo *info = (struct user_appinfo *)value;
@@ -642,7 +817,7 @@ static void _reload_appinfo(gpointer key, gpointer value, gpointer user_data)
 
 	r = pkgmgrinfo_pkginfo_get_usr_list(__pkg_list_cb, info, info->uid);
 	if (r != PMINFO_R_OK) {
-		_remove_user_appinfo(info->uid);
+		__remove_user_appinfo(info->uid);
 		return;
 	}
 
@@ -651,7 +826,7 @@ static void _reload_appinfo(gpointer key, gpointer value, gpointer user_data)
 
 void appinfo_reload(void)
 {
-	g_hash_table_foreach(user_tbl, _reload_appinfo, NULL);
+	g_hash_table_foreach(user_tbl, __reload_appinfo, NULL);
 }
 
 const char *appinfo_get_value(const struct appinfo *c, enum appinfo_type type)
@@ -711,7 +886,7 @@ struct _cbinfo {
 	void *cb_data;
 };
 
-static void _iter_cb(gpointer key, gpointer value, gpointer user_data)
+static void __iter_cb(gpointer key, gpointer value, gpointer user_data)
 {
 	struct _cbinfo *cbi = user_data;
 
@@ -723,9 +898,9 @@ void appinfo_foreach(uid_t uid, appinfo_iter_callback cb, void *user_data)
 	struct user_appinfo *info;
 	struct _cbinfo cbi;
 
-	info = _find_user_appinfo(uid);
+	info = __find_user_appinfo(uid);
 	if (info == NULL) {
-		info = _add_user_appinfo(uid);
+		info = __add_user_appinfo(uid);
 		if (info == NULL)
 			return;
 	}
@@ -739,7 +914,7 @@ void appinfo_foreach(uid_t uid, appinfo_iter_callback cb, void *user_data)
 	cbi.cb = cb;
 	cbi.cb_data = user_data;
 
-	g_hash_table_foreach(info->tbl, _iter_cb, &cbi);
+	g_hash_table_foreach(info->tbl, __iter_cb, &cbi);
 }
 
 int appinfo_get_boolean(const struct appinfo *c, enum appinfo_type type)
