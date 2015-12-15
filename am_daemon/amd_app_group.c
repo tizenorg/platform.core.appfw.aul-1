@@ -1268,7 +1268,7 @@ void app_group_lower(int pid, int *exit)
 				__detach_window(ac->wid);
 				ac->can_shift = 0;
 #ifdef WAYLAND
-				ecore_wl_window_lower((Ecore_Wl_Window *)ac->wid);
+				ecore_wl_window_lower((Ecore_Wl_Window *)((intptr_t)ac->wid));
 #else
 				/* ecore_x_window_lower(ac->wid); */
 #endif

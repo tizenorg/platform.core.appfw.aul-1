@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <glib/gstdio.h>
 #include <bundle_internal.h>
 #include <assert.h>
@@ -236,7 +237,7 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 
 	bundle_keyval_get_basic_val((bundle_keyval_t *) kv, (void**) &val, &size);
 
-	node_attr = (guint) g_hash_table_lookup(attr_key, key);
+	node_attr = (uintptr_t)g_hash_table_lookup(attr_key, key);
 	if (node_attr <= NODE_ATTR_MIN || node_attr >= NODE_ATTR_MAX) {
 		LOGE("INVALID_PARAMETER(0x%08x), node_attr(%d)",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER, node_attr);
@@ -306,9 +307,9 @@ static void __bundle_iterator_get_best_node(const char *key, const char *val,
 		void *data)
 {
 	unsigned int node_attr;
-	unsigned int *weight = (unsigned int *) data;
+	unsigned int *weight = (unsigned int *)data;
 
-	node_attr = (guint) g_hash_table_lookup(attr_key, key);
+	node_attr = (uintptr_t)g_hash_table_lookup(attr_key, key);
 	if (node_attr <= NODE_ATTR_MIN || node_attr >= NODE_ATTR_MAX) {
 		LOGE("INVALID_PARAMETER(0x%08x), node_attr(%d)",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER, node_attr);
@@ -979,8 +980,8 @@ static int __init(const char *rsc_folder_path, bundle *b)
 
 		unsigned int i;
 		for (i = 0; i < ARRAY_SIZE(map); i++) {
-			g_hash_table_insert(attr_key, (char *) map[i].bundle_attr_key,
-					(gpointer) (map[i].bundle_attr_value));
+			g_hash_table_insert(attr_key, (char *)map[i].bundle_attr_key,
+					(gpointer)((uintptr_t)(map[i].bundle_attr_value)));
 		}
 	}
 
