@@ -279,7 +279,7 @@ static int __app_process_by_pid(int cmd,
 	ai = appinfo_find(cr->uid, appid);
 	if (ai) {
 		pkgid = appinfo_get_value(ai, AIT_PKGID);
-		type = appinfo_get_value(ai, AIT_COMP);
+		type = appinfo_get_value(ai, AIT_COMPTYPE);
 	}
 
 	if (ai && (cmd == APP_RESUME_BY_PID || cmd == APP_PAUSE_BY_PID))
