@@ -63,6 +63,7 @@ enum _appinfo_idx {
 	_AI_BG_CATEGORY,
 	_AI_LAUNCH_MODE,
 	_AI_GLOBAL,
+	_AI_EFFECTIVE_APPID,
 	_AI_MAX,
 };
 #define _AI_START _AI_NAME /* start index */
@@ -423,25 +424,41 @@ static int __appinfo_add_global(const pkgmgrinfo_appinfo_h handle, struct appinf
 	return 0;
 }
 
+static int __appinfo_add_effective_appid(const pkgmgrinfo_appinfo_h handle, struct appinfo *info, void *data)
+{
+	char *effective_appid = NULL;
+
+	if (pkgmgrinfo_appinfo_get_effective_appid(handle, &effective_appid) != PMINFO_R_OK) {
+		_E("Failed to get effective appid");
+		return -1;
+	}
+
+	if (effective_appid && strlen(effective_appid) > 0)
+		info->val[_AI_EFFECTIVE_APPID] = strdup(effective_appid);
+
+	return 0;
+}
+
 static struct appinfo_t _appinfos[] = {
-	[_AI_NAME] = { "Name", AIT_NAME, __appinfo_add_name },
-	[_AI_EXEC] = { "Exec", AIT_EXEC, __appinfo_add_exec },
-	[_AI_TYPE] = { "PkgType", AIT_TYPE, __appinfo_add_type },
-	[_AI_ONBOOT] = { "StartOnBoot", AIT_ONBOOT, __appinfo_add_onboot },
-	[_AI_RESTART] = { "AutoRestart", AIT_RESTART, __appinfo_add_restart },
-	[_AI_MULTI] = { "Multiple", AIT_MULTI, __appinfo_add_multi },
-	[_AI_HWACC] = { "Hwacceleration", AIT_HWACC, __appinfo_add_hwacc },
-	[_AI_PERM] = { "PermissionType", AIT_PERM, __appinfo_add_perm },
-	[_AI_PKGID] = { "PackageId", AIT_PKGID, __appinfo_add_pkgid },
-	[_AI_PRELOAD] = { "Preload", AIT_PRELOAD, __appinfo_add_preload },
-	[_AI_STATUS] = { "Status", AIT_STATUS, __appinfo_add_status },
-	[_AI_POOL] = { "ProcessPool", AIT_POOL, __appinfo_add_pool },
-	[_AI_COMPTYPE] = { "ComponentType", AIT_COMPTYPE, __appinfo_add_comptype },
+	[_AI_NAME] = {"Name", AIT_NAME, __appinfo_add_name},
+	[_AI_EXEC] = {"Exec", AIT_EXEC, __appinfo_add_exec},
+	[_AI_TYPE] = {"PkgType", AIT_TYPE, __appinfo_add_type},
+	[_AI_ONBOOT] = {"StartOnBoot", AIT_ONBOOT, __appinfo_add_onboot},
+	[_AI_RESTART] = {"AutoRestart", AIT_RESTART, __appinfo_add_restart},
+	[_AI_MULTI] = {"Multiple", AIT_MULTI, __appinfo_add_multi},
+	[_AI_HWACC] = {"Hwacceleration", AIT_HWACC, __appinfo_add_hwacc},
+	[_AI_PERM] = {"PermissionType", AIT_PERM, __appinfo_add_perm},
+	[_AI_PKGID] = {"PackageId", AIT_PKGID, __appinfo_add_pkgid},
+	[_AI_PRELOAD] = {"Preload", AIT_PRELOAD, __appinfo_add_preload},
+	[_AI_STATUS] = {"Status", AIT_STATUS, __appinfo_add_status},
+	[_AI_POOL] = {"ProcessPool", AIT_POOL, __appinfo_add_pool},
+	[_AI_COMPTYPE] = {"ComponentType", AIT_COMPTYPE, __appinfo_add_comptype},
 	[_AI_TEP] = {"Tep", AIT_TEP, __appinfo_add_tep},
-	[_AI_STORAGE_TYPE] = {"StorageType", AIT_STORAGE_TYPE, __appinfo_add_storage_type },
-	[_AI_BG_CATEGORY] = { "BackgroundCategory", AIT_BG_CATEGORY, __appinfo_add_bg_category },
-	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE, __appinfo_add_launch_mode },
-	[_AI_GLOBAL] = {"global", AIT_GLOBAL, __appinfo_add_global },
+	[_AI_STORAGE_TYPE] = {"StorageType", AIT_STORAGE_TYPE, __appinfo_add_storage_type},
+	[_AI_BG_CATEGORY] = {"BackgroundCategory", AIT_BG_CATEGORY, __appinfo_add_bg_category},
+	[_AI_LAUNCH_MODE] = {"launch_mode", AIT_LAUNCH_MODE, __appinfo_add_launch_mode},
+	[_AI_GLOBAL] = {"global", AIT_GLOBAL, __appinfo_add_global},
+	[_AI_EFFECTIVE_APPID] = {"effective-appid", AIT_EFFECTIVE_APPID, __appinfo_add_effective_appid},
 };
 
 static int __appinfo_insert_handler (const pkgmgrinfo_appinfo_h handle,
