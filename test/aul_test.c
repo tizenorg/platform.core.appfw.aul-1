@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <glib.h>
+#include <bundle.h>
+#include <bundle_internal.h>
 
 #include "menu_db_util.h"
 #include "aul.h"

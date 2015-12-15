@@ -30,6 +30,8 @@
 #include <dirent.h>
 #include <glib.h>
 #include <dbus/dbus.h>
+#include <bundle.h>
+#include <bundle_internal.h>
 
 #include "aul.h"
 #include "aul_api.h"
