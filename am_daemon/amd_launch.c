@@ -682,30 +682,6 @@ static void __send_mount_request(const struct appinfo *ai, const char *tep_name,
 	}
 }
 
-static int __check_app_control_privilege(int fd, const char *operation)
-{
-	int ret = 0;
-
-	if (operation == NULL || fd < 0)
-		return 0;
-
-	if (!strcmp(operation, AUL_SVC_OPERATION_DOWNLOAD)) {
-		ret = check_privilege_by_cynara(fd, "http://tizen.org/privilege/download");
-		if (ret != 0) {
-			_E("no privilege for DOWNLOAD operation");
-			return -EILLEGALACCESS;
-		}
-	} else if (!strcmp(operation, AUL_SVC_OPERATION_CALL)) {
-		ret = check_privilege_by_cynara(fd, "http://tizen.org/privilege/call");
-		if (ret != 0) {
-			_E("no privilege for CALL operation");
-			return -EILLEGALACCESS;
-		}
-	}
-
-	return 0;
-}
-
 int _send_hint_for_visibility(uid_t uid)
 {
 	bundle *b = NULL;
@@ -741,7 +717,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 	const char *component_type = NULL;
 	const char *process_pool = NULL;
 	const char *tep_name = NULL;
-	const char *operation = NULL;
 	int pid = -1;
 	char tmpbuf[MAX_PID_STR_BUFSZ];
 	const char *hwacc;
@@ -798,16 +773,6 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 
 	if ((ret = __compare_signature(ai, cmd, caller_uid, appid, caller_appid, fd)) != 0)
 		return ret;
-
-	/* check privilege */
-	operation = bundle_get_val(kb, AUL_SVC_K_OPERATION);
-	if (operation) {
-		ret = __check_app_control_privilege(fd, operation);
-		if (ret != 0) {
-			__real_send(fd, ret);
-			return ret;
-		}
-	}
 
 	multiple = appinfo_get_value(ai, AIT_MULTI);
 	if (!multiple || strncmp(multiple, "false", 5) == 0)

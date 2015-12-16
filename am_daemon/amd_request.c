@@ -52,6 +52,8 @@
 #include "amd_app_group.h"
 #include "amd_cynara.h"
 #include "launch.h"
+#include "aul_svc.h"
+#include "aul_svc_priv_key.h"
 
 #define INHOUSE_UID     tzplatform_getuid(TZ_USER_NAME)
 #define REGULAR_UID_MIN     5000
@@ -59,6 +61,8 @@
 #define PRIVILEGE_APPMANAGER_LAUNCH "http://tizen.org/privilege/appmanager.launch"
 #define PRIVILEGE_APPMANAGER_KILL "http://tizen.org/privilege/appmanager.kill"
 #define PRIVILEGE_APPMANAGER_KILL_BGAPP "http://tizen.org/privilege/appmanager.kill.bgapp"
+#define PRIVILEGE_DOWNLOAD "http://tizen.org/privilege/download"
+#define PRIVILEGE_CALL "http://tizen.org/privilege/call"
 
 #define MAX_NR_OF_DESCRIPTORS 2
 #define PENDING_REQUEST_TIMEOUT 5000 /* msec */
@@ -414,6 +418,30 @@ static void __handle_agent_dead_signal(struct ucred *pcr)
 	__agent_dead_handler(pcr->uid);
 }
 
+static int __check_app_control_privilege(int fd, const char *operation)
+{
+	int ret = 0;
+
+	if (operation == NULL || fd < 0)
+		return 0;
+
+	if (!strcmp(operation, AUL_SVC_OPERATION_DOWNLOAD)) {
+		ret = check_privilege_by_cynara(fd, PRIVILEGE_DOWNLOAD);
+		if (ret != 0) {
+			_E("no privilege for DOWNLOAD operation");
+			return -EILLEGALACCESS;
+		}
+	} else if (!strcmp(operation, AUL_SVC_OPERATION_CALL)) {
+		ret = check_privilege_by_cynara(fd, PRIVILEGE_CALL);
+		if (ret != 0) {
+			_E("no privilege for CALL operation");
+			return -EILLEGALACCESS;
+		}
+	}
+
+	return 0;
+}
+
 static int __dispatch_get_socket_pair(int clifd, const app_pkt_t *pkt, struct ucred *cr)
 {
 	char *caller;
@@ -698,6 +726,7 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	rua_stat_pkt_t *rua_stat_item = NULL;
 	bool pending = false;
 	struct pending_item *pending_item;
+	const char *operation = NULL;
 
 	kb = bundle_decode(pkt->data, pkt->len);
 	if (kb == NULL) {
@@ -728,6 +757,15 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 					GLOBAL_USER, clifd, &pending);
 		}
 	} else {
+		operation = bundle_get_val(kb, AUL_SVC_K_OPERATION);
+		if (operation) {
+			ret = __check_app_control_privilege(clifd, operation);
+			if (ret != 0) {
+				__real_send(clifd, ret);
+				goto error;
+			}
+		}
+
 		ret = _start_app(appid, kb, pkt->cmd, cr->pid, cr->uid, clifd,
 				&pending);
 	}
