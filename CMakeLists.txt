@@ -72,6 +72,7 @@ add_library(aul SHARED
 		src/aul_path.c
 		src/app_group.c
 		src/aul_rsc_mgr.c
+		src/app_com.c
 		)
 TARGET_LINK_LIBRARIES(aul aul_mods ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
@@ -86,6 +87,7 @@ ADD_EXECUTABLE(amd
 	am_daemon/amd_status.c
 	am_daemon/amd_app_group.c
 	am_daemon/amd_cynara.c
+	am_daemon/amd_app_com.c
 	)
 SET_TARGET_PROPERTIES(amd PROPERTIES COMPILE_FLAGS "${EXTRA_CFLAGS} -fPIE")
 TARGET_LINK_LIBRARIES(amd aul_mods aul ${pkgs_LDFLAGS} "-pie")
