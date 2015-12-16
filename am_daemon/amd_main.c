@@ -46,6 +46,7 @@
 #include "amd_launch.h"
 #include "amd_request.h"
 #include "amd_app_group.h"
+#include "amd_app_com.h"
 
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define AUL_SP_DBUS_PATH "/Org/Tizen/Aul/Syspopup"
@@ -346,6 +347,8 @@ static int __app_dead_handler(int pid, void *data)
 			appid = strdup(tmp_appid);
 	}
 
+	app_com_client_remove(pid);
+
 	if (app_group_is_leader_pid(pid)) {
 		_W("app_group_leader_app, pid: %d", pid);
 		if (app_group_find_second_leader(pid) == -1) {
@@ -481,6 +484,7 @@ static int __init(void)
 	_request_init();
 	_status_init();
 	app_group_init();
+	app_com_broker_init();
 
 	if (vconf_notify_key_changed(VCONFKEY_SETAPPL_DEVOPTION_BGPROCESS,
 				__vconf_cb, NULL) != 0)
@@ -508,5 +512,6 @@ int main(int argc, char *argv[])
 	}
 	g_main_loop_run(mainloop);
 
+	app_com_broker_fini();
 	return 0;
 }
