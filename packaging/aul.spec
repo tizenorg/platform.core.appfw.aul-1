@@ -136,6 +136,7 @@ systemctl daemon-reload
 %{_bindir}/aul_test
 %{_bindir}/app_launcher
 %{_bindir}/appgroup_info
+%{_bindir}/app_com_tool
 %{_bindir}/launch_app
 %{_bindir}/appid2pid
 %{_bindir}/launch_debug
