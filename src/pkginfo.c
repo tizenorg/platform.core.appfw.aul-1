@@ -1,22 +1,17 @@
 /*
- *  aul
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd All Rights Reserved
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 #define _GNU_SOURCE
@@ -39,7 +34,7 @@ typedef struct _internal_param_t {
 static const char *__appid = NULL;
 static const char *__pkgid = NULL;
 
-SLPAPI int aul_app_get_pid(const char *appid)
+API int aul_app_get_pid(const char *appid)
 {
 	int ret = 0;
 
@@ -52,7 +47,7 @@ SLPAPI int aul_app_get_pid(const char *appid)
 	return ret;
 }
 
-SLPAPI int aul_app_is_running(const char *appid)
+API int aul_app_is_running(const char *appid)
 {
 	int ret = 0;
 
@@ -68,7 +63,7 @@ SLPAPI int aul_app_is_running(const char *appid)
 	return 0;
 }
 
-SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
+API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 					void *user_param)
 {
 	app_pkt_t *pkt = NULL;
@@ -103,12 +98,12 @@ SLPAPI int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	return AUL_R_OK;
 }
 
-SLPAPI void aul_set_preinit_appid(const char *appid)
+API void aul_set_preinit_appid(const char *appid)
 {
 	__appid = appid;
 }
 
-SLPAPI void aul_set_preinit_pkgid(const char *pkgid)
+API void aul_set_preinit_pkgid(const char *pkgid)
 {
 	__pkgid = pkgid;
 }
@@ -139,7 +134,7 @@ static int __get_info_bypid(int pid, char *appid, int len, int cmd)
 	return 0;
 }
 
-SLPAPI int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
+API int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
 {
 	return aul_app_get_appid_bypid(pid, pkgname, len);
 }
@@ -158,7 +153,7 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 	return 0;
 }
 
-SLPAPI int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid)
+API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid)
 {
 	app_pkt_t *pkt;
 	int pgid;
@@ -197,12 +192,12 @@ SLPAPI int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t 
 	return AUL_R_ERROR;
 }
 
-SLPAPI int aul_app_get_appid_bypid(int pid, char *appid, int len)
+API int aul_app_get_appid_bypid(int pid, char *appid, int len)
 {
 	return aul_app_get_appid_bypid_for_uid(pid, appid, len, getuid());
 }
 
-SLPAPI int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid)
+API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid)
 {
 	app_pkt_t *pkt = NULL;
 	int pgid;
@@ -250,7 +245,7 @@ SLPAPI int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t 
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
+API int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 {
 	return aul_app_get_pkgid_bypid_for_uid(pid, pkgid, len, getuid());
 }

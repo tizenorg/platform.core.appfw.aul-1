@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-
-#ifndef __PRIV_KEY_H__
-#define __PRIV_KEY_H__
+#pragma once
 
 /** AUL SVC internal private key */
 #define AUL_SVC_K_OPERATION "__APP_SVC_OP_TYPE__"
@@ -37,5 +35,4 @@
 /** AUL SVC internal private key */
 #define AUL_SVC_K_LAUNCH_MODE   "__APP_SVC_LAUNCH_MODE__"
 
-#endif	/* __PRIV_KEY_H__ */
 

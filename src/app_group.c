@@ -29,7 +29,7 @@
 #include "launch.h"
 #include "simple_util.h"
 
-SLPAPI int aul_app_group_get_window(int pid)
+API int aul_app_group_get_window(int pid)
 {
 	int ret;
 	bundle *b;
@@ -44,7 +44,7 @@ SLPAPI int aul_app_group_get_window(int pid)
 	return ret;
 }
 
-SLPAPI int aul_app_group_set_window(int wid)
+API int aul_app_group_set_window(int wid)
 {
 	int ret;
 	bundle *b;
@@ -59,7 +59,7 @@ SLPAPI int aul_app_group_set_window(int wid)
 	return ret;
 }
 
-SLPAPI void aul_app_group_get_leader_pids(int *cnt, int **pids)
+API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 {
 	app_pkt_t *ret = NULL;
 	*cnt = 0;
@@ -84,7 +84,7 @@ SLPAPI void aul_app_group_get_leader_pids(int *cnt, int **pids)
 
 }
 
-SLPAPI void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
+API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 {
 	app_pkt_t *ret = NULL;
 	bundle *b;
@@ -123,7 +123,7 @@ SLPAPI void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 	bundle_free(b);
 }
 
-SLPAPI int aul_app_group_get_leader_pid(int pid)
+API int aul_app_group_get_leader_pid(int pid)
 {
 	int ret;
 	bundle *b;
@@ -138,13 +138,13 @@ SLPAPI int aul_app_group_get_leader_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_app_group_clear_top(void)
+API int aul_app_group_clear_top(void)
 {
 	unsigned char dummy[1] = { 0 };
 	return  __app_send_raw(AUL_UTIL_PID, APP_GROUP_CLEAR_TOP, dummy, 0);
 }
 
-SLPAPI int aul_app_group_is_top(void)
+API int aul_app_group_is_top(void)
 {
 	int lpid = aul_app_group_get_leader_pid(getpid());
 
@@ -166,7 +166,7 @@ SLPAPI int aul_app_group_is_top(void)
 	return 1;
 }
 
-SLPAPI int aul_app_group_get_fg_flag(int pid)
+API int aul_app_group_get_fg_flag(int pid)
 {
 	int ret;
 	bundle *b;
@@ -181,7 +181,7 @@ SLPAPI int aul_app_group_get_fg_flag(int pid)
 	return ret;
 }
 
-SLPAPI void aul_app_group_lower(int *exit)
+API void aul_app_group_lower(int *exit)
 {
 	int ret;
 	unsigned char dummy[1] = { 0 };
@@ -189,7 +189,7 @@ SLPAPI void aul_app_group_lower(int *exit)
 	*exit = ret;
 }
 
-SLPAPI void aul_app_group_get_idle_pids(int *cnt, int **pids)
+API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 {
 	app_pkt_t *ret = NULL;
 	*cnt = 0;

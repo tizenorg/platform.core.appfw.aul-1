@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef __AUL_SVC_H__
-#define __AUL_SVC_H__
+#pragma once
 
 #include <bundle.h>
 #include <sys/types.h>
@@ -1106,6 +1105,4 @@ int aul_svc_set_loader_id(bundle *b, int loader_id);
 }
 #endif
 
-
-#endif      /* __AUL_SVC_H__ */
 

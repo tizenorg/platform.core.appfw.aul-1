@@ -1,22 +1,17 @@
 /*
- *  aul
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd All Rights Reserved
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 #define _GNU_SOURCE
@@ -39,7 +34,7 @@ static int __match_content_with_regex(const char *content, regex_t *regex_preg)
 		return 0;
 }
 
-SLPAPI int aul_get_mime_from_content(const char *content, char *mimetype,
+API int aul_get_mime_from_content(const char *content, char *mimetype,
 				     int len)
 {
 	char *founded = NULL;
@@ -73,7 +68,7 @@ SLPAPI int aul_get_mime_from_content(const char *content, char *mimetype,
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_get_mime_description(const char *mimetype, char *desc, int len)
+API int aul_get_mime_description(const char *mimetype, char *desc, int len)
 {
 	regex_tbl *miregex_tbl = NULL;
 	char *founded = NULL;
@@ -105,7 +100,7 @@ SLPAPI int aul_get_mime_description(const char *mimetype, char *desc, int len)
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_get_mime_extension(const char *mimetype, char *ext, int len)
+API int aul_get_mime_extension(const char *mimetype, char *ext, int len)
 {
 	const char **extlist;
 	int totlen = 0;
@@ -142,7 +137,7 @@ SLPAPI int aul_get_mime_extension(const char *mimetype, char *ext, int len)
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_get_mime_icon(const char *mimetype, char *iconname, int len)
+API int aul_get_mime_icon(const char *mimetype, char *iconname, int len)
 {
 	const char *icon;
 	const char *unaliased_mimetype;
@@ -165,7 +160,7 @@ SLPAPI int aul_get_mime_icon(const char *mimetype, char *iconname, int len)
 		return AUL_R_ERROR;
 }
 
-SLPAPI int aul_get_mime_from_file(const char *filename, char *mimetype, int len)
+API int aul_get_mime_from_file(const char *filename, char *mimetype, int len)
 {
 	const char *mime;
 	if (filename == NULL)
@@ -182,32 +177,32 @@ SLPAPI int aul_get_mime_from_file(const char *filename, char *mimetype, int len)
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_set_defapp_with_mime(const char *mimetype, const char *defapp)
+API int aul_set_defapp_with_mime(const char *mimetype, const char *defapp)
 {
 	/* removed */
 	return 0;
 }
 
-SLPAPI int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len)
+API int aul_get_defapp_from_mime(const char *mimetype, char *defapp, int len)
 {
 	/* removed */
 	return 0;
 }
 
-SLPAPI int aul_open_content(const char *content)
+API int aul_open_content(const char *content)
 {
 	/* removed */
 	return 0;
 }
 
-SLPAPI int aul_open_file_with_mimetype(const char *filename,
+API int aul_open_file_with_mimetype(const char *filename,
 				       const char *mimetype)
 {
 	/* removed */
 	return 0;
 }
 
-SLPAPI int aul_open_file(const char *filename)
+API int aul_open_file(const char *filename)
 {
 	/* removed */
 	return 0;

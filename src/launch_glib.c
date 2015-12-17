@@ -1,22 +1,17 @@
 /*
- *  aul
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd All Rights Reserved
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 #define _GNU_SOURCE
@@ -106,7 +101,7 @@ static gboolean __app_start_internal(gpointer data)
 	return 0;
 }
 
-SLPAPI int aul_launch_init(
+API int aul_launch_init(
 	int (*aul_handler) (aul_type type, bundle *, void *), void *data)
 {
 	int fd;
@@ -140,13 +135,13 @@ SLPAPI int aul_launch_init(
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_launch_fini()
+API int aul_launch_fini()
 {
 	g_source_destroy(src);
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_launch_argv_handler(int argc, char **argv)
+API int aul_launch_argv_handler(int argc, char **argv)
 {
 	bundle *b;
 
@@ -163,7 +158,7 @@ SLPAPI int aul_launch_argv_handler(int argc, char **argv)
 		return AUL_R_ERROR;
 }
 
-SLPAPI int aul_launch_local(bundle *b)
+API int aul_launch_local(bundle *b)
 {
 	if (!aul_is_initialized())
 		return AUL_R_ENOINIT;

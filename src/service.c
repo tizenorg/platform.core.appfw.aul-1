@@ -597,7 +597,7 @@ static int __get_list_with_submode(char *operation, char *win_id,
 	return 0;
 }
 
-SLPAPI int aul_svc_set_operation(bundle *b, const char *operation)
+API int aul_svc_set_operation(bundle *b, const char *operation)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_set_operation is NULL");
@@ -607,7 +607,7 @@ SLPAPI int aul_svc_set_operation(bundle *b, const char *operation)
 	return __set_bundle(b, AUL_SVC_K_OPERATION, operation);
 }
 
-SLPAPI int aul_svc_set_uri(bundle *b, const char *uri)
+API int aul_svc_set_uri(bundle *b, const char *uri)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_set_uri is NULL");
@@ -617,7 +617,7 @@ SLPAPI int aul_svc_set_uri(bundle *b, const char *uri)
 	return __set_bundle(b, AUL_SVC_K_URI, uri);
 }
 
-SLPAPI int aul_svc_set_mime(bundle *b, const char *mime)
+API int aul_svc_set_mime(bundle *b, const char *mime)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_set_mime is NULL");
@@ -627,7 +627,7 @@ SLPAPI int aul_svc_set_mime(bundle *b, const char *mime)
 	return __set_bundle(b, AUL_SVC_K_MIME, mime);
 }
 
-SLPAPI int aul_svc_add_data(bundle *b, const char *key, const char *val)
+API int aul_svc_add_data(bundle *b, const char *key, const char *val)
 {
 	if (b == NULL || key == NULL)
 		return AUL_SVC_RET_EINVAL;
@@ -638,7 +638,7 @@ SLPAPI int aul_svc_add_data(bundle *b, const char *key, const char *val)
 	return __set_bundle(b, key, val);
 }
 
-SLPAPI int aul_svc_add_data_array(bundle *b, const char *key,
+API int aul_svc_add_data_array(bundle *b, const char *key,
 				const char **val_array, int len)
 {
 	if (b == NULL || key == NULL)
@@ -650,7 +650,7 @@ SLPAPI int aul_svc_add_data_array(bundle *b, const char *key,
 	return __set_bundle_array(b, key, val_array, len);
 }
 
-SLPAPI int aul_svc_set_pkgname(bundle *b, const char *pkg_name)
+API int aul_svc_set_pkgname(bundle *b, const char *pkg_name)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_set_pkgname is NULL");
@@ -660,7 +660,7 @@ SLPAPI int aul_svc_set_pkgname(bundle *b, const char *pkg_name)
 	return __set_bundle(b, AUL_SVC_K_PKG_NAME, pkg_name);
 }
 
-SLPAPI int aul_svc_set_appid(bundle *b, const char *appid)
+API int aul_svc_set_appid(bundle *b, const char *appid)
 {
 	char *alias_id = NULL;
 	int ret;
@@ -681,7 +681,7 @@ SLPAPI int aul_svc_set_appid(bundle *b, const char *appid)
 	return ret;
 }
 
-SLPAPI int aul_svc_set_category(bundle *b, const char *category)
+API int aul_svc_set_category(bundle *b, const char *category)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_set_category is NULL");
@@ -691,7 +691,7 @@ SLPAPI int aul_svc_set_category(bundle *b, const char *category)
 	return __set_bundle(b, AUL_SVC_K_CATEGORY, category);
 }
 
-SLPAPI int aul_svc_set_launch_mode(bundle *b, const char *mode)
+API int aul_svc_set_launch_mode(bundle *b, const char *mode)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_set_launch_mode is NULL");
@@ -701,13 +701,13 @@ SLPAPI int aul_svc_set_launch_mode(bundle *b, const char *mode)
 	return __set_bundle(b, AUL_SVC_K_LAUNCH_MODE, mode);
 }
 
-SLPAPI int aul_svc_run_service(bundle *b, int request_code,
+API int aul_svc_run_service(bundle *b, int request_code,
 					aul_svc_res_fn cbfunc, void *data)
 {
 	return aul_svc_run_service_for_uid(b, request_code, cbfunc, data, getuid());
 }
 
-SLPAPI int aul_svc_run_service_for_uid(bundle *b, int request_code,
+API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 				aul_svc_res_fn cbfunc, void *data, uid_t uid)
 {
 	aul_svc_resolve_info_t info;
@@ -936,13 +936,13 @@ end:
 	return ret;
 }
 
-SLPAPI int aul_svc_get_list(bundle *b, aul_svc_info_iter_fn iter_fn,
+API int aul_svc_get_list(bundle *b, aul_svc_info_iter_fn iter_fn,
 		void *data)
 {
 	return aul_svc_get_list_for_uid(b, iter_fn, data, getuid());
 }
 
-SLPAPI int aul_svc_get_list_for_uid(bundle *b, aul_svc_info_iter_fn iter_fn,
+API int aul_svc_get_list_for_uid(bundle *b, aul_svc_info_iter_fn iter_fn,
 		void *data, uid_t uid)
 {
 	aul_svc_resolve_info_t info;
@@ -1022,12 +1022,12 @@ SLPAPI int aul_svc_get_list_for_uid(bundle *b, aul_svc_info_iter_fn iter_fn,
 	return AUL_SVC_RET_OK;
 }
 
-SLPAPI int aul_svc_get_all_defapps(aul_svc_info_iter_fn iter_fn, void *data)
+API int aul_svc_get_all_defapps(aul_svc_info_iter_fn iter_fn, void *data)
 {
 	return aul_svc_get_all_defapps_for_uid(iter_fn, data, getuid());
 }
 
-SLPAPI int aul_svc_get_all_defapps_for_uid(aul_svc_info_iter_fn iter_fn,
+API int aul_svc_get_all_defapps_for_uid(aul_svc_info_iter_fn iter_fn,
 		void *data, uid_t uid)
 {
 	char *pkgname = NULL;
@@ -1059,52 +1059,52 @@ SLPAPI int aul_svc_get_all_defapps_for_uid(aul_svc_info_iter_fn iter_fn,
 	return AUL_SVC_RET_OK;
 }
 
-SLPAPI const char *aul_svc_get_operation(bundle *b)
+API const char *aul_svc_get_operation(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_OPERATION);
 }
 
-SLPAPI const char *aul_svc_get_uri(bundle *b)
+API const char *aul_svc_get_uri(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_URI);
 }
 
-SLPAPI const char *aul_svc_get_mime(bundle *b)
+API const char *aul_svc_get_mime(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_MIME);
 }
 
-SLPAPI const char *aul_svc_get_data(bundle *b, const char *key)
+API const char *aul_svc_get_data(bundle *b, const char *key)
 {
 	return bundle_get_val(b, key);
 }
 
-SLPAPI const char **aul_svc_get_data_array(bundle *b, const char *key, int *len)
+API const char **aul_svc_get_data_array(bundle *b, const char *key, int *len)
 {
 	return bundle_get_str_array(b, key, len);
 }
 
-SLPAPI const char *aul_svc_get_pkgname(bundle *b)
+API const char *aul_svc_get_pkgname(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_PKG_NAME);
 }
 
-SLPAPI const char *aul_svc_get_appid(bundle *b)
+API const char *aul_svc_get_appid(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_PKG_NAME);
 }
 
-SLPAPI const char *aul_svc_get_category(bundle *b)
+API const char *aul_svc_get_category(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_CATEGORY);
 }
 
-SLPAPI const char *aul_svc_get_launch_mode(bundle *b)
+API const char *aul_svc_get_launch_mode(bundle *b)
 {
 	return bundle_get_val(b, AUL_SVC_K_LAUNCH_MODE);
 }
 
-SLPAPI int aul_svc_create_result_bundle(bundle *inb, bundle **outb)
+API int aul_svc_create_result_bundle(bundle *inb, bundle **outb)
 {
 	int ret = -1;
 
@@ -1128,7 +1128,7 @@ SLPAPI int aul_svc_create_result_bundle(bundle *inb, bundle **outb)
 	return ret;
 }
 
-SLPAPI int aul_svc_send_result(bundle *b, aul_svc_result_val result)
+API int aul_svc_send_result(bundle *b, aul_svc_result_val result)
 {
 	int ret;
 	char tmp[MAX_LOCAL_BUFSZ];
@@ -1155,13 +1155,13 @@ SLPAPI int aul_svc_send_result(bundle *b, aul_svc_result_val result)
 	return ret;
 }
 
-SLPAPI int aul_svc_set_defapp(const char *op, const char *mime_type,
+API int aul_svc_set_defapp(const char *op, const char *mime_type,
 				const char *uri, const char *defapp)
 {
 	return aul_svc_set_defapp_for_uid(op, mime_type, uri, defapp, getuid());
 }
 
-SLPAPI int aul_svc_set_defapp_for_uid(const char *op, const char *mime_type,
+API int aul_svc_set_defapp_for_uid(const char *op, const char *mime_type,
 				const char *uri, const char *defapp, uid_t uid)
 {
 	int ret;
@@ -1182,12 +1182,12 @@ SLPAPI int aul_svc_set_defapp_for_uid(const char *op, const char *mime_type,
 	return AUL_SVC_RET_OK;
 }
 
-SLPAPI int aul_svc_unset_defapp(const char *defapp)
+API int aul_svc_unset_defapp(const char *defapp)
 {
 	return aul_svc_unset_defapp_for_uid(defapp, getuid());
 }
 
-SLPAPI int aul_svc_unset_defapp_for_uid(const char *defapp, uid_t uid)
+API int aul_svc_unset_defapp_for_uid(const char *defapp, uid_t uid)
 {
 	int ret;
 
@@ -1208,12 +1208,12 @@ SLPAPI int aul_svc_unset_defapp_for_uid(const char *defapp, uid_t uid)
 	return AUL_SVC_RET_OK;
 }
 
-SLPAPI int aul_svc_unset_all_defapps()
+API int aul_svc_unset_all_defapps()
 {
 	return aul_svc_unset_all_defapps_for_uid(getuid());
 }
 
-SLPAPI int aul_svc_unset_all_defapps_for_uid(uid_t uid)
+API int aul_svc_unset_all_defapps_for_uid(uid_t uid)
 {
 	int ret;
 
@@ -1231,12 +1231,12 @@ SLPAPI int aul_svc_unset_all_defapps_for_uid(uid_t uid)
 	return AUL_SVC_RET_OK;
 }
 
-SLPAPI int aul_svc_is_defapp(const char *pkg_name)
+API int aul_svc_is_defapp(const char *pkg_name)
 {
 	return aul_svc_is_defapp_for_uid(pkg_name, getuid());
 }
 
-SLPAPI int aul_svc_is_defapp_for_uid(const char *pkg_name, uid_t uid)
+API int aul_svc_is_defapp_for_uid(const char *pkg_name, uid_t uid)
 {
 	int ret;
 
@@ -1249,7 +1249,7 @@ SLPAPI int aul_svc_is_defapp_for_uid(const char *pkg_name, uid_t uid)
 	return _svc_db_is_defapp(pkg_name, uid);
 }
 
-SLPAPI int aul_svc_data_is_array(bundle *b, const char *key)
+API int aul_svc_data_is_array(bundle *b, const char *key)
 {
 	int type;
 	type = bundle_get_type(b, key);
@@ -1262,7 +1262,7 @@ SLPAPI int aul_svc_data_is_array(bundle *b, const char *key)
 	return 0;
 }
 
-SLPAPI int aul_svc_allow_transient_app(bundle *b, int wid)
+API int aul_svc_allow_transient_app(bundle *b, int wid)
 {
 	char win_id[MAX_LOCAL_BUFSZ];
 
@@ -1276,13 +1276,13 @@ SLPAPI int aul_svc_allow_transient_app(bundle *b, int wid)
 	return __set_bundle(b, AUL_SVC_K_WIN_ID, win_id);
 }
 
-SLPAPI int aul_svc_request_transient_app(bundle *b, int callee_wid,
+API int aul_svc_request_transient_app(bundle *b, int callee_wid,
 				aul_svc_host_res_fn cbfunc, void *data)
 {
 	return 0;
 }
 
-SLPAPI int aul_svc_subapp_terminate_request_pid(int pid)
+API int aul_svc_subapp_terminate_request_pid(int pid)
 {
 	int cpid = getpid();
 	int lcnt;
@@ -1317,12 +1317,12 @@ SLPAPI int aul_svc_subapp_terminate_request_pid(int pid)
 	return aul_app_group_clear_top();
 }
 
-SLPAPI int aul_send_service_result(bundle *b)
+API int aul_send_service_result(bundle *b)
 {
 	return aul_send_result(b, 0);
 }
 
-SLPAPI int aul_svc_subscribe_launch_result(bundle *b, const char *result)
+API int aul_svc_subscribe_launch_result(bundle *b, const char *result)
 {
 	if (b == NULL) {
 		_E("bundle for aul_svc_subscribe_launch_result is NULL");
@@ -1332,7 +1332,7 @@ SLPAPI int aul_svc_subscribe_launch_result(bundle *b, const char *result)
 	return __set_bundle(b, result, "1");
 }
 
-SLPAPI int aul_svc_set_loader_id(bundle *b, int loader_id)
+API int aul_svc_set_loader_id(bundle *b, int loader_id)
 {
 	char tmp[MAX_LOCAL_BUFSZ];
 

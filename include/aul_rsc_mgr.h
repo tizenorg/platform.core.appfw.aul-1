@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef __AUL_RESOURCE_MANAGER_H__
-#define __AUL_RESOURCE_MANAGER_H__
+#pragma once
 
 #include <tizen.h>
 #include <bundle.h>
@@ -136,4 +135,4 @@ int aul_resource_manager_get_path_list(GHashTable **list);
 }
 #endif
 
-#endif /* __AUL_RESOURCE_MANAGER_H__ */
+

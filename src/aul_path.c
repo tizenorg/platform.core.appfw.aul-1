@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -202,84 +202,84 @@ static const char *__get(char **path, const char *appid,
 	return *path;
 }
 
-SLPAPI const char *aul_get_app_external_root_path(void)
+API const char *aul_get_app_external_root_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, NULL, getuid(), __get_external_path);
 }
 
-SLPAPI const char *aul_get_app_root_path(void)
+API const char *aul_get_app_root_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, NULL, getuid(), __get_path);
 }
 
-SLPAPI const char *aul_get_app_data_path(void)
+API const char *aul_get_app_data_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _DATA_DIR, getuid(), __get_path);
 }
 
-SLPAPI const char *aul_get_app_cache_path(void)
+API const char *aul_get_app_cache_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _CACHE_DIR, getuid(), __get_path);
 }
 
-SLPAPI const char *aul_get_app_resource_path(void)
+API const char *aul_get_app_resource_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _RESOURCE_DIR, getuid(), __get_path_from_db);
 }
 
-SLPAPI const char *aul_get_app_tep_resource_path(void)
+API const char *aul_get_app_tep_resource_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _TEP_RESOURCE_DIR, getuid(), __get_path_from_db);
 }
 
-SLPAPI const char *aul_get_app_shared_data_path(void)
+API const char *aul_get_app_shared_data_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _SHARED_DATA_DIR, getuid(), __get_path);
 }
 
-SLPAPI const char *aul_get_app_shared_resource_path(void)
+API const char *aul_get_app_shared_resource_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _SHARED_RESOURCE_DIR, getuid(), __get_path_from_db);
 }
 
-SLPAPI const char *aul_get_app_shared_trusted_path(void)
+API const char *aul_get_app_shared_trusted_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _SHARED_TRUSTED_DIR, getuid(), __get_path);
 }
 
-SLPAPI const char *aul_get_app_external_data_path(void)
+API const char *aul_get_app_external_data_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _DATA_DIR, getuid(), __get_external_path);
 }
 
-SLPAPI const char *aul_get_app_external_cache_path(void)
+API const char *aul_get_app_external_cache_path(void)
 {
 	static char *path;
 
 	return __get(&path, NULL, _CACHE_DIR, getuid(), __get_external_path);
 }
 
-SLPAPI const char *aul_get_app_external_shared_data_path(void)
+API const char *aul_get_app_external_shared_data_path(void)
 {
 	static char *path;
 
@@ -287,17 +287,17 @@ SLPAPI const char *aul_get_app_external_shared_data_path(void)
 			__get_external_path);
 }
 
-SLPAPI const char *aul_get_app_specific_path(void)
+API const char *aul_get_app_specific_path(void)
 {
 	return __get_specific_path(getuid());
 }
 
-SLPAPI const char *aul_get_app_external_specific_path(void)
+API const char *aul_get_app_external_specific_path(void)
 {
 	return _EXTERNAL_APP_SPECIFIC_PATH;
 }
 
-SLPAPI int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
+API int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
 {
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
@@ -305,7 +305,7 @@ SLPAPI int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
 	return __get_path(path, appid, _SHARED_DATA_DIR, getuid());
 }
 
-SLPAPI int aul_get_app_shared_resource_path_by_appid(const char *appid,
+API int aul_get_app_shared_resource_path_by_appid(const char *appid,
 		char **path)
 {
 	if (appid == NULL || path == NULL)
@@ -314,7 +314,7 @@ SLPAPI int aul_get_app_shared_resource_path_by_appid(const char *appid,
 	return __get_path_from_db(path, appid, _SHARED_RESOURCE_DIR, getuid());
 }
 
-SLPAPI int aul_get_app_shared_trusted_path_by_appid(const char *appid,
+API int aul_get_app_shared_trusted_path_by_appid(const char *appid,
 		char **path)
 {
 	if (appid == NULL || path == NULL)
@@ -323,7 +323,7 @@ SLPAPI int aul_get_app_shared_trusted_path_by_appid(const char *appid,
 	return __get_path(path, appid, _SHARED_TRUSTED_DIR, getuid());
 }
 
-SLPAPI int aul_get_app_external_shared_data_path_by_appid(const char *appid,
+API int aul_get_app_external_shared_data_path_by_appid(const char *appid,
 		char **path)
 {
 	if (appid == NULL || path == NULL)
@@ -332,7 +332,7 @@ SLPAPI int aul_get_app_external_shared_data_path_by_appid(const char *appid,
 	return __get_external_path(path, appid, _SHARED_DATA_DIR, getuid());
 }
 
-SLPAPI int aul_get_usr_app_shared_data_path_by_appid(const char *appid,
+API int aul_get_usr_app_shared_data_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
 	if (appid == NULL || path == NULL)
@@ -341,7 +341,7 @@ SLPAPI int aul_get_usr_app_shared_data_path_by_appid(const char *appid,
 	return __get_path_from_db(path, appid, _SHARED_DATA_DIR, uid);
 }
 
-SLPAPI int aul_get_usr_app_shared_resource_path_by_appid(const char *appid,
+API int aul_get_usr_app_shared_resource_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
 	if (appid == NULL || path == NULL)
@@ -350,7 +350,7 @@ SLPAPI int aul_get_usr_app_shared_resource_path_by_appid(const char *appid,
 	return __get_path_from_db(path, appid, _SHARED_RESOURCE_DIR, uid);
 }
 
-SLPAPI int aul_get_usr_app_shared_trusted_path_by_appid(const char *appid,
+API int aul_get_usr_app_shared_trusted_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
 	if (appid == NULL || path == NULL)
@@ -359,7 +359,7 @@ SLPAPI int aul_get_usr_app_shared_trusted_path_by_appid(const char *appid,
 	return __get_path_from_db(path, appid, _SHARED_TRUSTED_DIR, uid);
 }
 
-SLPAPI int aul_get_usr_app_external_shared_data_path_by_appid(const char *appid,
+API int aul_get_usr_app_external_shared_data_path_by_appid(const char *appid,
 		char **path, uid_t uid)
 {
 	if (appid == NULL || path == NULL)

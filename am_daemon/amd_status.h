@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __AUL_AMD_APP_STATUS_H_
-#define __AUL_AMD_APP_STATUS_H_
+
+#pragma once
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -36,7 +36,5 @@ char *_status_app_get_appid_bypid(int pid);
 int _status_get_appid_bypid(int fd, int pid);
 int _status_get_pkgid_bypid(int fd, int pid);
 int _status_init(void);
-
-#endif
 
 

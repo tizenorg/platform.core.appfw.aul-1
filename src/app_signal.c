@@ -1,9 +1,5 @@
 /*
- *  aul
- *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -269,7 +265,7 @@ static int __app_dbus_signal_handler_fini(const char *path, const char *interfac
 	return 0;
 }
 
-SLPAPI int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
+API int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
 {
 	if (func) {
 		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
@@ -288,7 +284,7 @@ SLPAPI int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
+API int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 {
 	if (func) {
 		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
@@ -307,7 +303,7 @@ SLPAPI int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), void *data)
+API int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), void *data)
 {
 	if (func) {
 		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
@@ -326,7 +322,7 @@ SLPAPI int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void 
 
 	return AUL_R_OK;
 }
-SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
+API int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 {
 	if (func && !_booting_done_handler) {
 		if (__app_dbus_signal_handler_init(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE, true) < 0) {
@@ -356,7 +352,7 @@ SLPAPI int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data)
+API int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data)
 {
 	if (func && !_cooldown_handler) {
 		if (__app_dbus_signal_handler_init(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI, true) < 0) {
@@ -387,7 +383,7 @@ SLPAPI int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data)
+API int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data)
 {
 	if (func && !_status_handler) {
 		if (__app_dbus_signal_handler_init(RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE, true) < 0) {
@@ -433,7 +429,7 @@ static int __app_dbus_send_init(void)
 	return 0;
 }
 
-SLPAPI int aul_update_freezer_status(int pid, const char *type)
+API int aul_update_freezer_status(int pid, const char *type)
 {
 	DBusError err;
 	DBusMessage *msg = NULL;
@@ -485,7 +481,7 @@ end:
 
 }
 
-SLPAPI int aul_send_app_launch_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
+API int aul_send_app_launch_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
 {
 	DBusMessage *msg = NULL;
 	dbus_uint32_t serial = 0;
@@ -530,7 +526,7 @@ end:
 	return ret;
 }
 
-SLPAPI int aul_send_app_resume_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
+API int aul_send_app_resume_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
 {
 	DBusMessage *msg = NULL;
 	dbus_uint32_t serial = 0;
@@ -588,7 +584,7 @@ end:
 	return ret;
 }
 
-SLPAPI int aul_send_app_terminate_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
+API int aul_send_app_terminate_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
 {
 	DBusMessage *msg = NULL;
 	dbus_uint32_t serial = 0;
@@ -644,7 +640,7 @@ end:
 	return ret;
 }
 
-SLPAPI int aul_send_app_status_change_signal(int pid, const char *appid, const char *pkgid, const char *status, const char *type)
+API int aul_send_app_status_change_signal(int pid, const char *appid, const char *pkgid, const char *status, const char *type)
 {
 	DBusMessage *msg = NULL;
 	dbus_uint32_t serial = 0;
@@ -704,7 +700,7 @@ end:
 	return ret;
 }
 
-SLPAPI int aul_send_app_terminated_signal(int pid)
+API int aul_send_app_terminated_signal(int pid)
 {
 	DBusMessage *msg = NULL;
 	dbus_uint32_t serial = 0;
@@ -744,7 +740,7 @@ end:
 	return ret;
 }
 
-SLPAPI int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pkgid)
+API int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pkgid)
 {
 	DBusMessage *msg = NULL;
 	dbus_uint32_t serial = 0;

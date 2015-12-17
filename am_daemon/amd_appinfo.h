@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef __AUL_AMD_APPINFO_H_
-#define __AUL_AMD_APPINFO_H_
+#pragma once
 
 #include <sys/types.h>
 
@@ -66,4 +65,4 @@ typedef void (*appinfo_iter_callback)(void *user_data,
 void appinfo_foreach(uid_t uid, appinfo_iter_callback cb, void *user_data);
 void appinfo_reload(void);
 
-#endif /* __AUL_AMD_APPINFO_H_ */
+
