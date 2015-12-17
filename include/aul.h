@@ -165,6 +165,10 @@ typedef enum _aul_type{
 #define AUL_K_LOADER_ID		"__AUL_LOADER_ID__"
 /** AUL internal private key */
 #define AUL_K_LOADER_PATH	"__AUL_LOADER_PATH__"
+/** AUL internal private key */
+#define AUL_K_WAYLAND_DISPLAY	"__AUL_WAYLAND_DISPLAY__"
+/** AUL internal private key */
+#define AUL_K_WAYLAND_WORKING_DIR "__AUL_WAYLAND_WORKING_DIR__"
 
 /**
  * @brief	This is callback function for aul_launch_init
