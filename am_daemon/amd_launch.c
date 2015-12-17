@@ -68,6 +68,7 @@
 #define PATH_DA_SO "/home/developer/sdk_tools/da/da_probe.so"
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define PREFIX_EXTERNAL_STORAGE_PATH "/opt/storage/sdcard/"
+#define DLP_K_DEBUG "__DLP_DEBUG__"
 
 typedef struct {
 	char *pkg_name;     /* package */
@@ -576,6 +577,46 @@ static int __get_pid_for_app_group(const char *appid, int pid, int caller_uid, b
 	return pid;
 }
 
+static int __check_pkginfo_for_debug(const char *appid)
+{
+	int ret;
+	bool preload = false;
+	char *storeclientid = NULL;
+	pkgmgrinfo_pkginfo_h handle;
+
+	ret = pkgmgrinfo_pkginfo_get_pkginfo(appid, &handle);
+	if (ret != PMINFO_R_OK) {
+		_E("Failed to get pkginfo %s", appid);
+		return -1;
+	}
+
+	ret = pkgmgrinfo_pkginfo_is_preload(handle, &preload);
+	if (ret != PMINFO_R_OK) {
+		_E("Failed to get preload info");
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+		return -1;
+	}
+
+	ret = pkgmgrinfo_pkginfo_get_storeclientid(handle, &storeclientid);
+	if (ret != PMINFO_R_OK) {
+		_E("Failed to get storeclientid");
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+		return -1;
+	}
+
+	if (preload == true || (storeclientid && storeclientid[0] != '\0')) {
+		_E("Debugging is not allowed");
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+		return -1;
+	}
+
+	ret = pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	if (ret != PMINFO_R_OK)
+		_E("Failed to destroy pkginfo");
+
+	return 0;
+}
+
 static int __tep_mount(char *mnt_path[])
 {
 	DBusMessage *msg;
@@ -822,8 +863,11 @@ int _start_app(const char* appid, bundle* kb, int cmd, int caller_pid,
 		bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool);
 		bundle_add(kb, AUL_K_COMP_TYPE, component_type);
 
-		if (bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE)
+		if (bundle_get_type(kb, AUL_K_SDK) != BUNDLE_TYPE_NONE) {
+			if (__check_pkginfo_for_debug(appid) == 0)
+				bundle_add(kb, DLP_K_DEBUG, "true");
 			pad_type = DEBUG_LAUNCHPAD_SOCK;
+		}
 
 		pid = app_agent_send_cmd(caller_uid, pad_type, PAD_CMD_LAUNCH, kb);
 		if (pid > 0) {
