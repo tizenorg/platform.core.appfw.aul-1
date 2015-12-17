@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef __AUL_H__
-#define __AUL_H__
+#pragma once
 
 #include <errno.h>
 #include <bundle.h>
@@ -1970,5 +1969,4 @@ int aul_app_get_pid(const char *appid);
 	}
 #endif
 
-#endif		/* __AUL_H__ */
 

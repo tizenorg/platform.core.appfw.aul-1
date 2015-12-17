@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef __APP_LAUNCHPAD_TYPES_H__
-#define __APP_LAUNCHPAD_TYPES_H__
+#pragma once
 
 #define LAUNCHPAD_PROCESS_POOL_SOCK ".launchpad-process-pool-sock"
 #define DEBUG_LAUNCHPAD_SOCK ".debug-launchpad-sock"
 
-#endif /* __APP_LAUNCHPAD_TYPES_H__ */
+

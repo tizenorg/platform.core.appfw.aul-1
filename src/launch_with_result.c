@@ -1,22 +1,17 @@
 /*
- *  aul
+ * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 #define _GNU_SOURCE
@@ -272,7 +267,7 @@ int app_result(int cmd, bundle *kb, int launched_pid)
 	return 0;
 }
 
-SLPAPI int aul_launch_app_with_result(const char *pkgname, bundle *kb,
+API int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data)
 {
@@ -302,7 +297,7 @@ void __iterate(const char *key, const char *val, void *data)
 	_D("%d %s %s", i++, key, val);
 }
 
-SLPAPI int aul_forward_app(const char* pkgname, bundle *kb)
+API int aul_forward_app(const char* pkgname, bundle *kb)
 {
 	char *caller;
 	int ret;
@@ -360,7 +355,7 @@ end:
 }
 
 
-SLPAPI int aul_create_result_bundle(bundle *inb, bundle **outb)
+API int aul_create_result_bundle(bundle *inb, bundle **outb)
 {
 	const char *pid_str;
 
@@ -454,7 +449,7 @@ int app_subapp_terminate_request()
 	return 0;
 }
 
-SLPAPI int aul_set_subapp(subapp_fn cb, void *data)
+API int aul_set_subapp(subapp_fn cb, void *data)
 {
 	is_subapp = 1;
 	subapp_cb = cb;
@@ -463,7 +458,7 @@ SLPAPI int aul_set_subapp(subapp_fn cb, void *data)
 	return 0;
 }
 
-SLPAPI int aul_subapp_terminate_request_pid(int pid)
+API int aul_subapp_terminate_request_pid(int pid)
 {
 	char pid_str[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -481,12 +476,12 @@ SLPAPI int aul_subapp_terminate_request_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_is_subapp()
+API int aul_is_subapp()
 {
 	return is_subapp;
 }
 
-SLPAPI int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data)
+API int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data)
 {
 	app_resultcb_info_t *info;
 
@@ -503,7 +498,7 @@ SLPAPI int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *da
 	return AUL_R_OK;
 }
 
-SLPAPI int aul_remove_caller_cb(int pid)
+API int aul_remove_caller_cb(int pid)
 {
 	app_resultcb_info_t *info;
 
@@ -537,7 +532,7 @@ static gboolean __invoke_caller_cb(gpointer data)
 	return G_SOURCE_REMOVE;
 }
 
-SLPAPI int aul_invoke_caller_cb(int pid)
+API int aul_invoke_caller_cb(int pid)
 {
 	if (g_idle_add_full(G_PRIORITY_DEFAULT, __invoke_caller_cb, GINT_TO_POINTER(pid), NULL) > 0)
 		return -1;

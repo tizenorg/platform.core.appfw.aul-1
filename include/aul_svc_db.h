@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-
-#ifndef __AUL_SVC_DB_H__
-#define __AUL_SVC_DB_H__
+#pragma once
 
 #include <sqlite3.h>
 #include <stdbool.h>
@@ -54,5 +52,4 @@ int _svc_db_delete_all(uid_t uid);
 }
 #endif
 
-#endif      /* __AUL_SVC_DB_H__ */
 

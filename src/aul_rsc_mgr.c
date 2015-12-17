@@ -1021,12 +1021,12 @@ static int __init(const char *rsc_folder_path, bundle *b)
 	return AUL_RESOURCE_ERROR_NONE;
 }
 
-SLPAPI int aul_resource_manager_init(void)
+API int aul_resource_manager_init(void)
 {
 	return __init(NULL, NULL);
 }
 
-SLPAPI int aul_resource_manager_init_slice(const char *rsc_folder_path, bundle *b)
+API int aul_resource_manager_init_slice(const char *rsc_folder_path, bundle *b)
 {
 	if (rsc_folder_path == NULL || b == NULL)
 		return AUL_RESOURCE_ERROR_INVALID_PARAMETER;
@@ -1035,7 +1035,7 @@ SLPAPI int aul_resource_manager_init_slice(const char *rsc_folder_path, bundle *
 }
 
 
-SLPAPI int aul_resource_manager_get_path_list(GHashTable **list)
+API int aul_resource_manager_get_path_list(GHashTable **list)
 {
 	if (is_slice == FALSE)
 		return AUL_RESOURCE_ERROR_IO_ERROR;
@@ -1048,7 +1048,7 @@ SLPAPI int aul_resource_manager_get_path_list(GHashTable **list)
 	return AUL_RESOURCE_ERROR_NONE;
 }
 
-SLPAPI int aul_resource_manager_get(aul_resource_e type, const char *id, char **path)
+API int aul_resource_manager_get(aul_resource_e type, const char *id, char **path)
 {
 	int retval = AUL_RESOURCE_ERROR_NONE;
 	char *put_fname = NULL;
@@ -1178,7 +1178,7 @@ static void __free_node_folder_list(gpointer data)
 	free(node_data);
 }
 
-SLPAPI int aul_resource_manager_release(void)
+API int aul_resource_manager_release(void)
 {
 	if (resource_handle != NULL) {
 		__close(resource_handle);

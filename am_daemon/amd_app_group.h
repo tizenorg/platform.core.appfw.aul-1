@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef __AUL_AMD_APP_GROUP_H_
-#define __AUL_AMD_APP_GROUP_H_
+#pragma once
 
 #include <glib.h>
 #include <bundle.h>
@@ -57,5 +56,5 @@ int app_group_find_pid_from_recycle_bin(const char *appid);
 void app_group_get_idle_pids(int *cnt, int **pids);
 void app_group_remove_from_recycle_bin(int pid);
 int app_group_get_next_caller_pid(int pid);
-#endif
+
 

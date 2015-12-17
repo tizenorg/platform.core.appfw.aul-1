@@ -1,22 +1,17 @@
 /*
- *  aul
+ * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 #define _GNU_SOURCE
@@ -41,7 +36,7 @@ app_status_cb_info_t *app_status_cb = NULL;
 
 static int app_status = STATUS_LAUNCHING;
 
-SLPAPI int aul_status_update(int status)
+API int aul_status_update(int status)
 {
 	int ret;
 	app_status_cb_info_t *cb = app_status_cb;
@@ -64,7 +59,7 @@ SLPAPI int aul_status_update(int status)
 	return ret;
 }
 
-SLPAPI  int aul_app_get_status_bypid(int pid)
+API  int aul_app_get_status_bypid(int pid)
 {
 	int ret;
 
@@ -76,7 +71,7 @@ SLPAPI  int aul_app_get_status_bypid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_add_status_local_cb(int (*func)(int status, void *data), void *data)
+API int aul_add_status_local_cb(int (*func)(int status, void *data), void *data)
 {
 	app_status_cb_info_t *cb = app_status_cb;
 
@@ -105,7 +100,7 @@ SLPAPI int aul_add_status_local_cb(int (*func)(int status, void *data), void *da
 	return 0;
 }
 
-SLPAPI int aul_remove_status_local_cb(int (*func)(int status, void *data), void *data)
+API int aul_remove_status_local_cb(int (*func)(int status, void *data), void *data)
 {
 	app_status_cb_info_t *cb = app_status_cb;
 	app_status_cb_info_t *tmp = NULL;
@@ -135,7 +130,7 @@ SLPAPI int aul_remove_status_local_cb(int (*func)(int status, void *data), void 
 	return -1;
 }
 
-SLPAPI int aul_invoke_status_local_cb(int status)
+API int aul_invoke_status_local_cb(int status)
 {
 	app_status_cb_info_t *cb = app_status_cb;
 
@@ -151,7 +146,7 @@ SLPAPI int aul_invoke_status_local_cb(int status)
 	return 0;
 }
 
-SLPAPI int aul_running_list_update(char *appid, char *app_path, char *pid)
+API int aul_running_list_update(char *appid, char *app_path, char *pid)
 {
 	int ret;
 	bundle *kb;

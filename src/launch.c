@@ -1,22 +1,17 @@
 /*
- *  aul
+ * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
  *
- * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 #define _GNU_SOURCE
@@ -214,7 +209,7 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
  * @param[in]	cmd		message's status (APP_START | APP_RESULT)
  * @param[in]	kb		data
  */
-SLPAPI int app_agent_send_cmd(int uid, const char *pad_type, int cmd, bundle *kb)
+API int app_agent_send_cmd(int uid, const char *pad_type, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
@@ -228,7 +223,7 @@ SLPAPI int app_agent_send_cmd(int uid, const char *pad_type, int cmd, bundle *kb
 	return res;
 }
 
-SLPAPI int app_agent_send_cmd_with_noreply(int uid, const char *pad_type, int cmd, bundle *kb)
+API int app_agent_send_cmd_with_noreply(int uid, const char *pad_type, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
@@ -248,12 +243,12 @@ SLPAPI int app_agent_send_cmd_with_noreply(int uid, const char *pad_type, int cm
  * @param[in]	cmd		message's status (APP_START | APP_RESULT)
  * @param[in]	kb		data
  */
-SLPAPI int app_send_cmd(int pid, int cmd, bundle *kb)
+API int app_send_cmd(int pid, int cmd, bundle *kb)
 {
 	return app_send_cmd_for_uid(pid, getuid(), cmd, kb);
 }
 
-SLPAPI int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
+API int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
@@ -267,7 +262,7 @@ SLPAPI int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 	return res;
 }
 
-SLPAPI int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
+API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 {
 	int datalen;
 	bundle_raw *kb_data;
@@ -613,7 +608,7 @@ int aul_initialize()
 	return aul_fd;
 }
 
-SLPAPI void aul_finalize()
+API void aul_finalize()
 {
 	aul_launch_fini();
 
@@ -623,12 +618,12 @@ SLPAPI void aul_finalize()
 	return;
 }
 
-SLPAPI int aul_request_data_control_socket_pair(bundle *kb, int *fd)
+API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
 {
 	return app_request_to_launchpad_with_fd(APP_GET_SOCKET_PAIR, NULL, kb, fd, getuid());
 }
 
-SLPAPI int aul_launch_app(const char *appid, bundle *kb)
+API int aul_launch_app(const char *appid, bundle *kb)
 {
 	int ret;
 
@@ -639,7 +634,7 @@ SLPAPI int aul_launch_app(const char *appid, bundle *kb)
 	return ret;
 }
 
-SLPAPI int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid)
+API int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid)
 {
 	int ret;
 	char buf[MAX_PID_STR_BUFSZ];
@@ -652,7 +647,7 @@ SLPAPI int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid)
 	return ret;
 }
 
-SLPAPI int aul_open_app(const char *appid)
+API int aul_open_app(const char *appid)
 {
 	int ret;
 
@@ -663,7 +658,7 @@ SLPAPI int aul_open_app(const char *appid)
 	return ret;
 }
 
-SLPAPI int aul_resume_app(const char *appid)
+API int aul_resume_app(const char *appid)
 {
 	int ret;
 
@@ -674,7 +669,7 @@ SLPAPI int aul_resume_app(const char *appid)
 	return ret;
 }
 
-SLPAPI int aul_resume_pid(int pid)
+API int aul_resume_pid(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -687,7 +682,7 @@ SLPAPI int aul_resume_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_terminate_pid(int pid)
+API int aul_terminate_pid(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -700,7 +695,7 @@ SLPAPI int aul_terminate_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_terminate_bgapp_pid(int pid)
+API int aul_terminate_bgapp_pid(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -713,7 +708,7 @@ SLPAPI int aul_terminate_bgapp_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_terminate_pid_without_restart(int pid)
+API int aul_terminate_pid_without_restart(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -726,7 +721,7 @@ SLPAPI int aul_terminate_pid_without_restart(int pid)
 	return ret;
 }
 
-SLPAPI int aul_terminate_pid_async(int pid)
+API int aul_terminate_pid_async(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -739,7 +734,7 @@ SLPAPI int aul_terminate_pid_async(int pid)
 	return ret;
 }
 
-SLPAPI int aul_kill_pid(int pid)
+API int aul_kill_pid(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -752,49 +747,49 @@ SLPAPI int aul_kill_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler)
+API int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler)
 {
 	__dc_handler = handler;
 	return 0;
 }
 
-SLPAPI int aul_unset_data_control_provider_cb(void)
+API int aul_unset_data_control_provider_cb(void)
 {
 	__dc_handler = NULL;
 	return 0;
 }
 
-SLPAPI void aul_set_preinit_window(void *evas_object)
+API void aul_set_preinit_window(void *evas_object)
 {
 	__window_object = evas_object;
 }
 
-SLPAPI void* aul_get_preinit_window(const char *win_name)
+API void* aul_get_preinit_window(const char *win_name)
 {
 	return __window_object;
 }
 
-SLPAPI void aul_set_preinit_background(void *evas_object)
+API void aul_set_preinit_background(void *evas_object)
 {
 	__bg_object = evas_object;
 }
 
-SLPAPI void* aul_get_preinit_background(void)
+API void* aul_get_preinit_background(void)
 {
 	return __bg_object;
 }
 
-SLPAPI void aul_set_preinit_conformant(void *evas_object)
+API void aul_set_preinit_conformant(void *evas_object)
 {
 	__conformant_object = evas_object;
 }
 
-SLPAPI void* aul_get_preinit_conformant(void)
+API void* aul_get_preinit_conformant(void)
 {
 	return __conformant_object;
 }
 
-SLPAPI int aul_pause_app(const char *appid)
+API int aul_pause_app(const char *appid)
 {
 	int ret;
 
@@ -805,7 +800,7 @@ SLPAPI int aul_pause_app(const char *appid)
 	return ret;
 }
 
-SLPAPI int aul_pause_pid(int pid)
+API int aul_pause_pid(int pid)
 {
 	char app_pid[MAX_PID_STR_BUFSZ];
 	int ret;
@@ -818,7 +813,7 @@ SLPAPI int aul_pause_pid(int pid)
 	return ret;
 }
 
-SLPAPI int aul_reload_appinfo(void)
+API int aul_reload_appinfo(void)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
 
@@ -827,7 +822,7 @@ SLPAPI int aul_reload_appinfo(void)
 	return app_request_to_launchpad(AMD_RELOAD_APPINFO, pkgname, NULL);
 }
 
-SLPAPI int aul_is_tep_mount_dbus_done(const char *tep_string)
+API int aul_is_tep_mount_dbus_done(const char *tep_string)
 {
 	DBusMessage *msg;
 	DBusMessage *reply;
@@ -877,7 +872,7 @@ func_out:
 	return ret;
 }
 
-SLPAPI int aul_check_tep_mount(const char *tep_path)
+API int aul_check_tep_mount(const char *tep_path)
 {
 	if (tep_path) {
 		int rv = -1;
@@ -898,7 +893,7 @@ SLPAPI int aul_check_tep_mount(const char *tep_path)
 	return 0;
 }
 
-SLPAPI int aul_add_loader(const char *loader_path)
+API int aul_add_loader(const char *loader_path)
 {
 	int ret;
 	bundle *b;
@@ -914,7 +909,7 @@ SLPAPI int aul_add_loader(const char *loader_path)
 	return ret;
 }
 
-SLPAPI int aul_remove_loader(int loader_id)
+API int aul_remove_loader(int loader_id)
 {
 	char lid[MAX_PID_STR_BUFSZ];
 	int ret;
