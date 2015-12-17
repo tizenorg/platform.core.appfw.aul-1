@@ -83,8 +83,17 @@ struct request {
 	struct ucred cr;
 };
 
-typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
+typedef struct _rua_stat_pkt_t {
+	int uid;
+	char *stat_tag;
+	char *stat_caller;
+	char appid[512];
+	gboolean is_group_app;
+	char *data;
+	int len;
+} rua_stat_pkt_t;
 
+typedef int (*app_cmd_dispatch_func)(int clifd, const app_pkt_t *pkt, struct ucred *cr);
 
 static int __send_result_to_client(int fd, int res);
 static gboolean __request_handler(gpointer data);
@@ -410,6 +419,66 @@ static gboolean __add_history_handler(gpointer user_data)
 	return FALSE;
 }
 
+static int __add_rua_info(const app_pkt_t *pkt, bundle *kb, uid_t uid, const char *appid)
+{
+	const char *stat_caller = NULL;
+	const char *stat_tag = NULL;
+	rua_stat_pkt_t *rua_stat_item = NULL;
+
+	rua_stat_item = calloc(1, sizeof(rua_stat_pkt_t));
+	if (rua_stat_item == NULL) {
+		_E("out of memory");
+		goto error;
+	}
+
+	if (pkt->len > 0) {
+		rua_stat_item->data = (char *)calloc(pkt->len, sizeof(char));
+		if (rua_stat_item->data == NULL) {
+			_E("out of memory");
+			goto error;
+		}
+		memcpy(rua_stat_item->data, pkt->data, pkt->len);
+	}
+	stat_caller = bundle_get_val(kb, AUL_SVC_K_RUA_STAT_CALLER);
+	stat_tag = bundle_get_val(kb, AUL_SVC_K_RUA_STAT_TAG);
+
+	rua_stat_item->len = pkt->len;
+	if (stat_caller != NULL) {
+		rua_stat_item->stat_caller = strdup(stat_caller);
+		if (rua_stat_item->stat_caller == NULL) {
+			_E("Out of memory");
+			goto error;
+		}
+	}
+
+	if (stat_tag != NULL) {
+		rua_stat_item->stat_tag = strdup(stat_tag);
+		if (rua_stat_item->stat_tag == NULL) {
+			_E("Out of memory");
+			goto error;
+		}
+
+	}
+	rua_stat_item->uid = uid;
+	rua_stat_item->is_group_app = app_group_is_group_app(kb);
+	strncpy(rua_stat_item->appid, appid, 511);
+
+	g_timeout_add(1500, __add_history_handler, rua_stat_item);
+
+	return 0;
+error:
+	if (rua_stat_item) {
+		if (rua_stat_item->data)
+			free(rua_stat_item->data);
+		if (rua_stat_item->stat_caller)
+			free(rua_stat_item->stat_caller);
+		if (rua_stat_item->stat_tag)
+			free(rua_stat_item->stat_tag);
+		free(rua_stat_item);
+	}
+	return -1;
+}
+
 static void __handle_agent_dead_signal(struct ucred *pcr)
 {
 	/* TODO: check the credentials from the caller: must be the amd agent */
@@ -720,10 +789,6 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 	int ret = -1;
 	int t_uid;
 	char *state;
-	item_pkt_t *item = NULL;
-	char *stat_caller = NULL;
-	char *stat_tag = NULL;
-	rua_stat_pkt_t *rua_stat_item = NULL;
 	bool pending = false;
 	struct pending_item *pending_item;
 	const char *operation = NULL;
@@ -781,75 +846,14 @@ static int __dispatch_app_start(int clifd, const app_pkt_t *pkt, struct ucred *c
 				pending_item);
 	}
 
-	if (ret > 0) {
-		item = calloc(1, sizeof(item_pkt_t));
-		if (item == NULL) {
-			_E("out of memory");
-			goto error;
-		}
-		item->pid = ret;
-		item->uid = cr->uid;
-		strncpy(item->appid, appid, 511);
-
-		g_timeout_add(1200, __add_item_running_list, item);
-
-		rua_stat_item = calloc(1, sizeof(rua_stat_pkt_t));
-		if (rua_stat_item == NULL) {
-			_E("out of memory");
-			goto error;
-		}
-
-		if (pkt->len > 0) {
-			rua_stat_item->data = (char *)calloc(pkt->len, sizeof(char));
-			if (rua_stat_item->data == NULL) {
-				_E("out of memory");
-				goto error;
-			}
-			memcpy(rua_stat_item->data, pkt->data, pkt->len);
-		}
-		stat_caller = (char *)bundle_get_val(kb, AUL_SVC_K_RUA_STAT_CALLER);
-		stat_tag = (char *)bundle_get_val(kb, AUL_SVC_K_RUA_STAT_TAG);
-
-		rua_stat_item->len = pkt->len;
-		if (stat_caller != NULL) {
-			rua_stat_item->stat_caller = strdup(stat_caller);
-			if (rua_stat_item->stat_caller == NULL) {
-				_E("Out of memory");
-				goto error;
-			}
-		}
-
-		if (stat_tag != NULL) {
-			rua_stat_item->stat_tag = strdup(stat_tag);
-			if (rua_stat_item->stat_tag == NULL) {
-				_E("Out of memory");
-				goto error;
-			}
-
-		}
-		rua_stat_item->uid = cr->uid;
-		rua_stat_item->is_group_app = app_group_is_group_app(kb);
-		strncpy(rua_stat_item->appid, appid, 511);
-
-		g_timeout_add(1500, __add_history_handler, rua_stat_item);
-	}
+	if (ret > 0 && __add_rua_info(pkt, kb, cr->uid, appid) < 0)
+		goto error;
 	bundle_free(kb);
 	return 0;
 
 error:
 	if (kb)
 		bundle_free(kb);
-	if (item)
-		free(item);
-	if (rua_stat_item) {
-		if (rua_stat_item->data)
-			free(rua_stat_item->data);
-		if (rua_stat_item->stat_caller)
-			free(rua_stat_item->stat_caller);
-		if (rua_stat_item->stat_tag)
-			free(rua_stat_item->stat_tag);
-		free(rua_stat_item);
-	}
 	return -1;
 }
 
