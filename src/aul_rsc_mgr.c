@@ -294,12 +294,14 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 			*invalid = true;
 		break;
 	case NODE_ATTR_LANGUAGE:
-		if (cur_language == NULL)
+		if (cur_language == NULL) {
 			cur_language = vconf_get_str(VCONFKEY_LANGSET);
-
-		if (strncmp(cur_language, val, strlen(val)))
+			if (cur_language == NULL)
+				*invalid = true;
+		}
+		if (cur_language && strncmp(cur_language, val, strlen(val)))
 			*invalid = true;
-			break;
+		break;
 	}
 }
 
