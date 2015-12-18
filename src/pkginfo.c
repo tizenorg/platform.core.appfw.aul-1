@@ -250,7 +250,7 @@ API int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 	return aul_app_get_pkgid_bypid_for_uid(pid, pkgid, len, getuid());
 }
 
-SLPAPI int aul_delete_rua_history(bundle *b)
+API int aul_delete_rua_history(bundle *b)
 {
 	app_pkt_t *ret = NULL;
 	bundle_raw *br = NULL;
