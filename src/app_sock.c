@@ -904,7 +904,8 @@ app_pkt_t *__app_send_cmd_with_result_for_uid(int pid, uid_t uid, int cmd, unsig
 	}
 	pkt->cmd = cmd;
 	pkt->len = datalen;
-	memcpy(pkt->data, kb_data, pkt->len);
+	if (kb_data)
+		memcpy(pkt->data, kb_data, pkt->len);
 
 	while (sent != AUL_PKT_HEADER_SIZE + pkt->len) {
 		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + pkt->len - sent, 0);
