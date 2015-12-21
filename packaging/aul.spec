@@ -16,6 +16,7 @@ Requires(postun): /sbin/ldconfig
 Requires(postun): /usr/bin/systemctl
 Requires(preun):  /usr/bin/systemctl
 Requires:   tizen-platform-config
+Requires:   sqlite3
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(dbus-glib-1)
