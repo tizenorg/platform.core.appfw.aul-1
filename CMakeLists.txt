@@ -13,7 +13,7 @@ ENDIF (with_x11)
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon security-manager cynara-client cynara-creds-socket cynara-session capi-system-info vconf sqlite3 iniparser)
+SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon capi-system-info vconf sqlite3 iniparser)
 IF (with_wayland)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client ecore-wayland)
 ENDIF (with_wayland)
@@ -21,12 +21,6 @@ IF (with_x11)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES})
 ENDIF (with_x11)
 FOREACH(flag ${libpkgs_CFLAGS})
-	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
-ENDFOREACH(flag)
-
-SET(AUL-1_PKG_CHECK_MODULES dlog rua glib-2.0 gio-2.0 vconf pkgmgr-info pkgmgr bundle)
-pkg_check_modules(pkgs REQUIRED  ${AUL-1_PKG_CHECK_MODULES} )
-FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
@@ -78,19 +72,6 @@ SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
 SET_TARGET_PROPERTIES(aul PROPERTIES VERSION ${FULLVER})
 INSTALL(TARGETS aul DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
 
-ADD_EXECUTABLE(amd
-	am_daemon/amd_main.c
-	am_daemon/amd_request.c
-	am_daemon/amd_appinfo.c
-	am_daemon/amd_launch.c
-	am_daemon/amd_status.c
-	am_daemon/amd_app_group.c
-	am_daemon/amd_cynara.c
-	)
-SET_TARGET_PROPERTIES(amd PROPERTIES COMPILE_FLAGS "${EXTRA_CFLAGS} -fPIE")
-TARGET_LINK_LIBRARIES(amd aul_mods aul ${pkgs_LDFLAGS} "-pie")
-INSTALL(TARGETS amd DESTINATION bin)
-
 # app_launcher
 SET(APP_LAUNCHER "app_launcher")
 ADD_EXECUTABLE(${APP_LAUNCHER} app_launcher.c)
@@ -114,6 +95,7 @@ CONFIGURE_FILE(feature/preexec_list.txt.in feature/preexec_list.txt @ONLY)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_rsc_mgr.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_svc.h DESTINATION include/aul)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_cmd.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/aul.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/legacy/preload_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/feature/preexec_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
