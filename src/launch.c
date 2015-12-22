@@ -620,7 +620,12 @@ API void aul_finalize()
 
 API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
 {
-	return app_request_to_launchpad_with_fd(APP_GET_SOCKET_PAIR, NULL, kb, fd, getuid());
+	return app_request_to_launchpad_with_fd(APP_GET_DC_SOCKET_PAIR, NULL, kb, fd, getuid());
+}
+
+API int aul_request_message_port_socket_pair(int *fd)
+{
+	return app_request_to_launchpad_with_fd(APP_GET_MP_SOCKET_PAIR, NULL, NULL, fd, getuid());
 }
 
 API int aul_launch_app(const char *appid, bundle *kb)
