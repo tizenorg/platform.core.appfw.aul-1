@@ -57,10 +57,15 @@ enum app_cmd {
 	APP_GROUP_LOWER,
 	APP_GROUP_CLEAR_TOP,
 	APP_GET_STATUS,
-	APP_GET_SOCKET_PAIR,
 	APP_ADD_LOADER,
 	APP_REMOVE_LOADER,
 	APP_GET_PID,
+
+	/* for data-control */
+	APP_GET_DC_SOCKET_PAIR,
+
+	/* for message-port */
+	APP_GET_MP_SOCKET_PAIR,
 
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,

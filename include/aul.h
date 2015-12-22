@@ -116,7 +116,8 @@ typedef enum _aul_type{
 #define AUL_K_RUA_PKGNAME "__K_RUA_PKGNAME"
 /** AUL public key - To support rua delete */
 #define AUL_K_RUA_APPPATH "__K_RUA_APPPATH"
-
+/** AUL public key - To support message-port */
+#define AUL_K_MP_SOCKET_PAIR_KEY "__K_MP_SOCKET_PAIR_KEY__"
 
 
 /** AUL internal private key */
@@ -1893,7 +1894,10 @@ void aul_app_group_get_idle_pids(int *cnt, int **pids);
  * This API is only for Appfw internally.
  */
 int aul_request_data_control_socket_pair(bundle *b, int *fd);
-
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_request_message_port_socket_pair(int *fd);
 /*
  * This API is only for Appfw internally.
  */
