@@ -487,9 +487,14 @@ int __app_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_
 {
 	int fd;
 	int len;
-	int ret;
 	int res = 0;
 	app_pkt_t *pkt = NULL;
+
+	char recv_buff[1024];
+	struct iovec vec[3];
+	int ret = 0;
+	int vec_len = 0;
+	int fds_len = 0;
 
 	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
 		_E("keybundle error\n");
@@ -556,12 +561,7 @@ int __app_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_
 
 retry_recv:
 
-	if (cmd == APP_GET_SOCKET_PAIR) {
-		char recv_buff[1024];
-		struct iovec vec[3];
-		int ret = 0;
-		int vec_len = 0;
-		int fds_len = 0;
+	if (cmd == APP_GET_DC_SOCKET_PAIR) {
 		int fds[1] = {0};
 
 		vec[0].iov_base = recv_buff;
@@ -579,7 +579,27 @@ retry_recv:
 			_E("fds : %d", fds[0]);
 			ret_fd[0] = fds[0];
 		}
-	} else {
+	} else if (cmd == APP_GET_MP_SOCKET_PAIR) {
+		int fds[2] = {0,};
+
+		vec[0].iov_base = recv_buff;
+		vec[0].iov_len = 1024;
+		ret = __recv_message(fd, vec, 1, &vec_len, fds, &fds_len);
+		if (ret < 0) {
+			_E("Error[%d]. while receiving message\n", -ret);
+			if (fds_len > 0)
+				close(fds[0]);
+			return -ECOMM;
+		} else {
+			recv_buff[ret] = '\0';
+		}
+
+		if (fds_len > 0) {
+			_E("mp fds : %d %d", fds[0], fds[1]);
+			ret_fd[0] = fds[0];
+			ret_fd[1] = fds[1];
+		}
+	}else {
 		len = recv(fd, &res, sizeof(int), 0);
 		if (len == -1) {
 			if (errno == EAGAIN) {
