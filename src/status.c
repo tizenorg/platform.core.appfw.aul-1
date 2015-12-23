@@ -22,7 +22,7 @@
 #include <bundle_internal.h>
 
 #include "aul_util.h"
-#include "app_sock.h"
+#include "aul_socket.h"
 #include "aul_api.h"
 #include "launch.h"
 
@@ -43,8 +43,8 @@ API int aul_status_update(int status)
 
 	app_status = status;
 
-	ret = __app_send_raw_with_noreply(AUL_UTIL_PID, APP_STATUS_UPDATE, (unsigned char *)&status, sizeof(status));
-
+	ret = aul_socket_send_raw_async(AUL_UTIL_PID, getuid(), APP_STATUS_UPDATE,
+			(unsigned char *)&status, sizeof(status));
 	if (!ret) {
 		while (cb) {
 			if (cb->handler) {
@@ -66,7 +66,8 @@ API  int aul_app_get_status_bypid(int pid)
 	if (pid == getpid())
 		return app_status;
 
-	ret = __app_send_raw(AUL_UTIL_PID, APP_GET_STATUS, (unsigned char *)&pid, sizeof(pid));
+	ret = aul_socket_send_raw_with_reply(AUL_UTIL_PID, getuid(), APP_GET_STATUS,
+			(unsigned char *)&pid, sizeof(pid));
 
 	return ret;
 }
