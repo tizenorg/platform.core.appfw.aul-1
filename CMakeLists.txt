@@ -46,7 +46,7 @@ SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 
 # aul_mods : modules (static library)
 add_library(aul_mods STATIC
-	src/app_sock.c
+	src/aul_sock.c
 	src/simple_util.c
 	)
 
