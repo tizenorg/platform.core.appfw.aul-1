@@ -26,7 +26,7 @@
 #include "aul_api.h"
 #include "menu_db_util.h"
 #include "simple_util.h"
-#include "app_sock.h"
+#include "aul_sock.h"
 #include "aul_util.h"
 #include "launch.h"
 
