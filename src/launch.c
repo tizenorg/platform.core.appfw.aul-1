@@ -30,7 +30,7 @@
 
 #include "aul.h"
 #include "aul_api.h"
-#include "app_sock.h"
+#include "aul_socket.h"
 #include "perf.h"
 #include "simple_util.h"
 #include "launch.h"
@@ -161,7 +161,7 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 	if (res != BUNDLE_ERROR_NONE)
 		return AUL_R_EINVAL;
 
-	if ((res = __app_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, ret_fd)) < 0) {
+	if ((res = aul_socket_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, ret_fd)) < 0) {
 		switch (res) {
 		case -EINVAL:
 			res = AUL_R_EINVAL;
@@ -203,41 +203,6 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 }
 
 /**
- * @brief	encode kb and send it to launchpad
- * @param[in]	uid		receiver's uid
- * @param[in]   pad_type	launchpad type
- * @param[in]	cmd		message's status (APP_START | APP_RESULT)
- * @param[in]	kb		data
- */
-API int app_agent_send_cmd(int uid, const char *pad_type, int cmd, bundle *kb)
-{
-	int datalen;
-	bundle_raw *kb_data;
-	int res;
-
-	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_agent_send_raw(uid, pad_type, cmd, kb_data, datalen)) < 0)
-		res = __get_aul_error(res);
-	free(kb_data);
-
-	return res;
-}
-
-API int app_agent_send_cmd_with_noreply(int uid, const char *pad_type, int cmd, bundle *kb)
-{
-	int datalen;
-	bundle_raw *kb_data;
-	int res;
-
-	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_agent_send_raw_with_noreply(uid, pad_type, cmd, kb_data, datalen)) < 0)
-		res = __get_aul_error(res);
-	free(kb_data);
-
-	return res;
-}
-
-/**
  * @brief	encode kb and send it to 'pid'
  * @param[in]	pid		receiver's pid
  * @param[in]	cmd		message's status (APP_START | APP_RESULT)
@@ -255,7 +220,7 @@ API int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw_for_uid(pid, uid, cmd, kb_data, datalen)) < 0)
+	if ((res = aul_socket_send_raw(pid, uid, cmd, kb_data, datalen)) < 0)
 		res = __get_aul_error(res);
 	free(kb_data);
 
@@ -269,8 +234,14 @@ API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = __app_send_raw_with_noreply(pid, cmd, kb_data, datalen)) < 0)
+	res = aul_socket_send_raw_async(pid, getuid(), cmd, kb_data, datalen);
+	if (res > 0) {
+		close(res);
+		res = 0;
+	} else {
 		res = __get_aul_error(res);
+	}
+
 	free(kb_data);
 
 	return res;
@@ -458,7 +429,7 @@ int aul_sock_handler(int fd)
 	int pid;
 	int ret;
 
-	if ((pkt = __app_recv_raw(fd, &clifd, &cr)) == NULL) {
+	if ((pkt = aul_socket_recv_pkt(fd, &clifd, &cr)) == NULL) {
 		_E("recv error");
 		return -1;
 	}
@@ -598,7 +569,7 @@ int aul_initialize()
 	if (aul_initialized)
 		return AUL_R_ECANCELED;
 
-	aul_fd = __create_server_sock(getpid());
+	aul_fd = aul_socket_create_server(getpid(), getuid());
 	if (aul_fd < 0) {
 		_E("aul_init create sock failed");
 		return AUL_R_ECOMM;
