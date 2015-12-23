@@ -13,7 +13,7 @@ ENDIF (with_x11)
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info libsystemd-daemon capi-system-info vconf sqlite3 iniparser)
+SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle dbus-glib-1 xdgmime libtzplatform-config pkgmgr-info capi-system-info vconf sqlite3 iniparser)
 IF (with_wayland)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client ecore-wayland)
 ENDIF (with_wayland)
@@ -46,7 +46,7 @@ SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 
 # aul_mods : modules (static library)
 add_library(aul_mods STATIC
-	src/app_sock.c
+	src/aul_sock.c
 	src/simple_util.c
 	)
 

@@ -25,7 +25,7 @@
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_util.h"
-#include "app_sock.h"
+#include "aul_sock.h"
 #include "launch.h"
 #include "simple_util.h"
 
@@ -65,8 +65,8 @@ API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 	*cnt = 0;
 	*pids = NULL;
 
-	ret = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GROUP_GET_LEADER_PIDS,
-			NULL, 0);
+	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_LEADER_PIDS, NULL, 0);
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
 		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {
@@ -99,9 +99,8 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 	bundle_add_str(b, AUL_K_LEADER_PID, buf);
 
 	bundle_encode(b, &br, &datalen);
-	ret = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GROUP_GET_GROUP_PIDS, br,
-			datalen);
-
+	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_GROUP_PIDS, br, datalen);
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
 		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {
@@ -141,7 +140,7 @@ API int aul_app_group_get_leader_pid(int pid)
 API int aul_app_group_clear_top(void)
 {
 	unsigned char dummy[1] = { 0 };
-	return  __app_send_raw(AUL_UTIL_PID, APP_GROUP_CLEAR_TOP, dummy, 0);
+	return  aul_sock_send_raw_with_reply(AUL_UTIL_PID, getuid(), APP_GROUP_CLEAR_TOP, dummy, 0);
 }
 
 API int aul_app_group_is_top(void)
@@ -185,7 +184,8 @@ API void aul_app_group_lower(int *exit)
 {
 	int ret;
 	unsigned char dummy[1] = { 0 };
-	ret =  __app_send_raw(AUL_UTIL_PID, APP_GROUP_LOWER, dummy, 0);
+
+	ret = aul_sock_send_raw_with_reply(AUL_UTIL_PID, getuid(), APP_GROUP_LOWER, dummy, 0);
 	*exit = ret;
 }
 
@@ -195,8 +195,8 @@ API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 	*cnt = 0;
 	*pids = NULL;
 
-	ret = __app_send_cmd_with_result(AUL_UTIL_PID, APP_GROUP_GET_IDLE_PIDS,
-			NULL, 0);
+	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_IDLE_PIDS, NULL, 0);
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
 		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {

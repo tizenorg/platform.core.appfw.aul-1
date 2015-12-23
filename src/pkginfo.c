@@ -23,7 +23,7 @@
 #include "aul_api.h"
 #include "menu_db_util.h"
 #include "simple_util.h"
-#include "app_sock.h"
+#include "aul_sock.h"
 #include "aul_util.h"
 
 typedef struct _internal_param_t {
@@ -41,8 +41,8 @@ API int aul_app_get_pid(const char *appid)
 	if (appid == NULL)
 		return -1;
 
-	ret = __app_send_raw(AUL_UTIL_PID, APP_GET_PID, (unsigned char *)appid,
-			strlen(appid));
+	ret = aul_sock_send_raw_with_reply(AUL_UTIL_PID, getuid(), APP_GET_PID,
+			(unsigned char *)appid, strlen(appid));
 
 	return ret;
 }
@@ -54,8 +54,8 @@ API int aul_app_is_running(const char *appid)
 	if (appid == NULL)
 		return 0;
 
-	ret = __app_send_raw(AUL_UTIL_PID, APP_IS_RUNNING, (unsigned char*)appid,
-			strlen(appid));
+	ret = aul_sock_send_raw_with_reply(AUL_UTIL_PID, getuid(), APP_IS_RUNNING,
+			(unsigned char*)appid, strlen(appid));
 
 	if (ret > 0)
 		return true;
@@ -76,7 +76,8 @@ API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result(AUL_UTIL_PID, APP_RUNNING_INFO, NULL, 0);
+	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_RUNNING_INFO, NULL, 0);
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
@@ -160,9 +161,9 @@ API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid
 	int ret;
 
 	if (pid != getpid()) {
-		pkt = __app_send_cmd_with_result_for_uid(AUL_UTIL_PID, uid,
-			APP_GET_APPID_BYPID, (unsigned char *)&pid,
-			sizeof(pid));
+		pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, uid,
+				APP_GET_APPID_BYPID, (unsigned char *)&pid,
+				sizeof(pid));
 		if (pkt == NULL)
 			return AUL_R_ERROR;
 		if (pkt->cmd == APP_GET_INFO_ERROR) {
@@ -230,7 +231,7 @@ API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid
 	if (pkgid == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = __app_send_cmd_with_result_for_uid(AUL_UTIL_PID, uid, cmd,
+	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, uid, cmd,
 					(unsigned char *)&pid, sizeof(pid));
 
 	if (pkt == NULL)
@@ -261,9 +262,8 @@ API int aul_delete_rua_history(bundle *b)
 	if (b != NULL)
 		bundle_encode(b, &br, &datalen);
 
-	ret = __app_send_cmd_with_result(AUL_UTIL_PID, APP_REMOVE_HISTORY, br,
-			datalen);
-
+	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_REMOVE_HISTORY, br, datalen);
 	if (ret != NULL) {
 		if (ret->len > 0) {
 			memcpy(&result, ret->data, ret->len);

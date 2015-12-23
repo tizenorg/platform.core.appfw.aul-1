@@ -24,7 +24,7 @@
 
 #include "aul.h"
 #include "aul_api.h"
-#include "app_sock.h"
+#include "aul_sock.h"
 #include "simple_util.h"
 #include "launch.h"
 #include "aul_util.h"
