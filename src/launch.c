@@ -36,6 +36,7 @@
 #include "launch.h"
 #include "key.h"
 #include "app_signal.h"
+#include "aul_app_com.h"
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20
 
@@ -496,7 +497,13 @@ int aul_sock_handler(int fd)
 	case APP_PAUSE_BY_PID:
 		app_pause();
 		break;
-
+	case APP_COM_MESSAGE:
+		kbundle = bundle_decode(pkt->data, pkt->len);
+		if (kbundle == NULL)
+			goto err;
+		app_com_recv(kbundle);
+		bundle_free(kbundle);
+		break;
 	default:
 		_E("no support packet");
 	}
