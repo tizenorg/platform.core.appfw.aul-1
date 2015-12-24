@@ -47,4 +47,5 @@ int app_subapp_terminate_request(void);
 int __call_aul_handler(aul_type type, bundle *kb);
 gboolean __aul_glib_handler(gpointer data);
 
+int app_com_recv(bundle *b);
 
