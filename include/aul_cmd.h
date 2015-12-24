@@ -61,7 +61,12 @@ enum app_cmd {
 	APP_ADD_LOADER,
 	APP_REMOVE_LOADER,
 	APP_GET_PID,
-
+	APP_COM_CREATE,
+	APP_COM_JOIN,
+	APP_COM_SEND,
+	APP_COM_LEAVE,
+	APP_COM_MESSAGE,
+ 
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */
