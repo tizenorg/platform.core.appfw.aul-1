@@ -27,7 +27,6 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  libattr-devel
 BuildRequires:  pkgconfig(libtzplatform-config)
-BuildRequires:  pkgconfig(libsystemd-daemon)
 BuildRequires:  pkgconfig(capi-system-info)
 BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  pkgconfig(sqlite3)
