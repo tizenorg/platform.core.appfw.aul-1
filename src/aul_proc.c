@@ -22,6 +22,9 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "aul_api.h"
+#include "aul_proc.h"
 #include "simple_util.h"
 
 #define BINSH_NAME	"/bin/sh"
@@ -43,8 +46,6 @@
 static inline int __read_proc(const char *path, char *buf, int size);
 static inline int __find_pid_by_appid(const char *dname, const char *appid,
 		void *priv, uid_t uid);
-static inline int __get_pgid_from_stat(int pid);
-
 
 static inline int __read_proc(const char *path, char *buf, int size)
 {
@@ -84,9 +85,7 @@ static inline int __find_pid_by_appid(const char *dname, const char *appid,
 	return pid;
 }
 
-int __proc_iter_appid(
-	int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid),
-		    void *priv)
+API int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid), void *priv)
 {
 	DIR *dp;
 	struct dirent *dentry;
@@ -107,7 +106,7 @@ int __proc_iter_appid(
 		if (!isdigit(dentry->d_name[0]))
 			continue;
 
-		uid = __proc_get_usr_bypid(atoi(dentry->d_name));
+		uid = aul_proc_get_usr_bypid(atoi(dentry->d_name));
 
 		snprintf(buf, sizeof(buf), "/proc/%s/attr/current", dentry->d_name);
 		ret = __read_proc(buf, buf, sizeof(buf));
@@ -131,8 +130,7 @@ int __proc_iter_appid(
 	return -1;
 }
 
-
-uid_t __proc_get_usr_bypid(int pid)
+API uid_t aul_proc_get_usr_bypid(int pid)
 {
 	char buf[MAX_CMD_BUFSZ];
 	int ret;
@@ -147,7 +145,7 @@ uid_t __proc_get_usr_bypid(int pid)
 	return uid;
 }
 
-char *__proc_get_appid_bypid(int pid)
+API char *aul_proc_get_appid_bypid(int pid)
 {
 	char buf[MAX_CMD_BUFSZ];
 	char *p;
@@ -167,126 +165,3 @@ char *__proc_get_appid_bypid(int pid)
 
 	return strdup(p);
 }
-
-char *__proc_get_cmdline_bypid(int pid)
-{
-	char buf[MAX_CMD_BUFSZ];
-	int ret;
-
-	snprintf(buf, sizeof(buf), "/proc/%d/cmdline", pid);
-	ret = __read_proc(buf, buf, sizeof(buf));
-	if (ret <= 0)
-		return NULL;
-
-	/* support app launched by shell script */
-	if (strncmp(buf, BINSH_NAME, BINSH_SIZE) == 0) {
-		return strdup(&buf[BINSH_SIZE + 1]);
-	} else if (strncmp(buf, VALGRIND_NAME, VALGRIND_SIZE) == 0) {
-		char* ptr = buf;
-
-		/* buf comes with double null-terminated string */
-		while (1) {
-			while (*ptr)
-				ptr++;
-
-			ptr++;
-
-			if (!(*ptr))
-				break;
-
-			/* ignore trailing "--" */
-			if (strncmp(ptr, "-", 1) != 0)
-				break;
-		};
-
-		return strdup(ptr);
-	} else if (strncmp(buf, BASH_NAME, BASH_SIZE) == 0) {
-		if (strncmp(&buf[BASH_SIZE + 1], OPROFILE_NAME, OPROFILE_SIZE) == 0) {
-			if (strncmp(&buf[BASH_SIZE + OPROFILE_SIZE + 2], OPTION_VALGRIND_NAME, OPTION_VALGRIND_SIZE) == 0)
-				return strdup(&buf[BASH_SIZE + OPROFILE_SIZE + OPTION_VALGRIND_SIZE + 3]);
-		}
-	}
-
-	return strdup(buf);
-}
-
-char *__proc_get_exe_bypid(int pid)
-{
-	char buf[MAX_CMD_BUFSZ];
-	char buf2[MAX_CMD_BUFSZ];
-	ssize_t len;
-
-	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-	len = readlink(buf, buf2, MAX_CMD_BUFSZ - 1);
-	if (len <= 0)
-		return NULL;
-	buf2[len] = 0;
-	return strdup(buf2);
-}
-
-static inline int __get_pgid_from_stat(int pid)
-{
-	char buf[MAX_LOCAL_BUFSZ];
-	char *str = NULL;
-	int ret;
-	int i;
-	int count = 0;
-
-	if (pid <= 1)
-		return -1;
-
-	snprintf(buf, sizeof(buf), "/proc/%d/stat", pid);
-	ret = __read_proc(buf, buf, sizeof(buf));
-	if (ret < 0)
-		return -1;
-
-	for (i = 0; i < (ret - 1); i++) {
-		if (buf[i] == ' ') {
-			count++;
-			if (count == PROC_STAT_GID_POS - 1)
-				str = &(buf[i + 1]);
-			else if (count == PROC_STAT_GID_POS) {
-				buf[i] = 0;
-				break;
-			}
-		}
-	}
-
-	if (count == PROC_STAT_GID_POS && str != NULL)
-		pid = atoi(str);
-	else
-		pid = -1;
-
-	return pid;
-}
-
-int __proc_iter_pgid(int pgid, int (*iterfunc)(int pid, void *priv, uid_t uid),
-			void *priv)
-{
-	DIR *dp;
-	struct dirent *dentry;
-	int _pgid;
-	int ret = -1;
-	uid_t uid;
-
-	dp = opendir("/proc");
-	if (dp == NULL)
-		return -1;
-
-	while ((dentry = readdir(dp)) != NULL) {
-		if (!isdigit(dentry->d_name[0]))
-			continue;
-
-		_pgid = __get_pgid_from_stat(atoi(dentry->d_name));
-		if (pgid == _pgid) {
-			uid =  __proc_get_usr_bypid(atoi(dentry->d_name));
-			ret = iterfunc(atoi(dentry->d_name), priv, uid);
-			if (ret >= 0)
-				break;
-		}
-	}
-
-	closedir(dp);
-	return ret;
-}
-
