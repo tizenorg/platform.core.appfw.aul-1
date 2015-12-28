@@ -22,7 +22,7 @@
 
 #include "app_signal.h"
 #include "aul_api.h"
-#include "simple_util.h"
+#include "aul_util.h"
 #include "aul.h"
 
 static int (*_app_dead_handler) (int pid, void *data);
