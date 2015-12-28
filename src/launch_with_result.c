@@ -25,9 +25,8 @@
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_sock.h"
-#include "simple_util.h"
-#include "launch.h"
 #include "aul_util.h"
+#include "launch.h"
 
 /*#define ACTIVATE_PREEMPT_FEATURE*/
 

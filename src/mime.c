@@ -24,7 +24,7 @@
 #include "aul_api.h"
 #include "miregex.h"
 #include "menu_db_util.h"
-#include "simple_util.h"
+#include "aul_util.h"
 
 static int __match_content_with_regex(const char *content, regex_t *regex_preg)
 {
