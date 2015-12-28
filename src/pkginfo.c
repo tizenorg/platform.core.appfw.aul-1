@@ -25,6 +25,7 @@
 #include "simple_util.h"
 #include "aul_sock.h"
 #include "aul_util.h"
+#include "aul_proc.h"
 
 typedef struct _internal_param_t {
 	aul_app_info_iter_fn enum_fn;
@@ -114,10 +115,10 @@ static int __get_info_bypid(int pid, char *appid, int len, int cmd)
 	char *result;
 	app_info_from_db *menu_info;
 	uid_t uid;
-	result = __proc_get_appid_bypid(pid);
+	result = aul_proc_get_appid_bypid(pid);
 	if (result == NULL)
 		return -1;
-	uid = __proc_get_usr_bypid(pid);
+	uid = aul_proc_get_usr_bypid(pid);
 
 	if ((menu_info = _get_app_info_from_db_by_appid_user(result, uid)) == NULL) {
 		free(result);
@@ -144,7 +145,7 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 {
 	char *result;
 
-	result = __proc_get_appid_bypid(pid);
+	result = aul_proc_get_appid_bypid(pid);
 	if (result == NULL)
 		return -1;
 
