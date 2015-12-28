@@ -32,10 +32,9 @@
 #include "aul_api.h"
 #include "aul_sock.h"
 #include "perf.h"
-#include "simple_util.h"
+#include "aul_util.h"
 #include "launch.h"
 #include "key.h"
-#include "aul_util.h"
 #include "app_signal.h"
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20

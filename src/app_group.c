@@ -27,7 +27,6 @@
 #include "aul_util.h"
 #include "aul_sock.h"
 #include "launch.h"
-#include "simple_util.h"
 
 API int aul_app_group_get_window(int pid)
 {

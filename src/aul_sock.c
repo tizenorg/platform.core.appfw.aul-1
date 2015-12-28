@@ -26,7 +26,7 @@
 
 #include "aul_api.h"
 #include "aul_sock.h"
-#include "simple_util.h"
+#include "aul_util.h"
 
 #define MAX_NR_OF_DESCRIPTORS 2
 
