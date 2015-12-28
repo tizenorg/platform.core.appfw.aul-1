@@ -18,33 +18,18 @@
 
 #include <unistd.h>
 #include <ctype.h>
-#include <dlog.h>
-#include <tzplatform_config.h>
 
-#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid), void *priv);
 
-#undef LOG_TAG
-#define LOG_TAG "AUL"
+/*
+ * This API is only for Appfw internally.
+ */
+char *aul_proc_get_appid_bypid(int pid);
 
-#define MAX_LOCAL_BUFSZ 128
-#define MAX_PID_STR_BUFSZ 20
-#define MAX_UID_STR_BUFSZ 20
-
-#define _E(fmt, arg...) LOGE(fmt, ##arg)
-#define _D(fmt, arg...) LOGD(fmt, ##arg)
-#define _W(fmt, arg...) LOGW(fmt, ##arg)
-
-#define retvm_if(expr, val, fmt, arg...) do { \
-	if (expr) { \
-		_E(fmt, ##arg); \
-		_E("(%s) -> %s() return", #expr, __FUNCTION__); \
-		return (val); \
-	} \
-} while (0)
-
-#define retv_if(expr, val) do { \
-	if (expr) { \
-		_E("(%s) -> %s() return", #expr, __FUNCTION__); \
-		return (val); \
-	} \
-} while (0)
+/*
+ * This API is only for Appfw internally.
+ */
+uid_t aul_proc_get_usr_bypid(int pid);

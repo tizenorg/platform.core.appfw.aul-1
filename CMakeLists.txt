@@ -44,11 +44,6 @@ SET(CMAKE_SKIP_BUILD_RPATH true)
 # Linker flags
 SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 
-# aul_mods : modules (static library)
-add_library(aul_mods STATIC
-	src/simple_util.c
-	)
-
 # aul
 add_library(aul SHARED
 		src/pkginfo.c
@@ -66,8 +61,9 @@ add_library(aul SHARED
 		src/app_group.c
 		src/aul_rsc_mgr.c
 		src/aul_sock.c
+		src/aul_proc.c
 		)
-TARGET_LINK_LIBRARIES(aul aul_mods ${libpkgs_LDFLAGS})
+TARGET_LINK_LIBRARIES(aul ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
 SET_TARGET_PROPERTIES(aul PROPERTIES VERSION ${FULLVER})
 INSTALL(TARGETS aul DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
@@ -76,14 +72,14 @@ INSTALL(TARGETS aul DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
 SET(APP_LAUNCHER "app_launcher")
 ADD_EXECUTABLE(${APP_LAUNCHER} app_launcher.c)
 SET_TARGET_PROPERTIES(${APP_LAUNCHER} PROPERTIES COMPILE_FLAGS "${EXTRA_CFLAGS} -fPIE")
-TARGET_LINK_LIBRARIES(${APP_LAUNCHER} aul aul_mods ${APP_LAUNCHER_DEPS_LDFLAGS} "-pie")
+TARGET_LINK_LIBRARIES(${APP_LAUNCHER} aul ${APP_LAUNCHER_DEPS_LDFLAGS} "-pie")
 INSTALL(TARGETS app_launcher DESTINATION bin)
 
 # appgroup info tool
 SET(APPGROUP_INFO "appgroup_info")
 ADD_EXECUTABLE(${APPGROUP_INFO} tool/app_group_info.c)
 SET_TARGET_PROPERTIES(${APPGROUP_INFO} PROPERTIES COMPILE_FLAGS "${EXTRA_CFLAGS} -fPIE")
-TARGET_LINK_LIBRARIES(${APPGROUP_INFO} aul aul_mods ${APPGROUP_INFO_DEPS_LDFLAGS} "-pie")
+TARGET_LINK_LIBRARIES(${APPGROUP_INFO} aul ${APPGROUP_INFO_DEPS_LDFLAGS} "-pie")
 INSTALL(TARGETS appgroup_info DESTINATION bin)
 
 # pkgconfig file
@@ -94,6 +90,7 @@ CONFIGURE_FILE(feature/preexec_list.txt.in feature/preexec_list.txt @ONLY)
 # Install headers, other files
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_sock.h DESTINATION include/aul)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_proc.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_rsc_mgr.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_svc.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_cmd.h DESTINATION include/aul)
