@@ -18,21 +18,18 @@
 
 #include <unistd.h>
 #include <ctype.h>
-#include <dlog.h>
-#include <tzplatform_config.h>
 
-#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid), void *priv);
 
-#undef LOG_TAG
-#define LOG_TAG "AUL"
+/*
+ * This API is only for Appfw internally.
+ */
+char *aul_proc_get_appid_bypid(int pid);
 
-#define _E(fmt, arg...) LOGE(fmt, ##arg)
-#define _D(fmt, arg...) LOGD(fmt, ##arg)
-#define _W(fmt, arg...) LOGW(fmt, ##arg)
-
-#define AUL_UTIL_PID -2
-#define MAX_LOCAL_BUFSZ 128
-#define MAX_PACKAGE_STR_SIZE 512
-#define MAX_PACKAGE_APP_PATH_SIZE 512
-#define MAX_PID_STR_BUFSZ 20
-#define MAX_UID_STR_BUFSZ 20
+/*
+ * This API is only for Appfw internally.
+ */
+uid_t aul_proc_get_usr_bypid(int pid);

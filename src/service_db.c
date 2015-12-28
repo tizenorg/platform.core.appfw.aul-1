@@ -25,7 +25,7 @@
 #include <tzplatform_config.h>
 
 #include "aul_svc_db.h"
-#include "simple_util.h"
+#include "aul_util.h"
 
 #define APP_INFO_DB_PATH	tzplatform_mkpath(TZ_SYS_DB, ".pkgmgr_parser.db")
 

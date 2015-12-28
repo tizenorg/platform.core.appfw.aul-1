@@ -29,7 +29,6 @@
 
 #include "aul_api.h"
 #include "aul_util.h"
-#include "simple_util.h"
 #include "aul.h"
 
 #define ROOT_UID 0

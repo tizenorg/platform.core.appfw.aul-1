@@ -15,8 +15,6 @@
  */
 
 #define _GNU_SOURCE
-#include "miregex.h"
-#include "simple_util.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -24,6 +22,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "miregex.h"
+#include "aul_util.h"
 
 #define MIREGEX_DIR SHARE_PREFIX"/miregex"
 #define ONELINE_BUF 1024

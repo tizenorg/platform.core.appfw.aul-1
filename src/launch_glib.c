@@ -19,10 +19,11 @@
 #include <poll.h>
 #include <bundle.h>
 #include <bundle_internal.h>
+
 #include "aul.h"
 #include "aul_api.h"
+#include "aul_util.h"
 #include "launch.h"
-#include "simple_util.h"
 
 static GSource *src;
 
