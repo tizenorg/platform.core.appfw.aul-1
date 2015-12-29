@@ -1897,7 +1897,10 @@ void aul_app_group_get_idle_pids(int *cnt, int **pids);
  * This API is only for Appfw internally.
  */
 int aul_request_data_control_socket_pair(bundle *b, int *fd);
-
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_request_message_port_socket_pair(int *fd);
 /*
  * This API is only for Appfw internally.
  */

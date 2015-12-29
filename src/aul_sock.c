@@ -545,12 +545,51 @@ static int __recv_message(int sock, struct iovec *vec, int vec_max_size, int *ve
 	return ret;
 }
 
+int __recv_socket_fd(int fd, int cmd, int *ret_fd) {
+
+	int fds[2] = {0,};
+	char recv_buff[1024];
+	struct iovec vec[3];
+	int ret = 0;
+	int vec_len = 0;
+	int fds_len = 0;
+
+	vec[0].iov_base = recv_buff;
+	vec[0].iov_len = 1024;
+	ret = __recv_message(fd, vec, 1, &vec_len, fds, &fds_len);
+	if (ret < 0) {
+		_E("Error[%d]. while receiving message\n", -ret);
+		if (fds_len > 0)
+			close(fds[0]);
+		return -ECOMM;
+	} else {
+		recv_buff[ret] = '\0';
+	}
+
+	if (fds_len > 0) {
+
+		if (cmd == APP_GET_DC_SOCKET_PAIR) {
+
+			_D("fds : %d", fds[0]);
+			ret_fd[0] = fds[0];
+
+		} else if (cmd == APP_GET_MP_SOCKET_PAIR) {
+
+			_D("mp fds : %d %d", fds[0], fds[1]);
+			ret_fd[0] = fds[0];
+			ret_fd[1] = fds[1];
+
+		}
+	}
+	return 0;
+}
+
 int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int *ret_fd)
 {
 	int fd;
 	int len;
-	int ret;
 	int res = 0;
+	int ret = 0;
 	app_pkt_t *pkt = NULL;
 
 	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
@@ -566,7 +605,7 @@ int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *
 		return -ECOMM;
 	}
 
-	pkt = (app_pkt_t *)malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
+	pkt = (app_pkt_t *) malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
 	if (NULL == pkt) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
@@ -617,29 +656,9 @@ int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *
 	}
 
 retry_recv:
-	if (cmd == APP_GET_SOCKET_PAIR) {
-		char recv_buff[1024];
-		struct iovec vec[3];
-		int ret = 0;
-		int vec_len = 0;
-		int fds_len = 0;
-		int fds[1] = {0};
 
-		vec[0].iov_base = recv_buff;
-		vec[0].iov_len = 1024;
-		ret = __recv_message(fd, vec, 1, &vec_len, fds, &fds_len);
-		if (ret < 0) {
-			_E("Error[%d]. while receiving message\n", -ret);
-			if (fds_len > 0)
-				close(fds[0]);
-			return -ECOMM;
-		} else
-			recv_buff[ret] = '\0';
-
-		if (fds_len > 0) {
-			_E("fds : %d", fds[0]);
-			ret_fd[0] = fds[0];
-		}
+	if (cmd == APP_GET_DC_SOCKET_PAIR || APP_GET_MP_SOCKET_PAIR) {
+		__recv_socket_fd(fd, cmd, ret_fd);
 	} else {
 		len = recv(fd, &res, sizeof(int), 0);
 		if (len == -1) {
