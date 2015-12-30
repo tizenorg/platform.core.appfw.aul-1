@@ -23,7 +23,7 @@
 
 #include "aul_cmd.h"
 
-#define AUL_SOCK_MAXBUFF 65535
+#define AUL_SOCK_MAXBUFF 131071
 #define ELOCALLAUNCH_ID 128
 #define EILLEGALACCESS 127
 #define ETERMINATING 126
