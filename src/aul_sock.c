@@ -580,12 +580,13 @@ int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *
 {
 	int fd;
 	int len;
-	int res = 0;
-	int ret = 0;
-	app_pkt_t *pkt = NULL;
+	int res;
+	app_pkt_t *pkt;
+	int sent = 0;
 
-	if (kb_data == NULL || datalen > AUL_SOCK_MAXBUFF - 8) {
-		_E("keybundle error\n");
+	if (kb_data == NULL ||
+			datalen > AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
+		_E("keybundle error");
 		return -EINVAL;
 	}
 
@@ -597,65 +598,38 @@ int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *
 		return -ECOMM;
 	}
 
-	pkt = (app_pkt_t *)malloc(sizeof(char) * AUL_SOCK_MAXBUFF);
-	if (NULL == pkt) {
+	pkt = (app_pkt_t *)malloc(AUL_PKT_HEADER_SIZE + datalen);
+	if (pkt == NULL) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
-	memset(pkt, 0, AUL_SOCK_MAXBUFF);
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
-	memcpy(pkt->data, kb_data, datalen);
+	memcpy(pkt->data, kb_data, pkt->len);
 
-	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
-		_E("sendto() failed - %d %d (errno %d)", len, datalen + 8, errno);
-		if (len > 0) {
-			while (len != datalen + 8) {
-				ret = send(fd, &pkt->data[len - 8], datalen + 8 - len, 0);
-				if (ret < 0) {
-					_E("second send() failed - %d %d (errno: %d)", ret, datalen + 8, errno);
-					if (errno == EPIPE)
-						_E("pid:%d, fd:%d\n", pid, fd);
-
-					close(fd);
-					if (pkt) {
-						free(pkt);
-						pkt = NULL;
-					}
-					return -ECOMM;
-				}
-				len += ret;
-				_D("send() len - %d %d", len, datalen + 8);
-			}
-		} else {
-			if (errno == EPIPE)
-				_E("pid:%d, fd:%d\n", pid, fd);
-
+	while (sent != AUL_PKT_HEADER_SIZE + pkt->len) {
+		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + pkt->len - sent, 0);
+		if (len <= 0) {
+			_E("send error fd:%d (errno %d)", fd, errno);
+			free(pkt);
 			close(fd);
-			if (pkt) {
-				free(pkt);
-				pkt = NULL;
-			}
-
-			_E("send() failed: %d %s", errno, strerror(errno));
 			return -ECOMM;
 		}
+		sent += len;
 	}
-	if (pkt) {
-		free(pkt);
-		pkt = NULL;
-	}
+
+	free(pkt);
 
 retry_recv:
-
 	if (cmd == APP_GET_DC_SOCKET_PAIR || APP_GET_MP_SOCKET_PAIR) {
 		res = __recv_socket_fd(fd, cmd, ret_fd);
 	} else {
 		len = recv(fd, &res, sizeof(int), 0);
 		if (len == -1) {
 			if (errno == EAGAIN) {
-				_E("recv timeout : cmd(%d) %s", cmd, strerror(errno));
+				_E("recv timeout : cmd(%d) %s", cmd,
+						strerror(errno));
 				res = -EAGAIN;
 			} else if (errno == EINTR) {
 				_E("recv : %s", strerror(errno));
