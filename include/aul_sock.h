@@ -30,13 +30,21 @@
 #define ENOLAUNCHPAD 125
 #define EREJECTED 123
 
-#define AUL_PKT_HEADER_SIZE (sizeof(int) + sizeof(int))
+#define AUL_PKT_HEADER_SIZE (sizeof(int) + sizeof(int) + sizeof(int))
 
 typedef struct _app_pkt_t {
 	int cmd;
 	int len;
+	int opt;
 	unsigned char data[1];
 } app_pkt_t;
+
+typedef enum {
+	AUL_SOCK_DEFAULT = 0x0,
+	AUL_SOCK_NOREPLY = 0x1,
+	AUL_SOCK_CLOSE = 0x2,
+	AUL_SOCK_QUEUE = 0x4,
+} aul_sock_opt_e;
 
 /*
  * This API is only for Appfw internally.
@@ -46,27 +54,27 @@ int aul_sock_create_server(int pid, uid_t uid);
 /*
  * This API is only for Appfw internally.
  */
-int aul_sock_send_raw(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen);
+int aul_sock_send_raw(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt);
 
 /*
  * This API is only for Appfw internally.
  */
-int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen);
+int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt);
 
 /*
  * This API is only for Appfw internally.
  */
-int aul_sock_send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen);
+int aul_sock_send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt);
 
 /*
  * This API is only for Appfw internally.
  */
-int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int *ret_fd);
+int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt, int *ret_fd);
 
 /*
  * This API is only for Appfw internally.
  */
-app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen);
+app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt);
 
 /*
  * This API is only for Appfw internally.

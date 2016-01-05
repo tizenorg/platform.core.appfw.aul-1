@@ -42,7 +42,7 @@ API int aul_app_get_pid(const char *appid)
 		return -1;
 
 	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GET_PID,
-			(unsigned char *)appid, strlen(appid));
+			(unsigned char *)appid, strlen(appid), 0);
 
 	return ret;
 }
@@ -55,7 +55,7 @@ API int aul_app_is_running(const char *appid)
 		return 0;
 
 	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_IS_RUNNING,
-			(unsigned char*)appid, strlen(appid));
+			(unsigned char*)appid, strlen(appid), 0);
 
 	if (ret > 0)
 		return true;
@@ -77,7 +77,7 @@ API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 		return AUL_R_EINVAL;
 
 	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_RUNNING_INFO, NULL, 0);
+			APP_RUNNING_INFO, NULL, 0, 0);
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
@@ -163,7 +163,7 @@ API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid
 	if (pid != getpid()) {
 		pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, uid,
 				APP_GET_APPID_BYPID, (unsigned char *)&pid,
-				sizeof(pid));
+				sizeof(pid), 0);
 		if (pkt == NULL)
 			return AUL_R_ERROR;
 		if (pkt->cmd == APP_GET_INFO_ERROR) {
@@ -232,7 +232,7 @@ API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid
 		return AUL_R_EINVAL;
 
 	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, uid, cmd,
-					(unsigned char *)&pid, sizeof(pid));
+					(unsigned char *)&pid, sizeof(pid), 0);
 
 	if (pkt == NULL)
 		return AUL_R_ERROR;
@@ -263,7 +263,7 @@ API int aul_delete_rua_history(bundle *b)
 		bundle_encode(b, &br, &datalen);
 
 	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_REMOVE_HISTORY, br, datalen);
+			APP_REMOVE_HISTORY, br, datalen, 0);
 	if (ret != NULL) {
 		if (ret->len > 0) {
 			memcpy(&result, ret->data, ret->len);
