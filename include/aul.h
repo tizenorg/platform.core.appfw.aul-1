@@ -649,9 +649,30 @@ typedef int (*aul_app_info_iter_fn)(const aul_app_info *ainfo, void *data);
  * @endcode
  * @remark
  *	This API is only available in User Session.
-*
-*/
+ *
+ */
 int aul_app_is_running(const char *appid);
+
+/**
+ * @par Description:
+ *	This API ask a application is running by application package name.
+ * @par Purpose:
+ *	To know whether some application is running or not, use this API
+ * @par Typical use case:
+ *	For example, If you want to know browser application running,
+ *	you can check it by using this API.
+ *
+ * @param[in]	pkgname	application package name
+ * @param[in]	uid	User ID
+ * @return	true / false
+ * @retval	1	app_name is running now.
+ * @retval	0	app_name is NOT running now.
+ *
+ * @endcode
+ * @remark
+ *	This API is only available in System Session.
+ */
+int aul_app_is_running_for_uid(const char *appid, uid_t uid);
 
 /**
  * @par Description:

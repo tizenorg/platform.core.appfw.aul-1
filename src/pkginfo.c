@@ -49,12 +49,17 @@ API int aul_app_get_pid(const char *appid)
 
 API int aul_app_is_running(const char *appid)
 {
+	return aul_app_is_running_for_uid(appid, getuid());
+}
+
+API int aul_app_is_running_for_uid(const char *appid, uid_t uid)
+{
 	int ret = 0;
 
 	if (appid == NULL)
 		return 0;
 
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_IS_RUNNING,
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_IS_RUNNING,
 			(unsigned char*)appid, strlen(appid));
 
 	if (ret > 0)
