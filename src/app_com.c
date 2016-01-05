@@ -42,7 +42,7 @@ int app_com_recv(bundle *b)
 	int ret = 0;
 	char *endpoint = NULL;
 	size_t result_sz;
-	int result;
+	int *result;
 	GList *head = handlers;
 	aul_app_com_connection_s *handler = NULL;
 
@@ -60,7 +60,7 @@ int app_com_recv(bundle *b)
 	while (head) {
 		handler = (aul_app_com_connection_s *)head->data;
 		if (handler && handler->endpoint && g_strcmp0(handler->endpoint, endpoint) == 0)
-			handler->callback(endpoint, result, b, handler->user_data);
+			handler->callback(endpoint, *result, b, handler->user_data);
 
 		head = head->next;
 	}
