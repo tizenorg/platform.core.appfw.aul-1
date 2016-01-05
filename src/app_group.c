@@ -65,7 +65,7 @@ API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 	*pids = NULL;
 
 	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_LEADER_PIDS, NULL, 0);
+			APP_GROUP_GET_LEADER_PIDS, NULL, 0, 0);
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
 		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {
@@ -99,7 +99,7 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 
 	bundle_encode(b, &br, &datalen);
 	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_GROUP_PIDS, br, datalen);
+			APP_GROUP_GET_GROUP_PIDS, br, datalen, 0);
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
 		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {
@@ -139,7 +139,7 @@ API int aul_app_group_get_leader_pid(int pid)
 API int aul_app_group_clear_top(void)
 {
 	unsigned char dummy[1] = { 0 };
-	return aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_CLEAR_TOP, dummy, 0);
+	return aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_CLEAR_TOP, dummy, 0, 0);
 }
 
 API int aul_app_group_is_top(void)
@@ -184,7 +184,7 @@ API void aul_app_group_lower(int *exit)
 	int ret;
 	unsigned char dummy[1] = { 0 };
 
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_LOWER, dummy, 0);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_LOWER, dummy, 0, 0);
 	*exit = ret;
 }
 
@@ -195,7 +195,7 @@ API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 	*pids = NULL;
 
 	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_IDLE_PIDS, NULL, 0);
+			APP_GROUP_GET_IDLE_PIDS, NULL, 0, 0);
 	if (ret != NULL) {
 		*cnt = ret->len / sizeof(int);
 		if (ret->len > 0 && ret->len <= AUL_SOCK_MAXBUFF - 8) {
