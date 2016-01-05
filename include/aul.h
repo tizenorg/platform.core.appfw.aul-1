@@ -169,6 +169,16 @@ typedef enum _aul_type{
 #define AUL_K_WAYLAND_DISPLAY	"__AUL_WAYLAND_DISPLAY__"
 /** AUL internal private key */
 #define AUL_K_WAYLAND_WORKING_DIR "__AUL_WAYLAND_WORKING_DIR__"
+/** AUL internal private key */
+#define AUL_K_COM_ENDPOINT	"__AUL_COM_ENDPOINT__"
+/** AUL internal private key */
+#define AUL_K_COM_PRIVILEGE	"__AUL_COM_PRIVILEGE__"
+/** AUL internal private key */
+#define AUL_K_COM_PROPAGATE	"__AUL_COM_PROPAGATE__"
+/** AUL internal private key */
+#define AUL_K_COM_FILTER	"__AUL_COM_FILTER__"
+/** AUL internal private key */
+#define AUL_K_COM_RESULT	"__AUL_COM_RESULT__"
 
 /**
  * @brief	This is callback function for aul_launch_init

@@ -36,6 +36,7 @@
 #include "launch.h"
 #include "key.h"
 #include "app_signal.h"
+#include "aul_app_com.h"
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20
 
@@ -433,7 +434,8 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC) {
+	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC &&
+		pkt->cmd != APP_COM_MESSAGE) {
 		ret = __send_result_to_launchpad(clifd, 0);
 		if (ret < 0) {
 			free(pkt);
@@ -496,7 +498,13 @@ int aul_sock_handler(int fd)
 	case APP_PAUSE_BY_PID:
 		app_pause();
 		break;
-
+	case APP_COM_MESSAGE:
+		kbundle = bundle_decode(pkt->data, pkt->len);
+		if (kbundle == NULL)
+			goto err;
+		app_com_recv(kbundle);
+		bundle_free(kbundle);
+		break;
 	default:
 		_E("no support packet");
 	}
