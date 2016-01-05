@@ -235,8 +235,7 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
 	return (0);
 }
 
-API int aul_sock_send_raw_async_with_fd(int fd, int cmd,
-		unsigned char *kb_data, int datalen)
+static int __send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt)
 {
 	int len;
 	int sent = 0;
@@ -250,6 +249,7 @@ API int aul_sock_send_raw_async_with_fd(int fd, int cmd,
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
+	pkt->opt = opt;
 
 	if (kb_data)
 		memcpy(pkt->data, kb_data, pkt->len);
@@ -269,11 +269,23 @@ API int aul_sock_send_raw_async_with_fd(int fd, int cmd,
 	return 0;
 }
 
+API int aul_sock_send_raw_async_with_fd(int fd, int cmd,
+		unsigned char *kb_data, int datalen, int opt)
+{
+	int ret;
+
+	ret = __send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
+	if (opt & AUL_SOCK_CLOSE)
+		close(fd);
+
+	return 0;
+}
+
 /*
  * @brief	Send data (in raw) to the process with 'pid' via socket
  */
 API int aul_sock_send_raw(int pid, uid_t uid, int cmd,
-		unsigned char *kb_data, int datalen)
+		unsigned char *kb_data, int datalen, int opt)
 {
 	int fd;
 	int len;
@@ -290,7 +302,7 @@ API int aul_sock_send_raw(int pid, uid_t uid, int cmd,
 	if (fd < 0)
 		return -ECOMM;
 
-	res = aul_sock_send_raw_async_with_fd(fd, cmd, kb_data, datalen);
+	res = __send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
 	if (res < 0) {
 		close(fd);
 		return res;
@@ -316,7 +328,7 @@ retry_recv:
 	return res;
 }
 
-API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen)
+API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt)
 {
 	int fd;
 
@@ -331,7 +343,7 @@ API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_d
 	if (fd < 0)
 		return -ECOMM;
 
-	aul_sock_send_raw_async_with_fd(fd, cmd, kb_data, datalen);
+	__send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
 
 	return fd;
 }
@@ -347,6 +359,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	unsigned char buf[AUL_SOCK_MAXBUFF];
 	int cmd;
 	int datalen;
+	int opt;
 
 	sun_size = sizeof(struct sockaddr_un);
 
@@ -380,6 +393,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	}
 	memcpy(&cmd, buf, sizeof(int));
 	memcpy(&datalen, buf + sizeof(int), sizeof(int));
+	memcpy(&opt, buf + sizeof(int) + sizeof(int), sizeof(int));
 
 	/* allocate for a null byte */
 	pkt = (app_pkt_t *)calloc(1, AUL_PKT_HEADER_SIZE + datalen + 1);
@@ -389,6 +403,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	}
 	pkt->cmd = cmd;
 	pkt->len = datalen;
+	pkt->opt = opt;
 
 	len = 0;
 	while (len != pkt->len) {
@@ -406,11 +421,12 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	return pkt;
 }
 
-API app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen)
+API app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt)
 {
 	int fd;
 	int len;
 	int ret;
+	int recv_opt;
 	app_pkt_t *pkt = NULL;
 	unsigned char buf[AUL_SOCK_MAXBUFF];
 
@@ -418,7 +434,7 @@ API app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, uns
 	if (fd < 0)
 		return NULL;
 
-	ret = aul_sock_send_raw_async_with_fd(fd, cmd, kb_data, datalen);
+	ret = __send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
 	if (ret < 0) {
 		close(fd);
 		return NULL;
@@ -438,6 +454,7 @@ retry_recv:
 	}
 	memcpy(&cmd, buf, sizeof(int));
 	memcpy(&len, buf + sizeof(int), sizeof(int));
+	memcpy(&recv_opt, buf + sizeof(int) + sizeof(int), sizeof(int));
 
 	/* allocate for a null byte */
 	pkt = (app_pkt_t *)calloc(1, AUL_PKT_HEADER_SIZE + len + 1);
@@ -447,6 +464,7 @@ retry_recv:
 	}
 	pkt->cmd = cmd;
 	pkt->len = len;
+	pkt->opt = recv_opt;
 
 	len = 0;
 	while (len != pkt->len) {
@@ -576,7 +594,7 @@ int __recv_socket_fd(int fd, int cmd, int *ret_fd)
 	return 0;
 }
 
-int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int *ret_fd)
+int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt, int *ret_fd)
 {
 	int fd;
 	int len;
@@ -606,6 +624,7 @@ int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *
 
 	pkt->cmd = cmd;
 	pkt->len = datalen;
+	pkt->opt = opt;
 	memcpy(pkt->data, kb_data, datalen);
 
 	if ((len = send(fd, pkt, datalen + 8, 0)) != datalen + 8) {
