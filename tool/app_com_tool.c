@@ -50,11 +50,13 @@ static void join(const char *endpoint, const char *filter)
 static void send(const char *endpoint)
 {
 	int idx = 2;
+	int ret;
+
 	bundle *b = bundle_create();
-	for (idx = 2; idx < gargc; idx += 2) {
+	for (idx = 2; idx < gargc; idx += 2)
 		bundle_add_str(b, gargv[idx], gargv[idx + 1]);
-	}
-	int ret = aul_app_com_send(endpoint, b);
+
+	ret = aul_app_com_send(endpoint, b);
 	printf("ret: %d\n", ret);
 
 	g_main_loop_quit(mainloop);
@@ -69,25 +71,22 @@ static gboolean run_func(void *data)
 	}
 
 	if (g_strcmp0(gargv[1], "create") == 0) {
-		if (gargc == 3) {
+		if (gargc == 3)
 			create(gargv[2], NULL);
-		} else if (gargc == 4) {
+		else if (gargc == 4)
 			create(gargv[2], gargv[3]);
-		}
 	}
 
 	if (g_strcmp0(gargv[1], "join") == 0) {
-		if (gargc == 3) {
+		if (gargc == 3)
 			join(gargv[2], NULL);
-		} else if (gargc == 4) {
+		else if (gargc == 4)
 			join(gargv[2], gargv[3]);
-		}
 	}
 
 	if (g_strcmp0(gargv[1], "send") == 0) {
-		if (gargc > 4) {
+		if (gargc > 4)
 			send(gargv[2]);
-		}
 	}
 
 	return FALSE;
