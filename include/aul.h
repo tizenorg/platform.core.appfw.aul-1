@@ -166,6 +166,8 @@ typedef enum _aul_type{
 /** AUL internal private key */
 #define AUL_K_LOADER_PATH	"__AUL_LOADER_PATH__"
 /** AUL internal private key */
+#define AUL_K_LOADER_EXTRA	"__AUL_LOADER_EXTRA__"
+/** AUL internal private key */
 #define AUL_K_WAYLAND_DISPLAY	"__AUL_WAYLAND_DISPLAY__"
 /** AUL internal private key */
 #define AUL_K_WAYLAND_WORKING_DIR "__AUL_WAYLAND_WORKING_DIR__"
@@ -1970,13 +1972,14 @@ int aul_forward_app(const char *appid, bundle *kb);
  *      Once it is made, added loader will make a candidate process to use.
  *
  * @param[in]	loader_path	The file name of the custom loader binary including full path
+ * @param[in]	extra		A bundle to be passed to the custom loader
  * @return	Loader ID if success, negative value(<0) if fail
  *
  * @remark
  *	This API is only for Appfw internally.
  *	This API is only available in User Session.
 */
-int aul_add_loader(const char *loader_path);
+int aul_add_loader(const char *loader_path, bundle *extra);
 
 /**
  * @par Description:
