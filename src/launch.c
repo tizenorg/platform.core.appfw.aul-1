@@ -896,18 +896,37 @@ API int aul_check_tep_mount(const char *tep_path)
 	return 0;
 }
 
-API int aul_add_loader(const char *loader_path)
+API int aul_add_loader(const char *loader_path, bundle *kb)
 {
 	int ret;
 	bundle *b;
+	bundle_raw *kb_raw;
+	int len;
 
 	if (loader_path == NULL)
 		return AUL_R_EINVAL;
 
 	b = bundle_create();
+	if (b == NULL)
+		return AUL_R_ERROR;
+
 	bundle_add_str(b, AUL_K_LOADER_PATH, loader_path);
+
+	if (kb) {
+		ret = bundle_encode(b, &kb_raw, &len);
+		if (ret != BUNDLE_ERROR_NONE) {
+			bundle_free(b);
+			return AUL_R_EINVAL;
+		}
+
+		bundle_add_str(b, AUL_K_LOADER_EXTRA, (const char *)kb_raw);
+	}
+
 	ret = app_send_cmd(AUL_UTIL_PID, APP_ADD_LOADER, b);
+
 	bundle_free(b);
+	if (kb_raw)
+		free(kb_raw);
 
 	return ret;
 }
