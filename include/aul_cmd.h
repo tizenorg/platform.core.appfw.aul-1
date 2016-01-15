@@ -77,6 +77,8 @@ enum app_cmd {
 	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */
 	AGENT_DEAD_SIGNAL,
+
+	APP_ALL_RUNNING_INFO,
 	APP_CMD_MAX
 };
 
