@@ -896,17 +896,24 @@ API int aul_check_tep_mount(const char *tep_path)
 	return 0;
 }
 
-API int aul_add_loader(const char *loader_path)
+API int aul_add_loader(const char *loader_path, int argc, char **argv)
 {
 	int ret;
 	bundle *b;
 
-	if (loader_path == NULL)
+	if (loader_path == NULL || argc < 0 || (argc > 0 && argv == NULL))
 		return AUL_R_EINVAL;
 
 	b = bundle_create();
+	if (b == NULL)
+		return AUL_R_ERROR;
+
 	bundle_add_str(b, AUL_K_LOADER_PATH, loader_path);
+	if (argc > 0)
+		bundle_add_str_array(b, AUL_K_LOADER_ARGS, (const char **)argv, argc);
+
 	ret = app_send_cmd(AUL_UTIL_PID, APP_ADD_LOADER, b);
+
 	bundle_free(b);
 
 	return ret;
