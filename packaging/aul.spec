@@ -18,7 +18,7 @@ Requires(preun):  /usr/bin/systemctl
 Requires:   tizen-platform-config
 
 BuildRequires:  cmake
-BuildRequires:  pkgconfig(dbus-glib-1)
+BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(dlog)
