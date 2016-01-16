@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2000 - 2016 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,780 +18,524 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdbool.h>
-#include <dbus/dbus-glib-lowlevel.h>
+#include <gio/gio.h>
+#include <glib.h>
 
 #include "app_signal.h"
 #include "aul_api.h"
 #include "aul_util.h"
 #include "aul.h"
 
-static int (*_app_dead_handler) (int pid, void *data);
-static void *_app_dead_data;
+static guint app_dead_id;
+static int (*app_dead_handler)(int pid, void *data);
+static void *app_dead_data;
 
-static int (*_app_launch_handler) (int pid, void *data);
-static void *_app_launch_data;
+static guint app_launch_id;
+static int (*app_launch_handler)(int pid, void *data);
+static void *app_launch_data;
 
-static int (*_app_launch_handler2) (int pid, const char *app_id, void *data);
-static void *_app_launch_data2;
+static guint app_launch_id2;
+static int (*app_launch_handler2)(int pid, const char *app_id, void *data);
+static void *app_launch_data2;
 
-static int (*_booting_done_handler) (int pid, void *data);
-static void *_booting_done_data;
+static guint booting_done_id;
+static int (*booting_done_handler) (int pid, void *data);
+static void *booting_done_data;
 
-static int (*_status_handler) (int pid, int status, void *data);
-static void *_status_data;
+static guint status_id;
+static int (*status_handler) (int pid, int status, void *data);
+static void *status_data;
 
-static int (*_cooldown_handler) (const char *cooldown_status, void *data);
-static void *_cooldown_data;
+static guint cooldown_id;
+static int (*cooldown_handler) (const char *cooldown_status, void *data);
+static void *cooldown_data;
 
-static DBusConnection *system_conn;
-static DBusConnection *session_conn;
+static GDBusConnection *system_conn = NULL;
+static GDBusConnection *session_conn = NULL;
 
-static DBusConnection *send_conn;
-
-static DBusError err;
-
-static int system_bus_initialized;
-static int session_bus_initialized;
-
-static int system_bus_ref;
-
-static DBusHandlerResult
-__dbus_signal_filter_system(DBusConnection *conn, DBusMessage *message,
-		       void *user_data)
+static void __session_dbus_signal_handler(GDBusConnection *connection,
+					const gchar *sender_name,
+					const gchar *object_path,
+					const gchar *interface_name,
+					const gchar *signal_name,
+					GVariant *parameters,
+					gpointer user_data)
 {
-	const char *interface;
-	const char *cooldown_status;
-	int pid = -1;
-	int status;
+	guint pid;
+	gchar *appid;
 
-	DBusError error;
-	dbus_error_init(&error);
+	if (g_strcmp0(signal_name, AUL_DBUS_APPDEAD_SIGNAL) == 0) {
+		g_variant_get(parameters, "(u)", &pid);
 
-	interface = dbus_message_get_interface(message);
-	if (interface == NULL) {
-		_E("reject by security issue - no interface\n");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		if (app_dead_handler)
+			app_dead_handler((int)pid, app_dead_data);
+	} else if (g_strcmp0(signal_name, AUL_DBUS_APPLAUNCH_SIGNAL) == 0) {
+		g_variant_get(parameters, "(us)", &pid, &appid);
+
+		if (app_launch_handler)
+			app_launch_handler((int)pid, app_launch_data);
+
+		if (app_launch_handler2)
+			app_launch_handler2((int)pid,
+					(const char *)appid, app_launch_data2);
+
+		g_object_unref(appid);
 	}
-
-	if (dbus_message_is_signal(
-	  message, interface, SYSTEM_SIGNAL_BOOTING_DONE)) {
-		if (_booting_done_handler)
-			_booting_done_handler(pid, _booting_done_data);
-	} else if (dbus_message_is_signal(
-	  message, interface, RESOURCED_SIGNAL_PROCESS_STATUS)) {
-		if (dbus_message_get_args(message, &error, DBUS_TYPE_INT32, &status,
-			DBUS_TYPE_INT32, &pid, DBUS_TYPE_INVALID) == FALSE) {
-			_E("Failed to get data: %s", error.message);
-			dbus_error_free(&error);
-			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		}
-		if (_status_handler)
-			_status_handler(pid, status, _status_data);
-	} else if (dbus_message_is_signal(
-	  message, interface, SYSTEM_SIGNAL_COOLDOWN_CHANGED)) {
-		if (dbus_message_get_args(message, &error, DBUS_TYPE_STRING, &cooldown_status,
-			DBUS_TYPE_INVALID) == FALSE) {
-			_E("Failed to get data: %s", error.message);
-			dbus_error_free(&error);
-			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		}
-		if (_cooldown_handler)
-			_cooldown_handler(cooldown_status, _cooldown_data);
-	}
-
-	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult
-__dbus_signal_filter_session(DBusConnection *conn, DBusMessage *message,
-		       void *user_data)
+static guint __session_dbus_register_signal(const char *object_path,
+					const char *interface_name,
+					const char *signal_name)
 {
-	const char *interface;
-	int pid = -1;
+	guint s_id;
+	GError *err = NULL;
+	GDBusConnection *conn = NULL;
 
-	DBusError error;
-	dbus_error_init(&error);
-
-	interface = dbus_message_get_interface(message);
-	if (interface == NULL) {
-		_E("reject by security issue - no interface\n");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
-
-	if (dbus_message_is_signal(
-	  message, interface, AUL_DBUS_APPDEAD_SIGNAL)) {
-		if (dbus_message_get_args(message, &error, DBUS_TYPE_UINT32,
-		     &pid, DBUS_TYPE_INVALID) == FALSE) {
-			_E("Failed to get data: %s", error.message);
-			dbus_error_free(&error);
-			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		}
-		if (_app_dead_handler)
-			_app_dead_handler(pid, _app_dead_data);
-	} else if (dbus_message_is_signal(
-	  message, interface, AUL_DBUS_APPLAUNCH_SIGNAL)) {
-		const char *app_id = NULL;
-		if (dbus_message_get_args(message, &error,
-					DBUS_TYPE_UINT32, &pid,
-					DBUS_TYPE_STRING, &app_id,
-					DBUS_TYPE_INVALID) == FALSE) {
-			_E("Failed to get data: %s", error.message);
-			dbus_error_free(&error);
-			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		}
-		if (_app_launch_handler)
-			_app_launch_handler(pid, _app_launch_data);
-
-		if (_app_launch_handler2)
-			_app_launch_handler2(pid, app_id, _app_launch_data2);
-	}
-
-	return DBUS_HANDLER_RESULT_HANDLED;
-}
-
-static int __app_dbus_signal_add_rule(DBusConnection *bus, const char *path, const char *interface)
-{
-	DBusError error;
-	char rule[MAX_LOCAL_BUFSZ];
-
-	dbus_error_init(&error);
-	snprintf(rule, MAX_LOCAL_BUFSZ,
-		 "path='%s',type='signal',interface='%s'", path, interface);
-
-	/* listening to messages */
-	dbus_bus_add_match(bus, rule, &error);
-	if (dbus_error_is_set(&error)) {
-		_E("Fail to rule set: %s", error.message);
-		dbus_error_free(&error);
-		return -1;
-	}
-
-	return 0;
-}
-
-static int __app_dbus_signal_handler_init(const char *path,
-		const char *interface, bool system_bus)
-{
-	DBusConnection *bus;
-	DBusError error;
-
-	if (!system_bus && session_bus_initialized)
-		return 0;
-
-	if (system_bus && system_bus_initialized)
-		return __app_dbus_signal_add_rule(system_conn, path, interface);
-
-	dbus_error_init(&error);
-	bus = dbus_bus_get_private(system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION, &error);
-	if (!bus) {
-		_E("Failed to connect to the D-BUS daemon: %s", error.message);
-		dbus_error_free(&error);
-		return -1;
-	}
-	dbus_connection_setup_with_g_main(bus, NULL);
-
-	if (__app_dbus_signal_add_rule(bus, path, interface) != 0)
-		return -1;
-
-	if (dbus_connection_add_filter(bus,
-				system_bus ? __dbus_signal_filter_system : __dbus_signal_filter_session,
-				NULL, NULL) == FALSE) {
-		_E("add filter fail");
-		return -1;
-	}
-
-	if (system_bus) {
-		system_conn = bus;
-		system_bus_initialized = 1;
-	} else {
-		session_conn = bus;
-		session_bus_initialized = 1;
-	}
-
-	_D("app signal initialized");
-
-	return 0;
-}
-
-static int __app_dbus_signal_remove_rule(DBusConnection *bus, const char *path, const char *interface)
-{
-	char rule[MAX_LOCAL_BUFSZ];
-	DBusError error;
-
-	dbus_error_init(&error);
-
-	snprintf(rule, MAX_LOCAL_BUFSZ,
-		 "path='%s',type='signal',interface='%s'", path, interface);
-	dbus_bus_remove_match(bus, rule, &error);
-	if (dbus_error_is_set(&error)) {
-		_E("Fail to rule unset: %s", error.message);
-		dbus_error_free(&error);
-		return -1;
-	}
-
-	return 0;
-}
-
-static int __app_dbus_signal_handler_fini(const char *path, const char *interface, bool system_bus)
-{
-	DBusConnection *bus;
-
-	if (system_bus) {
-		if (!system_bus_initialized)
+	if (session_conn == NULL) {
+		conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &err);
+		if (conn == NULL) {
+			_E("g_bus_get_sync() is failed. %s", err->message);
+			g_clear_error(&err);
 			return 0;
-		bus = system_conn;
-	} else {
-		if (!session_bus_initialized)
-			return 0;
-		bus = session_conn;
+		}
+		session_conn = conn;
 	}
 
-	dbus_connection_remove_filter(bus,
-			system_bus ? __dbus_signal_filter_system : __dbus_signal_filter_session, NULL);
+	s_id = g_dbus_connection_signal_subscribe(session_conn,
+					NULL,
+					interface_name,
+					signal_name,
+					object_path,
+					NULL,
+					G_DBUS_SIGNAL_FLAGS_NONE,
+					__session_dbus_signal_handler,
+					NULL,
+					NULL);
+	if (s_id == 0) {
+		_E("g_dbus_connection_signal_subscribe() is failed.");
+		if (conn) {
+			g_object_unref(conn);
+			session_conn = NULL;
+		}
+	}
 
-	if (__app_dbus_signal_remove_rule(bus, path, interface) != 0)
-		return -1;
+	g_clear_error(&err);
 
-	dbus_connection_close(bus);
-	dbus_connection_unref(bus);
+	return s_id;
+}
 
-	if (system_bus)
-		system_bus_initialized = 0;
+static guint __session_dbus_unregister_signal(guint s_id)
+{
+	if (session_conn == NULL)
+		return s_id;
+
+	g_dbus_connection_signal_unsubscribe(session_conn, s_id);
+
+	if (app_dead_handler == NULL
+			&& app_launch_handler == NULL
+			&& app_launch_handler2 == NULL) {
+		g_object_unref(session_conn);
+		session_conn = NULL;
+	}
+
+	return 0;
+}
+
+static void __system_dbus_signal_handler(GDBusConnection *connection,
+					const gchar *sender_name,
+					const gchar *object_path,
+					const gchar *interface_name,
+					const gchar *signal_name,
+					GVariant *parameters,
+					gpointer user_data)
+{
+	gchar *cooldown_status;
+	gint pid = -1;
+	gint status;
+
+	if (g_strcmp0(signal_name, SYSTEM_SIGNAL_BOOTING_DONE) == 0) {
+		if (booting_done_handler)
+			booting_done_handler((int)pid, booting_done_data);
+	} else if (g_strcmp0(signal_name,
+					RESOURCED_SIGNAL_PROCESS_STATUS) == 0) {
+		g_variant_get(parameters, "(ii)", &status, &pid);
+
+		if (status_handler)
+			status_handler((int)pid, (int)status, status_data);
+	} else if (g_strcmp0(signal_name,
+					SYSTEM_SIGNAL_COOLDOWN_CHANGED) == 0) {
+		g_variant_get(parameters, "(s)", &cooldown_status);
+
+		if (cooldown_handler)
+			cooldown_handler((const char *)cooldown_status,
+					cooldown_data);
+
+		g_object_unref(cooldown_status);
+	}
+}
+
+static guint __system_dbus_register_signal(const char *object_path,
+					const char *interface_name,
+					const char *signal_name)
+{
+	guint s_id;
+	GError *err = NULL;
+	GDBusConnection *conn = NULL;
+
+	if (system_conn == NULL) {
+		conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &err);
+		if (conn == NULL) {
+			_E("g_bus_get_sync() is failed. %s", err->message);
+			g_clear_error(&err);
+			return 0;
+		}
+		system_conn = conn;
+	}
+
+	s_id = g_dbus_connection_signal_subscribe(system_conn,
+					NULL,
+					interface_name,
+					signal_name,
+					object_path,
+					NULL,
+					G_DBUS_SIGNAL_FLAGS_NONE,
+					__system_dbus_signal_handler,
+					NULL,
+					NULL);
+	if (s_id == 0) {
+		_E("g_dbus_connection_signal_subscribe() is failed.");
+		if (conn) {
+			g_object_unref(conn);
+			system_conn = NULL;
+		}
+	}
+
+	g_clear_error(&err);
+
+	return s_id;
+}
+
+static guint __system_dbus_unregister_signal(guint s_id)
+{
+	if (system_conn == NULL)
+		return s_id;
+
+	g_dbus_connection_signal_unsubscribe(system_conn, s_id);
+
+	if (booting_done_handler == NULL
+			&& status_handler == NULL
+			&& cooldown_handler == NULL) {
+		g_object_unref(system_conn);
+		system_conn = NULL;
+	}
+
+	return 0;
+}
+
+API int aul_listen_app_dead_signal(int (*func)(int, void *), void *data)
+{
+	app_dead_handler = func;
+	app_dead_data = data;
+
+	if (app_dead_handler && app_dead_id == 0) {
+		app_dead_id = __session_dbus_register_signal(AUL_DBUS_PATH,
+					AUL_DBUS_SIGNAL_INTERFACE,
+					AUL_DBUS_APPDEAD_SIGNAL);
+		if (app_dead_id == 0)
+			return AUL_R_ERROR;
+	} else if (app_dead_handler == NULL && app_dead_id) {
+		app_dead_id = __session_dbus_unregister_signal(app_dead_id);
+		if (app_dead_id)
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+API int aul_listen_app_launch_signal(int (*func)(int, void *), void *data)
+{
+	app_launch_handler = func;
+	app_launch_data = data;
+
+	if (app_launch_handler && app_launch_id == 0) {
+		app_launch_id = __session_dbus_register_signal(AUL_DBUS_PATH,
+					AUL_DBUS_SIGNAL_INTERFACE,
+					AUL_DBUS_APPLAUNCH_SIGNAL);
+		if (app_launch_id == 0)
+			return AUL_R_ERROR;
+	} else if (app_launch_handler == NULL && app_launch_id) {
+		app_launch_id = __session_dbus_unregister_signal(app_launch_id);
+		if (app_launch_id)
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+API int aul_listen_app_launch_signal_v2(int (*func)(int, const char *, void *),
+		void *data)
+{
+	app_launch_handler2 = func;
+	app_launch_data2 = data;
+
+	if (app_launch_handler2 && app_launch_id2 == 0) {
+		app_launch_id2 = __session_dbus_register_signal(AUL_DBUS_PATH,
+					AUL_DBUS_SIGNAL_INTERFACE,
+					AUL_DBUS_APPLAUNCH_SIGNAL);
+		if (app_launch_id2 == 0)
+			return AUL_R_ERROR;
+	} else if (app_launch_handler == NULL && app_launch_id2) {
+		app_launch_id2 = __session_dbus_unregister_signal(
+				app_launch_id2);
+		if (app_launch_id2)
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+API int aul_listen_booting_done_signal(int (*func)(int, void *), void *data)
+{
+	booting_done_handler = func;
+	booting_done_data = data;
+
+	if (booting_done_handler && booting_done_id == 0) {
+		booting_done_id = __system_dbus_register_signal(
+					SYSTEM_PATH_CORE,
+					SYSTEM_INTERFACE_CORE,
+					SYSTEM_SIGNAL_BOOTING_DONE);
+		if (booting_done_id == 0)
+			return AUL_R_ERROR;
+	} else if (booting_done_handler == NULL && booting_done_id) {
+		booting_done_id = __system_dbus_unregister_signal(
+				booting_done_id);
+		if (booting_done_id)
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+API int aul_listen_cooldown_signal(int (*func)(const char *, void *),
+					void *data)
+{
+	cooldown_handler = func;
+	cooldown_data = data;
+
+	if (cooldown_handler && cooldown_id == 0) {
+		cooldown_id = __system_dbus_register_signal(
+					SYSTEM_PATH_SYSNOTI,
+					SYSTEM_INTERFACE_SYSNOTI,
+					SYSTEM_SIGNAL_COOLDOWN_CHANGED);
+		if (cooldown_id == 0)
+			return AUL_R_ERROR;
+	} else if (cooldown_handler == NULL && cooldown_id) {
+		cooldown_id = __system_dbus_unregister_signal(cooldown_id);
+		if (cooldown_id)
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+API int aul_listen_app_status_signal(int (*func)(int, int, void *),
+					void *data)
+{
+	status_handler = func;
+	status_data = data;
+
+	if (status_handler && status_id == 0) {
+		status_id = __system_dbus_register_signal(
+					RESOURCED_PATH_CORE,
+					RESOURCED_INTERFACE_CORE,
+					RESOURCED_SIGNAL_PROCESS_STATUS);
+		if (status_id == 0)
+			return AUL_R_ERROR;
+	} else if (status_handler == NULL && status_id) {
+		status_id = __system_dbus_unregister_signal(status_id);
+		if (status_id == 0)
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+static int __system_dbus_send_signal(const char *object_path,
+					const char *interface_name,
+					const char *signal_name,
+					GVariant *parameters)
+{
+	GError *err = NULL;
+	GDBusConnection *conn;
+	int ret = AUL_R_OK;
+
+	conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &err);
+	if (conn == NULL) {
+		_E("g_bus_get_sync() is failed. %s", err->message);
+		g_clear_error(&err);
+		return AUL_R_ERROR;
+	}
+
+	if (g_dbus_connection_emit_signal(conn,
+					NULL,
+					object_path,
+					interface_name,
+					signal_name,
+					parameters,
+					&err) == FALSE) {
+		_E("g_dbus_connection_emit_signal() is failed. %s",
+				err->message);
+		ret = AUL_R_ERROR;
+		goto end;
+	}
+
+	if (g_dbus_connection_flush_sync(conn, NULL, &err) == FALSE) {
+		_E("g_dbus_connection_flush_sync() is failed. %s",
+				err->message);
+		ret = AUL_R_ERROR;
+	}
+
+end:
+	if (conn)
+		g_object_unref(conn);
+
+	g_clear_error(&err);
+
+	return ret;
+}
+
+API int aul_status_freezer_status(int pid, const char *type)
+{
+	int ret;
+	GVariant *param;
+
+	param = g_variant_new("(si)", type, pid);
+	ret = __system_dbus_send_signal(RESOURCED_PROC_OBJECT,
+					RESOURCED_PROC_INTERFACE,
+					RESOURCED_PROC_METHOD,
+					param);
+
+	return ret;
+}
+
+API int aul_send_app_launch_request_signal(int pid,
+					const char *appid,
+					const char *pkgid,
+					const char *type)
+{
+	int ret;
+	GVariant *param;
+
+	param = g_variant_new("(isss)", pid, appid, pkgid, type);
+	ret = __system_dbus_send_signal(AUL_APP_STATUS_DBUS_PATH,
+					AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
+					AUL_APP_STATUS_DBUS_LAUNCH_REQUEST,
+					param);
+
+	return ret;
+}
+
+API int aul_send_app_resume_request_signal(int pid,
+					const char *appid,
+					const char *pkgid,
+					const char *type)
+{
+	int ret;
+	const char *empty = "";
+	GVariant *param;
+
+	if (appid)
+		param = g_variant_new("(isss)", pid, appid, pkgid, type);
 	else
-		session_bus_initialized = 0;
+		param = g_variant_new("(isss)", pid, empty, empty, empty);
 
-	_D("app signal finialized");
-
-	return 0;
-}
-
-API int aul_listen_app_dead_signal(int (*func) (int, void *), void *data)
-{
-	if (func) {
-		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
-			_E("error app signal init");
-			return AUL_R_ERROR;
-		}
-	} else if (_app_launch_handler == NULL && _app_launch_handler2 == NULL) {
-		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
-	}
-	_app_dead_handler = func;
-	_app_dead_data = data;
-
-	return AUL_R_OK;
-}
-
-API int aul_listen_app_launch_signal(int (*func) (int, void *), void *data)
-{
-	if (func) {
-		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
-			_E("error app signal init");
-			return AUL_R_ERROR;
-		}
-	} else if (_app_launch_handler2 == NULL && _app_dead_handler == NULL) {
-		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
-	}
-	_app_launch_handler = func;
-	_app_launch_data = data;
-
-	return AUL_R_OK;
-}
-
-API int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), void *data)
-{
-	if (func) {
-		if (__app_dbus_signal_handler_init(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
-			_E("error app signal init");
-			return AUL_R_ERROR;
-		}
-	} else if (_app_launch_handler == NULL && _app_dead_handler == NULL) {
-		if (__app_dbus_signal_handler_fini(AUL_DBUS_PATH, AUL_DBUS_SIGNAL_INTERFACE, false) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
-	}
-
-	_app_launch_handler2 = func;
-	_app_launch_data2 = data;
-
-	return AUL_R_OK;
-}
-API int aul_listen_booting_done_signal(int (*func) (int, void *), void *data)
-{
-	if (func && !_booting_done_handler) {
-		if (__app_dbus_signal_handler_init(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE, true) < 0) {
-			_E("error app signal init");
-			return AUL_R_ERROR;
-		}
-		system_bus_ref++;
-	} else if (!func && _booting_done_handler) {
-		system_bus_ref--;
-	} else {
-		_E("already finished or initialized twice");
-		return AUL_R_ERROR;
-	}
-
-	_booting_done_handler = func;
-	_booting_done_data = data;
-
-	if (!system_bus_ref) {
-		if (__app_dbus_signal_handler_fini(SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE, true) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
-	} else if (!_booting_done_handler) {
-		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_CORE, SYSTEM_INTERFACE_CORE) != 0)
-			return AUL_R_ERROR;
-	}
-	return AUL_R_OK;
-}
-
-API int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data)
-{
-	if (func && !_cooldown_handler) {
-		if (__app_dbus_signal_handler_init(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI, true) < 0) {
-			_E("error app signal init");
-			return AUL_R_ERROR;
-		}
-		system_bus_ref++;
-	} else if (!func && _cooldown_handler) {
-		system_bus_ref--;
-	} else {
-		_E("already finished or initialized twice");
-		return AUL_R_ERROR;
-	}
-
-	_cooldown_handler = func;
-	_cooldown_data = data;
-
-	if (!system_bus_ref) {
-		if (__app_dbus_signal_handler_fini(SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI, true) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
-	} else if (!_cooldown_handler) {
-		if (__app_dbus_signal_remove_rule(system_conn, SYSTEM_PATH_SYSNOTI, SYSTEM_INTERFACE_SYSNOTI) != 0)
-			return AUL_R_ERROR;
-	}
-
-	return AUL_R_OK;
-}
-
-API int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data)
-{
-	if (func && !_status_handler) {
-		if (__app_dbus_signal_handler_init(RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE, true) < 0) {
-			_E("error app signal init");
-			return AUL_R_ERROR;
-		}
-		system_bus_ref++;
-	} else if (!func && _status_handler) {
-		system_bus_ref--;
-	} else {
-		_E("already finished or initialized twice");
-		return AUL_R_ERROR;
-	}
-
-	_status_handler = func;
-	_status_data = data;
-
-	if (!system_bus_ref) {
-		if (__app_dbus_signal_handler_fini(RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE, true) < 0) {
-			_E("error app signal fini");
-			return AUL_R_ERROR;
-		}
-	} else if (!_status_handler) {
-		if (__app_dbus_signal_remove_rule(system_conn, RESOURCED_PATH_CORE, RESOURCED_INTERFACE_CORE) != 0)
-			return AUL_R_ERROR;
-	}
-
-	return AUL_R_OK;
-}
-
-static int __app_dbus_send_init(void)
-{
-	if (send_conn)
-		return 0;
-
-	dbus_error_init(&err);
-	send_conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-	if (!send_conn) {
-		_E("Fail to dbus_bus_get : %s", err.message);
-		return -1;
-	}
-
-	return 0;
-}
-
-API int aul_update_freezer_status(int pid, const char *type)
-{
-	DBusError err;
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
-
-	int ret = -1;
-
-	dbus_error_init(&err);
-
-	_W("send_update_freezer_status, pid: %d, type: %s", pid, type);
-
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	msg = dbus_message_new_signal(RESOURCED_PROC_OBJECT,
-			RESOURCED_PROC_INTERFACE,
-			RESOURCED_PROC_METHOD);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (!dbus_message_append_args(msg,
-			DBUS_TYPE_STRING, &type,
-			DBUS_TYPE_INT32, &pid,
-			DBUS_TYPE_INVALID)) {
-		_E("Failed to append a D-Bus Message.");
-		ret = -1;
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	dbus_error_free(&err);
-
-	if (msg)
-		dbus_message_unref(msg);
-
-	if (send_conn)
-		dbus_connection_unref(send_conn);
-
-	return ret;
-
-}
-
-API int aul_send_app_launch_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
-{
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
-
-	int ret = -1;
-
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	_W("send_app_launch_signal, pid: %d, appid: %s", pid, appid);
-
-	msg = dbus_message_new_signal(AUL_APP_STATUS_DBUS_PATH,
-			AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
-			AUL_APP_STATUS_DBUS_LAUNCH_REQUEST);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (!dbus_message_append_args(msg,
-			DBUS_TYPE_INT32, &pid,
-			DBUS_TYPE_STRING, &appid,
-			DBUS_TYPE_STRING, &pkgid,
-			DBUS_TYPE_STRING, &type,
-			DBUS_TYPE_INVALID)) {
-		_E("Failed to append a D-Bus Message.");
-		ret = -1;
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	if (msg)
-		dbus_message_unref(msg);
+	ret = __system_dbus_send_signal(AUL_APP_STATUS_DBUS_PATH,
+					AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
+					AUL_APP_STATUS_DBUS_RESUME_REQUEST,
+					param);
 
 	return ret;
 }
 
-API int aul_send_app_resume_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
+API int aul_send_app_terminate_request_signal(int pid,
+					const char *appid,
+					const char *pkgid,
+					const char *type)
 {
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
-	const char *empty_string = "";
+	int ret;
+	const char *empty = "";
+	GVariant *param;
 
-	int ret = -1;
+	if (appid)
+		param = g_variant_new("(isss)", pid, appid, pkgid, type);
+	else
+		param = g_variant_new("(isss)", pid, empty, empty, empty);
 
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	_W("send_app_resume_signal, pid: %d, appid: %s", pid, appid);
-
-	msg = dbus_message_new_signal(AUL_APP_STATUS_DBUS_PATH,
-			AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
-			AUL_APP_STATUS_DBUS_RESUME_REQUEST);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (appid) {
-		if (!dbus_message_append_args(msg,
-				DBUS_TYPE_INT32, &pid,
-				DBUS_TYPE_STRING, &appid,
-				DBUS_TYPE_STRING, &pkgid,
-				DBUS_TYPE_STRING, &type,
-				DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	} else {
-		if (!dbus_message_append_args(msg,
-				DBUS_TYPE_INT32, &pid,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	if (msg)
-		dbus_message_unref(msg);
-
+	ret = __system_dbus_send_signal(AUL_APP_STATUS_DBUS_PATH,
+					AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
+					AUL_APP_STATUS_DBUS_TERMINATE_REQUEST,
+					param);
 	return ret;
 }
 
-API int aul_send_app_terminate_request_signal(int pid, const char *appid, const char *pkgid, const char *type)
+API int aul_send_app_status_change_signal(int pid,
+					const char *appid,
+					const char *pkgid,
+					const char *status,
+					const char *type)
 {
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
-	const char *empty_string = "";
+	int ret;
+	const char *empty = "";
+	GVariant *param;
 
-	int ret = -1;
+	if (appid)
+		param = g_variant_new("(issss)",
+				pid, appid, pkgid, status, type);
+	else
+		param = g_variant_new("(issss)",
+				pid, empty, empty, status, type);
 
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	msg = dbus_message_new_signal(AUL_APP_STATUS_DBUS_PATH,
-			AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
-			AUL_APP_STATUS_DBUS_TERMINATE_REQUEST);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (appid) {
-		if (!dbus_message_append_args(msg,
-				DBUS_TYPE_INT32, &pid,
-				DBUS_TYPE_STRING, &appid,
-				DBUS_TYPE_STRING, &pkgid,
-				DBUS_TYPE_STRING, &type,
-				DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	} else {
-		if (!dbus_message_append_args(msg,
-				DBUS_TYPE_INT32, &pid,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	if (msg)
-		dbus_message_unref(msg);
-
-	return ret;
-}
-
-API int aul_send_app_status_change_signal(int pid, const char *appid, const char *pkgid, const char *status, const char *type)
-{
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
-	const char *empty_string = "";
-
-	int ret = -1;
-
-	_W("send_app_status_change_signal, pid: %d, appid: %s, status: %s", pid, appid, status);
-
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	msg = dbus_message_new_signal(AUL_APP_STATUS_DBUS_PATH,
-			AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
-			AUL_APP_STATUS_DBUS_STATUS_CHANGE);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (appid) {
-		if (!dbus_message_append_args(msg,
-				DBUS_TYPE_INT32, &pid,
-				DBUS_TYPE_STRING, &appid,
-				DBUS_TYPE_STRING, &pkgid,
-				DBUS_TYPE_STRING, &status,
-				DBUS_TYPE_STRING, &type,
-				DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	} else {
-		if (!dbus_message_append_args(msg,
-				DBUS_TYPE_INT32, &pid,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_STRING, &empty_string,
-				DBUS_TYPE_STRING, &status,
-				DBUS_TYPE_STRING, &type,
-				DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	if (msg)
-		dbus_message_unref(msg);
+	ret = __system_dbus_send_signal(AUL_APP_STATUS_DBUS_PATH,
+					AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
+					AUL_APP_STATUS_DBUS_STATUS_CHANGE,
+					param);
 
 	return ret;
 }
 
 API int aul_send_app_terminated_signal(int pid)
 {
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
+	int ret;
+	GVariant *param;
 
-	int ret = -1;
-
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	msg = dbus_message_new_signal(AUL_APP_STATUS_DBUS_PATH,
-			AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
-			AUL_APP_STATUS_DBUS_TERMINATED);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (!dbus_message_append_args(msg,
-			DBUS_TYPE_INT32, &pid,
-			DBUS_TYPE_INVALID)) {
-		_E("Failed to append a D-Bus Message.");
-		ret = -1;
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	if (msg)
-		dbus_message_unref(msg);
+	param = g_variant_new("(i)", pid);
+	ret = __system_dbus_send_signal(AUL_APP_STATUS_DBUS_PATH,
+					AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
+					AUL_APP_STATUS_DBUS_TERMINATED,
+					param);
 
 	return ret;
 }
 
-API int aul_send_app_group_signal(int owner_pid, int child_pid, const char *child_pkgid)
+API int aul_send_app_group_signal(int owner_pid,
+		int child_pid,
+		const char *child_pkgid)
 {
-	DBusMessage *msg = NULL;
-	dbus_uint32_t serial = 0;
-	const char  *empty_string = "";
+	int ret;
+	const char *empty = "";
+	GVariant *param;
 
-	int ret = -1;
+	if (child_pkgid)
+		param = g_variant_new("(iis)",
+					owner_pid, child_pid, child_pkgid);
+	else
+		param = g_variant_new("(iis)",
+					owner_pid, child_pid, empty);
 
-	_W("send_app_group_signal, owner: %d, child: %d", owner_pid, child_pid);
-
-	if (__app_dbus_send_init() < 0)
-		return -1;
-
-	msg = dbus_message_new_signal(AUL_APP_STATUS_DBUS_PATH,
-			AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
-			AUL_APP_STATUS_DBUS_GROUP);
-	if (!msg) {
-		_E("Could not create DBus Message.");
-		ret = -1;
-		goto end;
-	}
-
-	if (child_pkgid) {
-		if (!dbus_message_append_args(msg,
-					DBUS_TYPE_INT32, &owner_pid,
-					DBUS_TYPE_INT32, &child_pid,
-					DBUS_TYPE_STRING, &child_pkgid,
-					DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	} else {
-		if (!dbus_message_append_args(msg,
-					DBUS_TYPE_INT32, &owner_pid,
-					DBUS_TYPE_INT32, &child_pid,
-					DBUS_TYPE_STRING, &empty_string,
-					DBUS_TYPE_INVALID)) {
-			_E("Failed to append a D-Bus Message.");
-			ret = -1;
-		}
-	}
-
-	if (!dbus_connection_send(send_conn, msg, &serial)) {
-		_E("Failed to send a D-Bus Message.");
-		ret = -1;
-	}
-
-	dbus_connection_flush(send_conn);
-
-end:
-	if (msg)
-		dbus_message_unref(msg);
+	ret = __system_dbus_send_signal(AUL_APP_STATUS_DBUS_PATH,
+					AUL_APP_STATUS_DBUS_SIGNAL_INTERFACE,
+					AUL_APP_STATUS_DBUS_GROUP,
+					param);
 
 	return ret;
 }
