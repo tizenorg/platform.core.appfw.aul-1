@@ -24,7 +24,6 @@
 #include <string.h>
 #include <dirent.h>
 #include <glib.h>
-#include <dbus/dbus.h>
 
 #include <bundle_internal.h>
 
@@ -35,7 +34,6 @@
 #include "aul_util.h"
 #include "launch.h"
 #include "key.h"
-#include "app_signal.h"
 #include "aul_app_com.h"
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20
@@ -812,56 +810,6 @@ API int aul_reload_appinfo(void)
 	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", getpid());
 
 	return app_request_to_launchpad(AMD_RELOAD_APPINFO, pkgname, NULL);
-}
-
-API int aul_is_tep_mount_dbus_done(const char *tep_string)
-{
-	DBusMessage *msg;
-	DBusMessage *reply;
-	DBusError err;
-	int ret = -1;
-	int r = -1;
-
-	DBusConnection *conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
-	if (!conn) {
-		_E("dbus_bus_get error");
-		return -EBADMSG;
-	}
-
-	msg = dbus_message_new_method_call(TEP_BUS_NAME, TEP_OBJECT_PATH,
-					TEP_INTERFACE_NAME, TEP_IS_MOUNTED_METHOD);
-	if (!msg) {
-		_E("dbus_message_new_method_call(%s:%s-%s)", TEP_OBJECT_PATH,
-			TEP_INTERFACE_NAME, TEP_IS_MOUNTED_METHOD);
-		return ret;
-	}
-
-	if (!dbus_message_append_args(msg,
-				DBUS_TYPE_STRING, &tep_string,
-				DBUS_TYPE_INVALID)) {
-		_E("Ran out of memory while constructing args\n");
-		dbus_message_unref(msg);
-		return ret;
-	}
-
-	dbus_error_init(&err);
-	reply = dbus_connection_send_with_reply_and_block(conn, msg, 500, &err);
-	if (!reply) {
-		_E("dbus_connection_send error(%s:%s)", err.name, err.message);
-		goto func_out;
-	}
-
-	r = dbus_message_get_args(reply, &err, DBUS_TYPE_INT32, &ret,
-				DBUS_TYPE_INVALID);
-	if (!r) {
-		_E("no message : [%s:%s]", err.name, err.message);
-		goto func_out;
-	}
-
-func_out:
-	dbus_message_unref(msg);
-	dbus_error_free(&err);
-	return ret;
 }
 
 API int aul_check_tep_mount(const char *tep_path)
