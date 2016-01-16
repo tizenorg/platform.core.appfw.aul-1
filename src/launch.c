@@ -24,10 +24,11 @@
 #include <string.h>
 #include <dirent.h>
 #include <glib.h>
-#include <dbus/dbus.h>
+#include <gio/gio.h>
 
 #include <bundle_internal.h>
 
+#include "app_signal.h"
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_sock.h"
@@ -35,7 +36,6 @@
 #include "aul_util.h"
 #include "launch.h"
 #include "key.h"
-#include "app_signal.h"
 #include "aul_app_com.h"
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20
@@ -807,51 +807,62 @@ API int aul_reload_appinfo(void)
 
 API int aul_is_tep_mount_dbus_done(const char *tep_string)
 {
-	DBusMessage *msg;
-	DBusMessage *reply;
-	DBusError err;
-	int ret = -1;
-	int r = -1;
+	GError *err = NULL;
+	GDBusConnection *conn;
+	GDBusMessage *msg = NULL;
+	GDBusMessage *reply = NULL;
+	GVariant *body;
+	int ret = AUL_R_ERROR;
 
-	DBusConnection *conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
-	if (!conn) {
-		_E("dbus_bus_get error");
-		return -EBADMSG;
+	conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &err);
+	if (conn == NULL) {
+		_E("g_bus_get_sync() is failed. %s", err->message);
+		g_clear_error(&err);
+		return AUL_R_ERROR;
 	}
 
-	msg = dbus_message_new_method_call(TEP_BUS_NAME, TEP_OBJECT_PATH,
-					TEP_INTERFACE_NAME, TEP_IS_MOUNTED_METHOD);
-	if (!msg) {
-		_E("dbus_message_new_method_call(%s:%s-%s)", TEP_OBJECT_PATH,
-			TEP_INTERFACE_NAME, TEP_IS_MOUNTED_METHOD);
-		return ret;
+	msg = g_dbus_message_new_method_call(TEP_BUS_NAME,
+					TEP_OBJECT_PATH,
+					TEP_INTERFACE_NAME,
+					TEP_IS_MOUNTED_METHOD);
+	if (msg == NULL) {
+		_E("g_dbus_message_new_method_call() is failed. %s",
+				err->message);
+		goto end;
+	}
+	g_dbus_message_set_body(msg, g_variant_new("(s)", tep_string));
+
+	reply = g_dbus_connection_send_message_with_reply_sync(conn,
+					msg,
+					G_DBUS_SEND_MESSAGE_FLAGS_NONE,
+					500,
+					NULL,
+					NULL,
+					&err);
+	if (reply == NULL) {
+		_E("g_dbus_connection_send_message_with_reply_sync() "
+					"is failed. %s", err->message);
+		goto end;
 	}
 
-	if (!dbus_message_append_args(msg,
-				DBUS_TYPE_STRING, &tep_string,
-				DBUS_TYPE_INVALID)) {
-		_E("Ran out of memory while constructing args\n");
-		dbus_message_unref(msg);
-		return ret;
+	body = g_dbus_message_get_body(reply);
+	if (body == NULL) {
+		_E("g_dbus_message_get_body() is failed.");
+		goto end;
 	}
 
-	dbus_error_init(&err);
-	reply = dbus_connection_send_with_reply_and_block(conn, msg, 500, &err);
-	if (!reply) {
-		_E("dbus_connection_send error(%s:%s)", err.name, err.message);
-		goto func_out;
-	}
+	ret = (int)g_variant_get_int32(body);
 
-	r = dbus_message_get_args(reply, &err, DBUS_TYPE_INT32, &ret,
-				DBUS_TYPE_INVALID);
-	if (!r) {
-		_E("no message : [%s:%s]", err.name, err.message);
-		goto func_out;
-	}
+end:
+	if (msg)
+		g_object_unref(msg);
+	if (reply)
+		g_object_unref(reply);
+	if (conn)
+		g_object_unref(conn);
 
-func_out:
-	dbus_message_unref(msg);
-	dbus_error_free(&err);
+	g_clear_error(&err);
+
 	return ret;
 }
 
