@@ -93,6 +93,49 @@ API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 		info.pid = atoi(strtok_r(token, ":", &saveptr2));
 		info.appid = strtok_r(NULL, ":", &saveptr2);
 		info.app_path = strtok_r(NULL, ":", &saveptr2);
+		info.pkgid = strtok_r(NULL, ":", &saveptr2);
+		info.status = atoi(strtok_r(NULL, ":", &saveptr2));
+		info.is_sub_app = atoi(strtok_r(NULL, ":", &saveptr2));
+		info.pkg_name = strdup(info.appid);
+
+		enum_fn(&info, user_param);
+		free(info.pkg_name);
+	}
+
+	free(pkt);
+
+	return AUL_R_OK;
+}
+
+API int aul_app_get_all_running_app_info(aul_app_info_iter_fn enum_fn,
+					void *user_param)
+{
+	app_pkt_t *pkt;
+	char *saveptr1;
+	char *saveptr2;
+	char *token;
+	char *pkt_data;
+	aul_app_info info;
+
+	memset(&info, 0, sizeof(info));
+	if (enum_fn == NULL)
+		return AUL_R_EINVAL;
+
+	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_ALL_RUNNING_INFO, NULL, 0);
+	if (pkt == NULL)
+		return AUL_R_ERROR;
+
+	for (pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
+		token = strtok_r(pkt_data, ";", &saveptr1);
+		if (token == NULL)
+			break;
+		info.pid = atoi(strtok_r(token, ":", &saveptr2));
+		info.appid = strtok_r(NULL, ":", &saveptr2);
+		info.app_path = strtok_r(NULL, ":", &saveptr2);
+		info.pkgid = strtok_r(NULL, ":", &saveptr2);
+		info.status = atoi(strtok_r(NULL, ":", &saveptr2));
+		info.is_sub_app = atoi(strtok_r(NULL, ":", &saveptr2));
 		info.pkg_name = strdup(info.appid);
 
 		enum_fn(&info, user_param);
