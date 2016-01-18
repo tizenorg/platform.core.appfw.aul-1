@@ -44,7 +44,7 @@ API int aul_status_update(int status)
 	app_status = status;
 
 	ret = aul_sock_send_raw_async(AUL_UTIL_PID, getuid(), APP_STATUS_UPDATE,
-			(unsigned char *)&status, sizeof(status));
+		(unsigned char *)&status, sizeof(status), AUL_SOCK_NONE);
 	if (ret > 0) {
 		close(ret);
 		ret = 0;
@@ -70,7 +70,7 @@ API  int aul_app_get_status_bypid(int pid)
 		return app_status;
 
 	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GET_STATUS,
-			(unsigned char *)&pid, sizeof(pid));
+			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_NONE);
 
 	return ret;
 }
