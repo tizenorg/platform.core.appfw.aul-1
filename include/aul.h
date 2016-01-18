@@ -622,9 +622,12 @@ int aul_terminate_pid_async(int pid);
  */
 typedef struct _aul_app_info {
 	int pid;		/**< app's pid if running*/
-	char* pkg_name;		/**< application id */
-	char* app_path;		/**< application excutable path */
-	char* appid;
+	char *pkg_name;		/**< application id */
+	char *app_path;		/**< application excutable path */
+	char *appid;
+	char *pkgid;		/**< package id */
+	int status;		/**< app's status */
+	int is_sub_app;		/**< state whether sub app of app group */
 } aul_app_info;
 
 /**
@@ -690,7 +693,6 @@ int aul_app_is_running_for_uid(const char *appid, uid_t uid);
  *	This API call iter_fn with each aul_app_info of running apps when running application is found.
  * @par Purpose:
  *	If you want to get running application list, use this API
- *	This API give you running applications which has SLP desktop file.
  * @par Typical use case:
  *	In general, this API is used by task manager appllication. (running application list viewer)
  *
@@ -726,6 +728,51 @@ int aul_app_is_running_for_uid(const char *appid, uid_t uid);
  *	This API is only available in User Session.
  */
 int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
+
+/**
+ * @par Description:
+ *	This API use to get all running application list, including sub app.
+ *	This API call iter_fn with each aul_app_info of running apps when running application is found.
+ * @par Purpose:
+ *	If you want to get all running application list, use this API
+ * @par Typical use case:
+ *	In general, this API is used by task manager application. (running application list viewer)
+ *
+ * @param[in]	iter_fn		iterator function
+ * @param[in]	data		user-supplied data for iter_fn
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- internal error
+ *
+ * @code
+ * #include <aul.h>
+ *
+ * int iterfunc_status(const aul_app_info *info, void *data)
+ * {
+ *	printf("\t==========================\n");
+ *	printf("\t pid: %d\n", info->pid);
+ *	printf("\t appid: %s\n", info->appid);
+ *	printf("\t app_path: %s\n", info->app_path);
+ *	printf("\t pkgid: %s\n", info->pkgid);
+ *	printf("\t status: %d\n", info->status);
+ *	printf("\t is_sub_app : %d\n", info->is_sub_app);
+ *	printf("\t==========================\n");
+ *	return 0;
+ * }
+ *
+ * int iterate_running_apps()
+ * {
+ *      return aul_app_get_all_running_app_info(iterfunc_status,NULL);
+ * }
+ *
+ * @endcode
+ * @remark
+ *	This API should use if you want to know running application which has desktop files.
+ *	If you want to get all process list, you must iterate process information by using proc filesystem
+ *	Or, If you want to get all window list, you must iterate XWindows by using XWindow APIs
+ *	This API is only available in User Session.
+ */
+int aul_app_get_all_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
 
 /**
  * @par Description:
