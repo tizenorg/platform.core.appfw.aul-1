@@ -161,7 +161,7 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 	if (res != BUNDLE_ERROR_NONE)
 		return AUL_R_EINVAL;
 
-	if ((res = aul_sock_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, ret_fd)) < 0) {
+	if ((res = aul_sock_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, AUL_SOCK_NONE, ret_fd)) < 0) {
 		switch (res) {
 		case -EINVAL:
 			res = AUL_R_EINVAL;
@@ -202,6 +202,20 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 	return res;
 }
 
+static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int opt)
+{
+	int datalen;
+	bundle_raw *kb_data;
+	int res;
+
+	bundle_encode(kb, &kb_data, &datalen);
+	if ((res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen, opt)) < 0)
+		res = __get_aul_error(res);
+	free(kb_data);
+
+	return res;
+}
+
 /**
  * @brief	encode kb and send it to 'pid'
  * @param[in]	pid		receiver's pid
@@ -210,21 +224,17 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
  */
 API int app_send_cmd(int pid, int cmd, bundle *kb)
 {
-	return app_send_cmd_for_uid(pid, getuid(), cmd, kb);
+	return __send_cmd_for_uid_opt(pid, getuid(), cmd, kb, AUL_SOCK_NONE);
 }
 
 API int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 {
-	int datalen;
-	bundle_raw *kb_data;
-	int res;
+	return __send_cmd_for_uid_opt(pid, uid, cmd, kb, AUL_SOCK_NONE);
+}
 
-	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen)) < 0)
-		res = __get_aul_error(res);
-	free(kb_data);
-
-	return res;
+API int app_send_cmd_with_queue_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
+{
+	return __send_cmd_for_uid_opt(pid, uid, cmd, kb, AUL_SOCK_QUEUE);
 }
 
 API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
@@ -234,7 +244,7 @@ API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 	int res;
 
 	bundle_encode(kb, &kb_data, &datalen);
-	res = aul_sock_send_raw_async(pid, getuid(), cmd, kb_data, datalen);
+	res = aul_sock_send_raw_async(pid, getuid(), cmd, kb_data, datalen, AUL_SOCK_NOREPLY);
 	if (res > 0) {
 		close(res);
 		res = 0;
@@ -371,7 +381,7 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 
 	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
-	ret = app_send_cmd_for_uid(AUL_UTIL_PID, uid, cmd, kb);
+	ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd, kb);
 
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
@@ -434,15 +444,14 @@ int aul_sock_handler(int fd)
 		return -1;
 	}
 
-	if (pkt->cmd != APP_RESULT && pkt->cmd != APP_CANCEL && pkt->cmd != APP_TERM_BY_PID_ASYNC &&
-		pkt->cmd != APP_COM_MESSAGE) {
+	if (pkt->opt & AUL_SOCK_NOREPLY) {
+		close(clifd);
+	} else {
 		ret = __send_result_to_launchpad(clifd, 0);
 		if (ret < 0) {
 			free(pkt);
 			return -1;
 		}
-	} else {
-		close(clifd);
 	}
 
 	switch (pkt->cmd) {
