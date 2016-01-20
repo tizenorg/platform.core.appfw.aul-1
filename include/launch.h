@@ -24,11 +24,13 @@ int aul_register_init_callback(
 int aul_is_initialized();
 int aul_sock_handler(int fd);
 int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb);
+int aul_app_register_pid(const char *appid, int pid);
 
 int app_start(bundle *kb);
 int app_send_cmd(int pid, int cmd, bundle *kb);
 int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb);
 int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb);
+int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bundle *kb);
 int app_request_to_launchpad(int cmd, const char *pkgname, bundle *kb);
 int app_request_to_launchpad_for_uid(int cmd, const char *pkgname, bundle *kb, uid_t uid);
 

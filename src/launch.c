@@ -257,6 +257,48 @@ API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 	return res;
 }
 
+API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bundle *kb)
+{
+	int fd;
+	int datalen;
+	bundle_raw *kb_data;
+	int len;
+	int res;
+
+	fd = aul_sock_create_launchpad_client(pad_type, uid);
+	if (fd < 0)
+		return -1;
+
+	bundle_encode(kb, &kb_data, &datalen);
+	res = aul_sock_send_raw_async_with_fd(fd, cmd,
+			kb_data, datalen, AUL_SOCK_NONE);
+	if (res < 0) {
+		free(kb_data);
+		close(fd);
+		return res;
+	}
+
+retry_recv:
+	len = recv(fd, &res, sizeof(int), 0);
+	if (len == -1) {
+		if (errno == EAGAIN) {
+			_E("recv timeout: %s", strerror(errno));
+			res = -EAGAIN;
+		} else if (errno == EINTR) {
+			_D("recv: %s", strerror(errno));
+			goto retry_recv;
+		} else {
+			_E("recv error: %s", strerror(errno));
+			res = -ECOMM;
+		}
+	}
+
+	free(kb_data);
+	close(fd);
+
+	return res;
+}
+
 static void __clear_internal_key(bundle *kb)
 {
 	bundle_del(kb, AUL_K_CALLER_PID);
@@ -949,4 +991,21 @@ API int aul_remove_loader(int loader_id)
 	return ret;
 }
 
+API int aul_app_register_pid(const char *appid, int pid)
+{
+	char buf[MAX_PID_STR_BUFSZ];
+	int ret;
+	bundle *b;
 
+	if (!appid || pid <= 0)
+		return AUL_R_EINVAL;
+
+	b = bundle_create();
+	bundle_add_str(b, AUL_K_APPID, appid);
+	snprintf(buf, sizeof(buf), "%d", pid);
+	bundle_add_str(b, AUL_K_PID, buf);
+	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, APP_REGISTER_PID, b);
+	bundle_free(b);
+
+	return ret;
+}

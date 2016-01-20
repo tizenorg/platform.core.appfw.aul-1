@@ -27,12 +27,20 @@
 #include <sys/types.h>
 #include <string.h>
 #include <glib.h>
+#include <linux/limits.h>
 
 #include <pkgmgr-info.h>
 #include <bundle.h>
 #include <bundle_internal.h>
 
 #include "aul.h"
+#include "aul_svc.h"
+#include "launch.h"
+
+#define AMD_READY ".amd_ready"
+#define LAUNCHPAD_PROCESS_POOL_SOCK ".launchpad-process-pool-sock"
+#define APP_TYPE_UI "uiapp"
+#define APP_TYPE_SERVICE "svcapp"
 
 static GMainLoop *mainloop = NULL;
 
@@ -106,6 +114,138 @@ static gboolean run_func(void *data)
 	return FALSE;
 }
 
+static int __get_gles(void)
+{
+	FILE *fp;
+	char buf[PATH_MAX];
+	char *tmp;
+	int gles = 1;
+
+	fp = fopen("/proc/cmdline", "r");
+	if (fp == NULL)
+		return gles;
+
+	if (fgets(buf, sizeof(buf), fp) != NULL) {
+		tmp = strstr(buf, "gles");
+		if (tmp != NULL)
+			sscanf(tmp, "gles=%d", &gles);
+	}
+
+	fclose(fp);
+
+	return gles;
+}
+
+static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
+{
+	pkgmgrinfo_appinfo_h handle;
+	int ret;
+	char *pkgid;
+	char *exec;
+	char *apptype;
+	char *component_type;
+	pkgmgrinfo_app_hwacceleration hwacc = PMINFO_HWACCELERATION_NOT_USE_GL;
+	const char *hwacc_str = "NOT_USE";
+	bool process_pool = false;
+
+	if (kb == NULL)
+		return -1;
+
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, getuid(), &handle);
+	if (ret != PMINFO_R_OK)
+		return -1;
+
+	ret = pkgmgrinfo_appinfo_get_exec(handle, &exec);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	ret = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	ret = pkgmgrinfo_appinfo_get_apptype(handle, &apptype);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	ret = pkgmgrinfo_appinfo_get_component_type(handle, &component_type);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	if (!component_type || (strcmp(component_type, APP_TYPE_SERVICE) != 0
+			&& strcmp(component_type, APP_TYPE_UI) != 0)) {
+		ret = -1;
+		goto end;
+	}
+
+	ret = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	ret = pkgmgrinfo_appinfo_is_process_pool(handle, &process_pool);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	if (__get_gles()) {
+		if (hwacc == PMINFO_HWACCELERATION_NOT_USE_GL)
+			hwacc_str = "NOT_USE";
+		else if (hwacc == PMINFO_HWACCELERATION_USE_GL)
+			hwacc_str = "USE";
+		else
+			hwacc_str = "SYS";
+	}
+
+	bundle_add(kb, AUL_K_APPID, appid);
+	bundle_add(kb, AUL_K_HWACC, hwacc_str);
+	bundle_add(kb, AUL_K_EXEC, exec);
+	bundle_add(kb, AUL_K_PACKAGETYPE, apptype);
+	bundle_add(kb, AUL_K_PKGID, pkgid);
+	bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool ? "true" : "false");
+	bundle_add(kb, AUL_K_COMP_TYPE, component_type);
+
+	aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
+
+end:
+	pkgmgrinfo_appinfo_destroy_appinfo(handle);
+
+	return ret;
+}
+
+static gboolean fast_run_func(void *data)
+{
+	int pid;
+	bundle *kb;
+	struct launch_arg *launch_arg_data = (struct launch_arg *)data;
+
+	kb = _create_internal_bundle(launch_arg_data);
+	if (kb == NULL)
+		kb = bundle_create();
+
+	if (__set_appinfo_for_launchpad(kb, launch_arg_data->appid) < 0) {
+		printf("failed to set appinfo\n");
+		bundle_free(kb);
+		return FALSE;
+	}
+
+	pid = app_send_cmd_to_launchpad(LAUNCHPAD_PROCESS_POOL_SOCK,
+			getuid(), 0, kb);
+	bundle_free(kb);
+	if (pid > 0) {
+		printf("... successfully launched pid = %d\n", pid);
+		aul_app_register_pid(launch_arg_data->appid, pid);
+		if (launch_arg_data->sync) {
+			aul_listen_app_dead_signal(__launch_app_dead_handler,
+					(void *)(intptr_t)pid);
+			return FALSE;
+		}
+	} else {
+		printf("... launch failed\n");
+	}
+
+	g_main_loop_quit(mainloop);
+
+	return FALSE;
+}
+
 static void print_usage(char *program)
 {
 	printf("Usage : %s [ OPTIONS... ] [ ARGS... ]\n", program);
@@ -118,6 +258,7 @@ static void print_usage(char *program)
 			"   -t [tizen application ID] --terminate         Terminate widget with tizen application ID\n"
 			"   -r [tizen application ID] --is-running        Check whether application is running by tizen application ID,\n"
 			"                                                 If widget is running, 0(zero) will be returned.\n"
+			"   -f [tizen application ID] --fast-start        Fast launch app with tizen application ID\n"
 			"   -d                        --debug             Activate debug mode\n"
 	      );
 }
@@ -214,6 +355,7 @@ static int is_app_installed(char *appid)
 
 int main(int argc, char **argv)
 {
+	char path[PATH_MAX];
 	bool disp_help = false;
 	bool disp_list = false;
 	bool disp_run_list = false;
@@ -231,6 +373,7 @@ int main(int argc, char **argv)
 		{ "kill", required_argument, 0, 'k' },
 		{ "terminate", required_argument, 0, 't' },
 		{ "is-running", required_argument, 0, 'r' },
+		{ "fast-launch", required_argument, 0, 'f' },
 		{ "debug", no_argument, 0, 'd' },
 		{ 0, 0, 0, 0 }
 	};
@@ -239,7 +382,7 @@ int main(int argc, char **argv)
 	do {
 		next_opt = getopt_long(argc,
 				argv,
-				"hlSs:k:t:r:d",
+				"hlSs:k:t:r:f:d",
 				long_options,
 				&opt_idx);
 
@@ -276,6 +419,7 @@ int main(int argc, char **argv)
 		case 'k':
 		case 't':
 		case 'r':
+		case 'f':
 			if (strlen(optarg) > 255) {
 				print_usage(argv[0]);
 				return -1;
@@ -304,7 +448,7 @@ int main(int argc, char **argv)
 		args.argc = argc - optind;
 		args.argv = &argv[optind];
 	}
-	if ((op == 's') || (op == 'k') || (op == 'r')) {
+	if ((op == 's') || (op == 'k') || (op == 'r') || (op == 'f')) {
 		if (is_app_installed(args.appid) <= 0) {
 			printf("The app with ID: %s is not avaible "
 					"for the user %d \n",
@@ -354,6 +498,26 @@ int main(int argc, char **argv)
 			printf("result: %s\n", "not running");
 			return 1;
 		}
+	} else if (op == 'f') {
+		if (strlen(args.appid) <= 0) {
+			printf("result: failed\n");
+			return -1;
+		}
+		aul_launch_init(NULL, NULL);
+
+		snprintf(path, sizeof(path), "/run/user/%d/%s",
+						getuid(), AMD_READY);
+		if (access(path, F_OK) == 0)
+			g_idle_add(run_func, args.appid);
+		else
+			g_idle_add(fast_run_func, args.appid);
+
+		mainloop = g_main_loop_new(NULL, FALSE);
+		if (!mainloop) {
+			printf("failed to create glib main loop\n");
+			exit(EXIT_FAILURE);
+		}
+		g_main_loop_run(mainloop);
 	}
 
 	return 0;
