@@ -1962,6 +1962,11 @@ int aul_is_tep_mount_dbus_done(const char *tep_string);
  */
 int aul_forward_app(const char *appid, bundle *kb);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_app_register_pid(const char *appid, int pid);
+
 /**
  * @par Description:
  *	This API create custom launchpad-loader
