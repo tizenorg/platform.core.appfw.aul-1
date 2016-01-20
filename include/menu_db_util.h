@@ -45,7 +45,7 @@ typedef struct {
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *pkg_type;		/* x_slp_packagetype */
-	char *hwacc;		/* hwacceleration */
+	char *hwacc;
 	char *pkg_id;
 } app_info_from_db;
 
@@ -98,21 +98,22 @@ static inline char *_get_original_app_path(app_info_from_db *menu_info)
 
 static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 {
-	if (menu_info != NULL) {
-		if (menu_info->appid != NULL)
-			free(menu_info->appid);
-		if (menu_info->app_path != NULL)
-			free(menu_info->app_path);
-		if (menu_info->original_app_path != NULL)
-			free(menu_info->original_app_path);
-		if (menu_info->pkg_type != NULL)
-			free(menu_info->pkg_type);
-		if (menu_info->hwacc != NULL)
-			free(menu_info->hwacc);
-		if (menu_info->pkg_id != NULL)
-			free(menu_info->pkg_id);
-		free(menu_info);
-	}
+	if (menu_info == NULL)
+		return;
+
+	if (menu_info->appid != NULL)
+		free(menu_info->appid);
+	if (menu_info->app_path != NULL)
+		free(menu_info->app_path);
+	if (menu_info->original_app_path != NULL)
+		free(menu_info->original_app_path);
+	if (menu_info->pkg_type != NULL)
+		free(menu_info->pkg_type);
+	if (menu_info->hwacc != NULL)
+		free(menu_info->hwacc);
+	if (menu_info->pkg_id != NULL)
+		free(menu_info->pkg_id);
+	free(menu_info);
 }
 
 static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
@@ -132,7 +133,6 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		_free_app_info_from_db(menu_info);
 		return NULL;
 	}
-
 
 	if (getuid() != GLOBAL_USER)
 		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, getuid(), &handle);

@@ -73,6 +73,8 @@ enum app_cmd {
 	APP_COM_LEAVE,
 	APP_COM_MESSAGE,
 
+	APP_REGISTER_PID,
+
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */
