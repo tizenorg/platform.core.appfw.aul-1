@@ -80,3 +80,8 @@ app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, unsigne
  * This API is only for Appfw internally.
  */
 app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_sock_create_launchpad_client(const char *pad_type, uid_t uid);
