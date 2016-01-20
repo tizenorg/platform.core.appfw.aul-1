@@ -45,8 +45,10 @@ typedef struct {
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
 	char *pkg_type;		/* x_slp_packagetype */
-	char *hwacc;		/* hwacceleration */
+	char *hwacc;
 	char *pkg_id;
+	char *component_type;
+	char *process_pool;
 } app_info_from_db;
 
 static inline char *_get_appid(app_info_from_db *menu_info)
@@ -98,21 +100,26 @@ static inline char *_get_original_app_path(app_info_from_db *menu_info)
 
 static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 {
-	if (menu_info != NULL) {
-		if (menu_info->appid != NULL)
-			free(menu_info->appid);
-		if (menu_info->app_path != NULL)
-			free(menu_info->app_path);
-		if (menu_info->original_app_path != NULL)
-			free(menu_info->original_app_path);
-		if (menu_info->pkg_type != NULL)
-			free(menu_info->pkg_type);
-		if (menu_info->hwacc != NULL)
-			free(menu_info->hwacc);
-		if (menu_info->pkg_id != NULL)
-			free(menu_info->pkg_id);
-		free(menu_info);
-	}
+	if (menu_info == NULL)
+		return;
+
+	if (menu_info->appid != NULL)
+		free(menu_info->appid);
+	if (menu_info->app_path != NULL)
+		free(menu_info->app_path);
+	if (menu_info->original_app_path != NULL)
+		free(menu_info->original_app_path);
+	if (menu_info->pkg_type != NULL)
+		free(menu_info->pkg_type);
+	if (menu_info->hwacc != NULL)
+		free(menu_info->hwacc);
+	if (menu_info->pkg_id != NULL)
+		free(menu_info->pkg_id);
+	if (menu_info->component_type != NULL)
+		free(menu_info->component_type);
+	if (menu_info->process_pool != NULL)
+		free(menu_info->process_pool);
+	free(menu_info);
 }
 
 static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
@@ -123,6 +130,9 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 	int ret = PMINFO_R_OK;
 	char *exec = NULL;
 	char *apptype = NULL;
+	char *component_type = NULL;
+	pkgmgrinfo_app_hwacceleration hwacc = PMINFO_HWACCELERATION_NOT_USE_GL;
+	bool process_pool = false;
 
 	menu_info = calloc(1, sizeof(app_info_from_db));
 	if (menu_info == NULL)
@@ -162,6 +172,26 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 
 	if (apptype)
 		menu_info->pkg_type = strdup(apptype);
+
+	ret = pkgmgrinfo_appinfo_get_component_type(handle, &component_type);
+	if (ret != PMINFO_R_OK)
+		_E("failed to get component type");
+
+	if (component_type)
+		menu_info->component_type = strdup(component_type);
+
+	ret = pkgmgrinfo_appinfo_get_hwacceleration(handle, &hwacc);
+	if (ret != PMINFO_R_OK)
+		_E("failed to get hwacc");
+
+	menu_info->hwacc = strdup((hwacc == PMINFO_HWACCELERATION_NOT_USE_GL) ?
+					"NOT_USE" : "USE");
+
+	ret = pkgmgrinfo_appinfo_is_process_pool(handle, &process_pool);
+	if (ret != PMINFO_R_OK)
+		_E("failed to get process_pool");
+
+	menu_info->process_pool = strdup(process_pool ? "true" : "false");
 
 	ret = pkgmgrinfo_appinfo_destroy_appinfo(handle);
 	if (ret != PMINFO_R_OK)

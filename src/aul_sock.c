@@ -662,3 +662,49 @@ retry_recv:
 
 	return res;
 }
+
+int aul_sock_create_launchpad_client(const char *pad_type, uid_t uid)
+{
+	int fd = -1;
+	struct sockaddr_un saddr = { 0, };
+	int retry = 1;
+	int ret = -1;
+
+	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+	/*  support above version 2.6.27*/
+	if (fd < 0) {
+		if (errno == EINVAL) {
+			fd = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (fd < 0) {
+				_E("second chance - socket create error");
+				return -1;
+			}
+		} else {
+			_E("socket error");
+			return -1;
+		}
+	}
+
+	saddr.sun_family = AF_UNIX;
+	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
+				"/run/user/%d/%s", uid, pad_type);
+retry_con:
+	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr,
+				sizeof(saddr), 100 * 1000);
+	if (ret < -1) {
+		_E("maybe peer not launched or peer daed\n");
+		if (retry > 0) {
+			usleep(100 * 1000);
+			retry--;
+			goto retry_con;
+		}
+	}
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
+
+	__set_sock_option(fd, 1);
+
+	return fd;
+}
