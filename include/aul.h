@@ -2008,7 +2008,6 @@ int aul_remove_loader(int loader_id);
  */
 int aul_app_get_pid(const char *appid);
 
-
 /**
  * @par Description:
  * This function delete rua history.
