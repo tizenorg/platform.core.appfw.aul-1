@@ -45,11 +45,16 @@ static const char _SHARED_DATA_DIR[] = "shared/data/";
 static const char _SHARED_TRUSTED_DIR[] = "shared/trusted/";
 static const char _SHARED_RESOURCE_DIR[] = "shared/res/";
 
-static const char * __get_specific_path(uid_t uid)
+static const char * __get_specific_path(const char *pkgid, uid_t uid)
 {
 	const char * path;
+	char buf[PATH_MAX];
+
 	if (uid == ROOT_UID || uid == GLOBAL_USER) {
 		path = tzplatform_getenv(TZ_SYS_RO_APP);
+		snprintf(buf, sizeof(buf), "%s/%s", path, pkgid);
+		if (access(buf, R_OK) != 0)
+			path = tzplatform_getenv(TZ_SYS_RW_APP);
 	} else {
 		tzplatform_set_user(uid);
 		path = tzplatform_getenv(TZ_USER_APP);
@@ -128,7 +133,7 @@ static int __get_path(char **path, const char *appid, const char *dir_name,
 	if (ret != AUL_R_OK)
 		return ret;
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s", __get_specific_path(uid),
+	snprintf(buf, sizeof(buf), "%s/%s/%s", __get_specific_path(pkgid, uid),
 			pkgid, dir_name ? dir_name : "");
 	*path = strdup(buf);
 
@@ -288,7 +293,19 @@ API const char *aul_get_app_external_shared_data_path(void)
 
 API const char *aul_get_app_specific_path(void)
 {
-	return __get_specific_path(getuid());
+	char appid[NAME_MAX];
+	char pkgid[NAME_MAX];
+	int ret;
+
+	ret = aul_app_get_appid_bypid(getpid(), appid, sizeof(appid));
+	if (ret != AUL_R_OK)
+		return NULL;
+
+	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, getuid());
+	if (ret != AUL_R_OK)
+		return NULL;
+
+	return __get_specific_path(pkgid, getuid());
 }
 
 API const char *aul_get_app_external_specific_path(void)
