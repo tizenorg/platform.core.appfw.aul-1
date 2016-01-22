@@ -143,6 +143,7 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 	char *pkgid;
 	char *exec;
 	char *apptype;
+	char *pkgtype;
 	char *component_type;
 	pkgmgrinfo_app_hwacceleration hwacc = PMINFO_HWACCELERATION_NOT_USE_GL;
 	const char *hwacc_str = "NOT_USE";
@@ -164,6 +165,10 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 		goto end;
 
 	ret = pkgmgrinfo_appinfo_get_apptype(handle, &apptype);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	ret = pkgmgrinfo_appinfo_get_pkgtype(handle, &pkgtype);
 	if (ret != PMINFO_R_OK)
 		goto end;
 
@@ -197,10 +202,11 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 	bundle_add(kb, AUL_K_APPID, appid);
 	bundle_add(kb, AUL_K_HWACC, hwacc_str);
 	bundle_add(kb, AUL_K_EXEC, exec);
-	bundle_add(kb, AUL_K_PACKAGETYPE, apptype);
+	bundle_add(kb, AUL_K_APP_TYPE, apptype);
 	bundle_add(kb, AUL_K_PKGID, pkgid);
 	bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool ? "true" : "false");
 	bundle_add(kb, AUL_K_COMP_TYPE, component_type);
+	bundle_add(kb, AUL_K_PACKAGETYPE, pkgtype);
 
 	aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
 
