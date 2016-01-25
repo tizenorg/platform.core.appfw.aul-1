@@ -159,6 +159,8 @@ API int aul_app_group_is_top(void)
 			free(pids);
 			return 0;
 		}
+		if (pids)
+			free(pids);
 	}
 
 	return 1;
