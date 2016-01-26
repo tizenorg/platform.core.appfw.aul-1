@@ -71,7 +71,6 @@ INSTALL(TARGETS aul DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
 
 # pkgconfig file
 CONFIGURE_FILE(aul.pc.in aul.pc @ONLY)
-CONFIGURE_FILE(legacy/preload_list.txt.in legacy/preload_list.txt @ONLY)
 CONFIGURE_FILE(feature/preexec_list.txt.in feature/preexec_list.txt @ONLY)
 
 # Install headers, other files
@@ -83,7 +82,6 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_svc.h DESTINATION include/
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_cmd.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/aul_app_com.h DESTINATION include/aul)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/aul.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/legacy/preload_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/feature/preexec_list.txt DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/miregex DESTINATION ${SHARE_INSTALL_PREFIX}/aul )
 
