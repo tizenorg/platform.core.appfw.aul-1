@@ -112,7 +112,6 @@ chsmack -a 'User::Home' %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
 %{_bindir}/appid2pid
 %{_bindir}/launch_debug
 %{_datadir}/aul/miregex/*
-%{_datadir}/aul/preload_list.txt
 %{_datadir}/aul/preexec_list.txt
 %{_datadir}/appsvc/*
 %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
