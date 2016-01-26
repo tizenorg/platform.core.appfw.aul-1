@@ -68,20 +68,11 @@ static int __get_pkgid(char *pkgid, int len, const char *appid, uid_t uid)
 	pkgmgrinfo_appinfo_h appinfo;
 	char *_pkgid;
 	int ret;
-	char buf[NAME_MAX];
-	const char *_appid;
 
-	if (appid == NULL) {
-		ret = aul_app_get_appid_bypid(getpid(), buf, sizeof(buf));
-		if (ret != AUL_R_OK)
-			return ret;
+	if (appid == NULL)
+		return aul_app_get_pkgid_bypid(getpid(), pkgid, len);
 
-		_appid = buf;
-	} else {
-		_appid = appid;
-	}
-
-	ret = pkgmgrinfo_appinfo_get_usr_appinfo(_appid, uid, &appinfo);
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &appinfo);
 	if (ret != PMINFO_R_OK) {
 		if (ret != PMINFO_R_OK) {
 			_E("Failed to get app info. (ret:%d)", ret);
