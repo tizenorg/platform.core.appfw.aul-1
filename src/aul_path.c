@@ -208,6 +208,38 @@ static const char *__get(char **path, const char *appid,
 	return *path;
 }
 
+static int __compare_api_version(const char *appid, uid_t uid, int *result)
+{
+	int ret;
+	char pkgid[NAME_MAX];
+	pkgmgrinfo_pkginfo_h pkginfo;
+	char *api_version;
+
+	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, uid);
+	if (ret != AUL_R_OK) {
+		_E("Failed to get package id");
+		return ret;
+	}
+
+	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(pkgid, uid, &pkginfo);
+	if (ret != PMINFO_R_OK) {
+		_E("Failed to get pakckage info");
+		return ret;
+	}
+
+	ret = pkgmgrinfo_pkginfo_get_api_version(pkginfo, &api_version);
+	if (ret != PMINFO_R_OK) {
+		_E("Failed to get api-version");
+		pkgmgrinfo_pkginfo_destroy_pkginfo(pkginfo);
+		return ret;
+	}
+
+	*result = strverscmp(api_version, "3.0");
+	pkgmgrinfo_pkginfo_destroy_pkginfo(pkginfo);
+
+	return ret;
+}
+
 API const char *aul_get_app_external_root_path(void)
 {
 	static char *path;
@@ -250,11 +282,17 @@ API const char *aul_get_app_tep_resource_path(void)
 	return __get(&path, NULL, _TEP_RESOURCE_DIR, getuid(), __get_path_from_db);
 }
 
-API const char *aul_get_app_shared_data_path(void)
+API int aul_get_app_shared_data_path(char **path)
 {
-	static char *path;
+	int res;
 
-	return __get(&path, NULL, _SHARED_DATA_DIR, getuid(), __get_path);
+	if (__compare_api_version(NULL, getuid(), &res) < 0)
+		return AUL_R_EINVAL;
+
+	if (res >= 0)
+		return AUL_R_EREJECTED;
+
+	return __get_path(path, NULL, _SHARED_DATA_DIR, getuid());
 }
 
 API const char *aul_get_app_shared_resource_path(void)
@@ -317,8 +355,27 @@ API const char *aul_get_app_external_specific_path(void)
 
 API int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
 {
+	int res;
+	int callee_pid;
+	int caller_pid = getpid();
+
 	if (appid == NULL || path == NULL)
 		return AUL_R_EINVAL;
+
+	if (__compare_api_version(NULL, getuid(), &res) < 0)
+		return AUL_R_EINVAL;
+
+	if (res >= 0)
+		return AUL_R_EREJECTED;
+
+	callee_pid = aul_app_get_pid(appid);
+	if (caller_pid != callee_pid) {
+		if (__compare_api_version(appid, getuid(), &res) < 0)
+			return AUL_R_EINVAL;
+
+		if (res >= 0)
+			return AUL_R_EREJECTED;
+	}
 
 	return __get_path(path, appid, _SHARED_DATA_DIR, getuid());
 }
