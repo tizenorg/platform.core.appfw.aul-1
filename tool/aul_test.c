@@ -255,6 +255,26 @@ int get_allpkg_test()
 	return aul_app_get_running_app_info(iterfunc, NULL);
 }
 
+int iterfunc_status(const aul_app_info *info, void *data)
+{
+	printf("\t==========================\n");
+	printf("\t pid: %d\n", info->pid);
+	printf("\t appid: %s\n", info->appid);
+	printf("\t app_path: %s\n", info->app_path);
+	printf("\t pkgid: %s\n", info->pkgid);
+	printf("\t status: %d\n", info->status);
+	printf("\t is_sub_app : %d\n", info->is_sub_app);
+	printf("\t==========================\n");
+
+	return 0;
+}
+
+int get_all_app_test()
+{
+	static int num = 0;
+	printf("[aul_app_get_all_running_app_info %d test] \n", num++);
+	return aul_app_get_all_running_app_info(iterfunc_status, NULL);
+}
 int get_app_bypid_test()
 {
 	int pid = 0;
@@ -564,6 +584,8 @@ static test_func_t test_func[] = {
 		"[usage] is_run <pkgname>"},
 	{"getallpkg", get_allpkg_test, "aul_app_get_running_app_info test",
 		"[usage] getallpkg all"},
+	{"getallappstatus", get_all_app_test, "aul_app_get_all_running_app_info test",
+		"[usage] getallappstatus "},
 	{"get_app_bypid", get_app_bypid_test, "aul_app_get_appid_bypid test",
 		"[usage] get_app_bypid <pid>"},
 	{"get_pkg_bypid", get_pkg_bypid_test, "aul_app_get_pkgid_bypid test",
