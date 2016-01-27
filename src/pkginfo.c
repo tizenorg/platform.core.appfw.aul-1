@@ -33,6 +33,7 @@ typedef struct _internal_param_t {
 
 static const char *__appid = NULL;
 static const char *__pkgid = NULL;
+static const char *__root_path = NULL;
 
 API int aul_app_get_pid(const char *appid)
 {
@@ -112,6 +113,16 @@ API void aul_set_preinit_appid(const char *appid)
 API void aul_set_preinit_pkgid(const char *pkgid)
 {
 	__pkgid = pkgid;
+}
+
+API void aul_set_preinit_root_path(const char *root_path)
+{
+	__root_path = root_path;
+}
+
+API const char *aul_get_preinit_root_path(void)
+{
+	return __root_path;
 }
 
 static int __get_info_bypid(int pid, char *appid, int len, int cmd)

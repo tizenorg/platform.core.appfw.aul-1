@@ -181,6 +181,8 @@ typedef enum _aul_type{
 #define AUL_K_COM_FILTER	"__AUL_COM_FILTER__"
 /** AUL internal private key */
 #define AUL_K_COM_RESULT	"__AUL_COM_RESULT__"
+/** AUL internal private key */
+#define AUL_K_ROOT_PATH		"__AUL_ROOT_PATH__"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -1770,6 +1772,16 @@ void aul_set_preinit_appid(const char *appid);
  * This API is only for Appfw internally.
  */
 void aul_set_preinit_pkgid(const char *pkgid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_preinit_root_path(const char *root_path);
+
+/*
+ * This API is only for Appfw internally.
+ */
+const char *aul_get_preinit_root_path(void);
 
 /*
  * This API is only for Appfw internally.

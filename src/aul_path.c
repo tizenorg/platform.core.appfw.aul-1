@@ -140,6 +140,17 @@ static int __get_path_from_db(char **path, const char *appid, const char *dir_na
 	int ret;
 	pkgmgrinfo_pkginfo_h pkginfo;
 	int len;
+	const char *root_path;
+
+	root_path = aul_get_preinit_root_path();
+	if (appid == NULL && root_path) {
+		len = root_path ? strlen(root_path) : 0;
+		snprintf(buf, sizeof(buf), "%s%s%s", root_path,
+			root_path[len - 1] == '/' ?  "" : "/",
+			dir_name ? dir_name : "");
+		*path = strdup(buf);
+		return AUL_R_OK;
+	}
 
 	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, uid);
 	if (ret != AUL_R_OK)
