@@ -1616,7 +1616,7 @@ const char *aul_get_app_tep_resource_path(void);
 /*
  * This API is only for Appfw internally.
  */
-const char *aul_get_app_shared_data_path(void);
+int aul_get_app_shared_data_path(char **path);
 
 /*
  * This API is only for Appfw internally.
