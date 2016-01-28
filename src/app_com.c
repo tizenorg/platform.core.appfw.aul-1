@@ -210,14 +210,13 @@ API int aul_app_com_leave(aul_app_com_connection_h connection)
 
 	while (head) {
 		h = (aul_app_com_connection_s *)head->data;
+		head = head->next;
 		if (h && h->endpoint && g_strcmp0(h->endpoint, connection->endpoint) == 0) {
 			if (h == connection)
-				handlers = g_list_remove_link(handlers, head);
+				handlers = g_list_remove(handlers, h);
 			else
 				endpoint_cnt++;
 		}
-
-		head = head->next;
 	}
 
 	if (endpoint_cnt > 0) {
