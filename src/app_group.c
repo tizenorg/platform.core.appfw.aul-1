@@ -91,8 +91,6 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 {
 	app_pkt_t *ret = NULL;
 	bundle *b;
-	bundle_raw *br = NULL;
-	int datalen;
 	char buf[128];
 	int c;
 	*cnt = 0;
@@ -107,19 +105,11 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 
 	snprintf(buf, 128, "%d", leader_pid);
 	bundle_add_str(b, AUL_K_LEADER_PID, buf);
-	bundle_encode(b, &br, &datalen);
 
-	if (br == NULL) {
-		_E("out of memory");
-		bundle_free(b);
-		return;
-	}
-
-	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_GROUP_PIDS, br, datalen, AUL_SOCK_NONE);
+	ret = aul_sock_send_bundle_with_pkt_reply(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_GROUP_PIDS, b, AUL_SOCK_NONE);
 
 	if (ret == NULL) {
-		free(br);
 		bundle_free(b);
 		return;
 	}
@@ -138,7 +128,6 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 
 clear:
 	free(ret);
-	free(br);
 	bundle_free(b);
 }
 

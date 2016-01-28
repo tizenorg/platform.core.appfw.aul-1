@@ -281,6 +281,28 @@ API int aul_sock_send_raw_async_with_fd(int fd, int cmd,
 	return ret;
 }
 
+API int aul_sock_send_bundle_async_with_fd(int fd, int cmd,
+		bundle *kb, int opt)
+{
+	bundle_raw *kb_data = NULL;
+	int datalen;
+	int res;
+
+	if (!kb)
+		return -EINVAL;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE)
+		return -EINVAL;
+
+	res = aul_sock_send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+
+	if (kb_data)
+		free(kb_data);
+
+	return res;
+}
+
 /*
  * @brief	Send data (in raw) to the process with 'pid' via socket
  */
@@ -328,6 +350,27 @@ retry_recv:
 	return res;
 }
 
+API int aul_sock_send_bundle(int pid, uid_t uid, int cmd, bundle *kb, int opt)
+{
+	bundle_raw *kb_data = NULL;
+	int datalen;
+	int res;
+
+	if (!kb)
+		return -EINVAL;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE)
+		return -EINVAL;
+
+	res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+
+	if (kb_data)
+		free(kb_data);
+
+	return res;
+}
+
 API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt)
 {
 	int fd;
@@ -346,6 +389,27 @@ API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_d
 	__send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
 
 	return fd;
+}
+
+API int aul_sock_send_bundle_async(int pid, uid_t uid, int cmd, bundle *kb, int opt)
+{
+	bundle_raw *kb_data = NULL;
+	int datalen;
+	int res;
+
+	if (!kb)
+		return -EINVAL;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE)
+		return -EINVAL;
+
+	res = aul_sock_send_raw_async(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+
+	if (kb_data)
+		free(kb_data);
+
+	return res;
 }
 
 API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
@@ -483,6 +547,28 @@ retry_recv:
 		_D("recv len %d %d", len, pkt->len);
 	}
 	close(fd);
+
+	return pkt;
+}
+
+API app_pkt_t *aul_sock_send_bundle_with_pkt_reply(int pid, uid_t uid, int cmd, bundle *kb, int opt)
+{
+	bundle_raw *kb_data = NULL;
+	int datalen;
+	int res;
+	app_pkt_t *pkt;
+
+	if (!kb)
+		return NULL;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE)
+		return NULL;
+
+	pkt = aul_sock_send_raw_with_pkt_reply(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+
+	if (kb_data)
+		free(kb_data);
 
 	return pkt;
 }
@@ -659,6 +745,27 @@ retry_recv:
 		}
 	}
 	close(fd);
+
+	return res;
+}
+
+int aul_sock_send_bundle_with_fd_reply(int pid, uid_t uid, int cmd, bundle *kb, int opt, int *ret_fd)
+{
+	bundle_raw *kb_data = NULL;
+	int datalen;
+	int res;
+
+	if (!kb)
+		return -EINVAL;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE)
+		return -EINVAL;
+
+	res = aul_sock_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE, ret_fd);
+
+	if (kb_data)
+		free(kb_data);
 
 	return res;
 }
