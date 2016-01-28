@@ -153,15 +153,9 @@ static int __get_aul_error(int res)
 
 static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *ret_fd)
 {
-	int datalen;
-	bundle_raw *kb_data = NULL;
 	int res = AUL_R_OK;
 
-	res = bundle_encode(kb, &kb_data, &datalen);
-	if (res != BUNDLE_ERROR_NONE)
-		return AUL_R_EINVAL;
-
-	if ((res = aul_sock_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, AUL_SOCK_NONE, ret_fd)) < 0) {
+	if ((res = aul_sock_send_bundle_with_fd_reply(pid, uid, cmd, kb, AUL_SOCK_NONE, ret_fd)) < 0) {
 		switch (res) {
 		case -EINVAL:
 			res = AUL_R_EINVAL;
@@ -197,21 +191,15 @@ static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *re
 		}
 	}
 
-	free(kb_data);
-
 	return res;
 }
 
 static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int opt)
 {
-	int datalen;
-	bundle_raw *kb_data;
 	int res;
 
-	bundle_encode(kb, &kb_data, &datalen);
-	if ((res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen, opt)) < 0)
+	if ((res = aul_sock_send_bundle(pid, uid, cmd, kb, opt)) < 0)
 		res = __get_aul_error(res);
-	free(kb_data);
 
 	return res;
 }
@@ -239,12 +227,9 @@ API int app_send_cmd_with_queue_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 
 API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 {
-	int datalen;
-	bundle_raw *kb_data;
 	int res;
 
-	bundle_encode(kb, &kb_data, &datalen);
-	res = aul_sock_send_raw_async(pid, getuid(), cmd, kb_data, datalen, AUL_SOCK_NOREPLY);
+	res = aul_sock_send_bundle_async(pid, getuid(), cmd, kb, AUL_SOCK_NOREPLY);
 	if (res > 0) {
 		close(res);
 		res = 0;
@@ -252,16 +237,12 @@ API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 		res = __get_aul_error(res);
 	}
 
-	free(kb_data);
-
 	return res;
 }
 
 API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bundle *kb)
 {
 	int fd;
-	int datalen;
-	bundle_raw *kb_data;
 	int len;
 	int res;
 
@@ -269,11 +250,9 @@ API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bund
 	if (fd < 0)
 		return -1;
 
-	bundle_encode(kb, &kb_data, &datalen);
-	res = aul_sock_send_raw_async_with_fd(fd, cmd,
-			kb_data, datalen, AUL_SOCK_NONE);
+	res = aul_sock_send_bundle_async_with_fd(fd, cmd,
+			kb, AUL_SOCK_NONE);
 	if (res < 0) {
-		free(kb_data);
 		close(fd);
 		return res;
 	}
@@ -293,7 +272,6 @@ retry_recv:
 		}
 	}
 
-	free(kb_data);
 	close(fd);
 
 	return res;
