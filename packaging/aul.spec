@@ -34,6 +34,7 @@ BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(ecore-wayland)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(tizen-extension-client)
+BuildRequires:  pkgconfig(libxml-2.0)
 %endif
 
 %description

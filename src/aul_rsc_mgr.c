@@ -27,18 +27,11 @@
 #include <dlog.h>
 #include <vconf.h>
 #include <system_info.h>
-#include <pkgmgr-info.h>
-#include <pkgmgrinfo_resource.h>
 
 #include "aul.h"
 #include "aul_api.h"
 #include "aul_rsc_mgr.h"
-
-#ifdef LOG_TAG
-#undef LOG_TAG
-#endif
-
-#define LOG_TAG "AUL_RESOURCE_MANAGER"
+#include "aul_rsc_mgr_internal.h"
 
 #define WEIGHT_SCREEN_DPI 10000
 #define WEIGHT_SCREEN_DPI_RANGE 10000
@@ -660,8 +653,8 @@ static int __open(resource_manager_t **handle)
 	}
 
 	snprintf(buf, MAX_PATH - 1, "%sres.xml", res_path);
-	retval = pkgmgrinfo_resource_open(buf, &(rsc_manager->data));
-	if (retval != PMINFO_R_OK) {
+	retval = _resource_open(buf, &(rsc_manager->data));
+	if (retval) {
 		LOGE("IO_ERROR(0x%08x), failed to get db for resource manager",
 				AUL_RESOURCE_ERROR_IO_ERROR);
 		free(rsc_manager);
@@ -710,7 +703,7 @@ static int __close(resource_manager_t *handle)
 		g_hash_table_destroy(handle->cache);
 
 	if (handle->data != NULL)
-		pkgmgrinfo_resource_close(handle->data);
+		_resource_close(handle->data);
 
 	free(handle);
 

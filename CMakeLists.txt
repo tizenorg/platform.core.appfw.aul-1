@@ -13,7 +13,7 @@ ENDIF (with_x11)
 
 # Set required packages
 INCLUDE(FindPkgConfig)
-SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle xdgmime libtzplatform-config pkgmgr-info capi-system-info vconf sqlite3 iniparser gio-2.0 glib-2.0)
+SET(AUL-1_LIB_PKG_CHECK_MODULES dlog bundle xdgmime libtzplatform-config pkgmgr-info capi-system-info vconf sqlite3 iniparser gio-2.0 glib-2.0 libxml-2.0)
 IF (with_wayland)
 	pkg_check_modules(libpkgs REQUIRED ${AUL-1_LIB_PKG_CHECK_MODULES} wayland-client tizen-extension-client ecore-wayland)
 ENDIF (with_wayland)
@@ -60,6 +60,7 @@ add_library(aul SHARED
 		src/aul_path.c
 		src/app_group.c
 		src/aul_rsc_mgr.c
+		src/aul_rsc_mgr_internal.c
 		src/aul_sock.c
 		src/aul_proc.c
 		src/app_com.c
