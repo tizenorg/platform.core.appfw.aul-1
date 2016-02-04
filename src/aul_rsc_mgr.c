@@ -109,6 +109,9 @@ static GHashTable *id_list = NULL;
 static GList *all_node_list = NULL;
 static bundle *given_attr_list = NULL;
 
+extern int _resource_open(const char *path, resource_data_t **data);
+extern int _resource_close(resource_data_t *data);
+
 static gint __resource_manager_comp(gconstpointer a, gconstpointer b)
 {
 	resource_group_t *rsc_group = (resource_group_t *) a;
@@ -660,7 +663,8 @@ static int __open(resource_manager_t **handle)
 	}
 
 	snprintf(buf, MAX_PATH - 1, "%sres.xml", res_path);
-	retval = pkgmgrinfo_resource_open(buf, &(rsc_manager->data));
+	retval = _resource_open(buf, &(rsc_manager->data));
+//	retval = pkgmgrinfo_resource_open(buf, &(rsc_manager->data));
 	if (retval != PMINFO_R_OK) {
 		LOGE("IO_ERROR(0x%08x), failed to get db for resource manager",
 				AUL_RESOURCE_ERROR_IO_ERROR);
@@ -710,7 +714,8 @@ static int __close(resource_manager_t *handle)
 		g_hash_table_destroy(handle->cache);
 
 	if (handle->data != NULL)
-		pkgmgrinfo_resource_close(handle->data);
+		_resource_close(handle->data);
+//		pkgmgrinfo_resource_close(handle->data);
 
 	free(handle);
 
