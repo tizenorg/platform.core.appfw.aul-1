@@ -20,11 +20,14 @@
 
 #include <glib.h>
 #include <libxml/tree.h>
+#include <libxml/xmlschemas.h>
 
 #include <dlog.h>
 #include <bundle.h>
 
 #include "aul_rsc_mgr_internal.h"
+
+#define RSC_SCHEMA_FILE_PATH "/etc/package-manager/preload/res.xsd"
 
 static char *_get_attribute(xmlNode *xml_node, const char *name)
 {
@@ -145,13 +148,54 @@ static int _parse_resource(xmlNode *xml_node, resource_data_t **data)
 	return 0;
 }
 
+static int _validate_schema(const char *path)
+{
+	xmlSchemaParserCtxt *parser_ctxt;
+	xmlSchema *schema;
+	xmlSchemaValidCtxt *valid_ctxt;
+	int ret;
+
+	parser_ctxt = xmlSchemaNewParserCtxt(RSC_SCHEMA_FILE_PATH);
+	if (parser_ctxt == NULL) {
+		LOGE("failed to create parser context");
+		return -1;
+	}
+
+	schema = xmlSchemaParse(parser_ctxt);
+	if (schema == NULL) {
+		LOGE("failed to create schema");
+		xmlSchemaFreeParserCtxt(parser_ctxt);
+		return -1;
+	}
+
+	valid_ctxt = xmlSchemaNewValidCtxt(schema);
+	if (valid_ctxt == NULL) {
+		LOGE("failed to create valid context");
+		xmlSchemaFree(schema);
+		xmlSchemaFreeParserCtxt(parser_ctxt);
+		return -1;
+	}
+
+	ret = xmlSchemaValidateFile(valid_ctxt, path, 0);
+	if (ret) {
+		LOGE("%s: validation failed(%d)", path, ret);
+	}
+
+	xmlSchemaFreeValidCtxt(valid_ctxt);
+	xmlSchemaFree(schema);
+	xmlSchemaFreeParserCtxt(parser_ctxt);
+
+	return ret;
+}
+
 int _resource_open(const char *path, resource_data_t **data)
 {
 	int ret;
 	xmlDoc *doc;
 	xmlNode *root;
 
-	/* TODO: validate ? */
+	if (_validate_schema(path))
+		return -1;
 	doc = xmlReadFile(path, NULL, 0);
 	if (doc == NULL)
 		return -1;
