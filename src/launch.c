@@ -451,7 +451,7 @@ static int __send_result_to_launchpad(int fd, int res)
 int aul_sock_handler(int fd)
 {
 	app_pkt_t *pkt;
-	bundle *kbundle;
+	bundle *kbundle = NULL;
 	int clifd;
 	struct ucred cr;
 
@@ -474,14 +474,16 @@ int aul_sock_handler(int fd)
 		}
 	}
 
-	switch (pkt->cmd) {
-	case APP_START:	/* run in callee */
-	case APP_START_RES:
+	if (pkt->opt & AUL_SOCK_BUNDLE) {
 		kbundle = bundle_decode(pkt->data, pkt->len);
 		if (kbundle == NULL)
 			goto err;
+	}
+
+	switch (pkt->cmd) {
+	case APP_START:	/* run in callee */
+	case APP_START_RES:
 		app_start(kbundle);
-		bundle_free(kbundle);
 		break;
 
 	case APP_OPEN:	/* run in callee */
@@ -505,38 +507,28 @@ int aul_sock_handler(int fd)
 
 	case APP_RESULT:	/* run in caller */
 	case APP_CANCEL:
-		kbundle = bundle_decode(pkt->data, pkt->len);
-		if (kbundle == NULL)
-			goto err;
-
 		pid_str = bundle_get_val(kbundle, AUL_K_CALLEE_PID);
 		pid = atoi(pid_str);
 
 		app_result(pkt->cmd, kbundle, pid);
-		bundle_free(kbundle);
 		break;
 
 	case APP_KEY_EVENT:	/* run in caller */
-		kbundle = bundle_decode(pkt->data, pkt->len);
-		if (kbundle == NULL)
-			goto err;
 		app_key_event(kbundle);
-		bundle_free(kbundle);
 		break;
 
 	case APP_PAUSE_BY_PID:
 		app_pause();
 		break;
 	case APP_COM_MESSAGE:
-		kbundle = bundle_decode(pkt->data, pkt->len);
-		if (kbundle == NULL)
-			goto err;
 		app_com_recv(kbundle);
-		bundle_free(kbundle);
 		break;
 	default:
 		_E("no support packet");
 	}
+
+	if (kbundle)
+		bundle_free(kbundle);
 
 	free(pkt);
 	return 0;
