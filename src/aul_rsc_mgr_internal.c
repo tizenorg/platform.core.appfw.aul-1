@@ -28,7 +28,7 @@
 #include "aul_rsc_mgr_internal.h"
 #include "aul_rsc_mgr_schema.h"
 
-static char *_get_attribute(xmlNode *xml_node, const char *name)
+static char *__get_attribute(xmlNode *xml_node, const char *name)
 {
 	xmlChar *val;
 	char *attr = NULL;
@@ -42,17 +42,17 @@ static char *_get_attribute(xmlNode *xml_node, const char *name)
 	return attr;
 }
 
-static void _get_attribute_into_bundle(xmlNode *xml_node, const char *name,
+static void __get_attribute_into_bundle(xmlNode *xml_node, const char *name,
 		bundle *b)
 {
 	char *attr;
 
-	attr = _get_attribute(xml_node, name);
+	attr = __get_attribute(xml_node, name);
 	if (attr)
 		bundle_add_str(b, name, attr);
 }
 
-static int _parse_node(xmlNode *xml_node, GList **nodes)
+static int __parse_node(xmlNode *xml_node, GList **nodes)
 {
 	resource_node_t *node;
 
@@ -60,22 +60,22 @@ static int _parse_node(xmlNode *xml_node, GList **nodes)
 		return -1;
 
 	node = calloc(1, sizeof(resource_node_t));
-	node->folder = _get_attribute(xml_node, "folder");
+	node->folder = __get_attribute(xml_node, "folder");
 	/* why we should use bundle here? */
 	node->attr = bundle_create();
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_DPI,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_DPI,
 			node->attr);
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_DPI_RANGE,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_DPI_RANGE,
 			node->attr);
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_WIDTH_RANGE,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_WIDTH_RANGE,
 			node->attr);
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_LARGE,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_LARGE,
 			node->attr);
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_BPP,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_SCREEN_BPP,
 			node->attr);
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_PLATFORM_VER,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_PLATFORM_VER,
 			node->attr);
-	_get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_LANGUAGE,
+	__get_attribute_into_bundle(xml_node, RSC_NODE_ATTR_LANGUAGE,
 			node->attr);
 
 	*nodes = g_list_append(*nodes, node);
@@ -106,7 +106,7 @@ static char *_get_group_type(xmlNode *xml_node)
 	return ptr;
 }
 
-static int _parse_group(xmlNode *xml_node, GList **groups)
+static int __parse_group(xmlNode *xml_node, GList **groups)
 {
 	xmlNode *tmp;
 	char *type;
@@ -118,12 +118,12 @@ static int _parse_group(xmlNode *xml_node, GList **groups)
 
 	group = calloc(1, sizeof(resource_group_t));
 	group->type = type;
-	group->folder = _get_attribute(xml_node, "folder");
+	group->folder = __get_attribute(xml_node, "folder");
 
 	for (tmp = xml_node->children; tmp; tmp = tmp->next) {
 		if (xml_node->type != XML_ELEMENT_NODE)
 			continue;
-		if (_parse_node(tmp, &group->node_list))
+		if (__parse_node(tmp, &group->node_list))
 			continue;
 	}
 
@@ -132,7 +132,7 @@ static int _parse_group(xmlNode *xml_node, GList **groups)
 	return 0;
 }
 
-static int _parse_resource(xmlNode *xml_node, resource_data_t **data)
+static int __parse_resource(xmlNode *xml_node, resource_data_t **data)
 {
 	xmlNode *tmp;
 
@@ -141,7 +141,7 @@ static int _parse_resource(xmlNode *xml_node, resource_data_t **data)
 	for (tmp = xml_node->children; tmp; tmp = tmp->next) {
 		if (tmp->type != XML_ELEMENT_NODE)
 			continue;
-		_parse_group(tmp, &(*data)->group_list);
+		__parse_group(tmp, &(*data)->group_list);
 	}
 
 	return 0;
@@ -199,7 +199,7 @@ int _resource_open(const char *path, resource_data_t **data)
 		return -1;
 	root = xmlDocGetRootElement(doc);
 
-	ret = _parse_resource(root, data);
+	ret = __parse_resource(root, data);
 
 	xmlFreeDoc(doc);
 
