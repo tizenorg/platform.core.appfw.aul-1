@@ -22,9 +22,12 @@
 
 #include <bundle.h>
 
+#define AUL_APP_COM_WIDGET_STATUS "amd://status.widget"
+
 typedef enum {
 	AUL_APP_COM_PUBLIC = 0x0, /* allowed for all */
 	AUL_APP_COM_PRIVILEGED = 0x1, /* allowed for given privileged app */
+	AUL_APP_COM_PACKAGE = 0x2, /* allowed for same package id */
 } aul_app_com_propagate_option_e;
 
 typedef enum {
