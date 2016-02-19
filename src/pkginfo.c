@@ -337,3 +337,21 @@ API int aul_delete_rua_history(bundle *b)
 	return result;
 }
 
+API int aul_set_default_app_byoperation(bundle *b)
+{
+	int ret;
+
+	if (b == NULL)
+		return AUL_R_EINVAL;
+
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
+			APP_SET_DEFAULT_APP, b, AUL_SOCK_NONE);
+	if (ret != 0) {
+		if (ret == -EILLEGALACCESS)
+			return AUL_R_EILLACC;
+		else
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
