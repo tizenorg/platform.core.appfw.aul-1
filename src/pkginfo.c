@@ -337,3 +337,40 @@ API int aul_delete_rua_history(bundle *b)
 	return result;
 }
 
+API int aul_set_default_app_by_operation(bundle *b)
+{
+	int ret;
+
+	if (b == NULL)
+		return AUL_R_EINVAL;
+
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
+			APP_SET_DEFAULT_APP, b, AUL_SOCK_NONE);
+	if (ret != 0) {
+		if (ret == -EILLEGALACCESS)
+			return AUL_R_EILLACC;
+		else
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
+
+API int aul_unset_default_app_by_operation(const char *app_id)
+{
+	int ret;
+
+	if (app_id == NULL)
+		return AUL_R_EINVAL;
+
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_UNSET_DEFAULT_APP,
+			(unsigned char *)app_id, strlen(app_id), AUL_SOCK_NONE);
+	if (ret != 0) {
+		if (ret == -EILLEGALACCESS)
+			return AUL_R_EILLACC;
+		else
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}
