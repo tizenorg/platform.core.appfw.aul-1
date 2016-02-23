@@ -32,6 +32,7 @@
 
 typedef struct _app_resultcb_info_t {
 	int launched_pid;
+	int seq_num;
 	void (*cb_func) (bundle *kb, int is_cancel, void *data);
 	void *priv_data;
 	void (*caller_cb) (int launched_pid, void *data);
@@ -48,18 +49,19 @@ void *subapp_data = NULL;
 
 pthread_mutex_t result_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
-			 void *data);
-static app_resultcb_info_t *__find_resultcb(int pid);
-static void __remove_resultcb(app_resultcb_info_t *info);
 static int __call_app_result_callback(bundle *kb, int is_cancel,
 				    int launched_pid);
 static int __get_caller_pid(bundle *kb);
 
+static int __get_seq_num(void)
+{
+	static int num = 0;
 
+	return num++;
+}
 
 static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
-			 void *data)
+			 void *data, int seq_num)
 {
 	app_resultcb_info_t *info;
 
@@ -67,6 +69,7 @@ static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 	if (info == NULL)
 		return;
 	info->launched_pid = pid;
+	info->seq_num = seq_num;
 	info->cb_func = cbfunc;
 	info->priv_data = data;
 	info->caller_cb = NULL;
@@ -76,21 +79,60 @@ static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
 	rescb_head = info;
 }
 
-static app_resultcb_info_t *__find_resultcb(int pid)
+static app_resultcb_info_t *__find_resultcb(int pid, bundle *kb)
 {
 	app_resultcb_info_t *tmp;
-	app_resultcb_info_t *ret = NULL;
+	const char *num_str;
+	int num;
 
+	num_str = bundle_get_val(kb, AUL_K_SEQ_NUM);
+	if (num_str == NULL) {
+		_E("No AUL_K_SEQ_NUM");
+		return NULL;
+	}
+	num = atoi(num_str);
 	pthread_mutex_lock(&result_lock);
 	tmp = rescb_head;
 	while (tmp) {
-		if (tmp->launched_pid == pid)
-			ret = tmp;
+		if (tmp->launched_pid == pid && tmp->seq_num == num) {
+			pthread_mutex_unlock(&result_lock);
+			return tmp;
+		}
 		tmp = tmp->next;
 	}
 	pthread_mutex_unlock(&result_lock);
 
-	return ret;
+	return NULL;
+}
+
+static app_resultcb_info_t *__get_first_resultcb(int pid)
+{
+	app_resultcb_info_t *tmp;
+
+	tmp = rescb_head;
+	while (tmp) {
+		if (tmp->launched_pid == pid)
+			return tmp;
+		tmp = tmp->next;
+	}
+
+	return NULL;
+}
+
+static app_resultcb_info_t *__get_next_resultcb(app_resultcb_info_t *info, int pid)
+{
+	app_resultcb_info_t *tmp;
+
+	if (info == NULL)
+		return NULL;
+	tmp = info->next;
+	while (tmp) {
+		if (tmp->launched_pid == pid)
+			return tmp;
+		tmp = tmp->next;
+	}
+
+	return NULL;
 }
 
 static void __remove_resultcb(app_resultcb_info_t *info)
@@ -126,9 +168,11 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 {
 	app_resultcb_info_t *info;
 	int pgid;
-	char *fwdpid_str;
+	const char *fwdpid_str;
+	const char *num_str;
 
-	if (((info = __find_resultcb(launched_pid)) == NULL)
+
+	if (((info = __find_resultcb(launched_pid, kb)) == NULL)
 	    || (launched_pid < 0)) {
 		_E("reject by pid - wait pid = %d, recvd pid = %d\n", getpid(),
 		   launched_pid);
@@ -137,7 +181,7 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		pgid = getpgid(launched_pid);
 		if (pgid <= 1)
 			return -1;
-		if ((info = __find_resultcb(pgid)) == NULL) {
+		if ((info = __find_resultcb(pgid, kb)) == NULL) {
 			_E("second chance : also reject pgid - %d\n", pgid);
 			return -1;
 		}
@@ -148,9 +192,16 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 
 	/* In case of aul_forward_app, update the callback data */
 	if (is_cancel == 1 &&
-			(fwdpid_str = (char *)bundle_get_val(kb, AUL_K_FWD_CALLEE_PID))) {
+			(fwdpid_str = bundle_get_val(kb, AUL_K_FWD_CALLEE_PID))) {
+		num_str = bundle_get_val(kb, AUL_K_SEQ_NUM);
+		if (num_str == NULL) {
+			_E("seq num is null");
+			return -1;
+		}
+
 		app_resultcb_info_t newinfo;
 		newinfo.launched_pid = atoi(fwdpid_str);
+		newinfo.seq_num = atoi(num_str);
 		newinfo.cb_func = info->cb_func;
 		newinfo.priv_data = info->priv_data;
 		newinfo.caller_cb = NULL;
@@ -160,7 +211,7 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 			info->caller_cb(newinfo.launched_pid, info->caller_data);
 
 		__remove_resultcb(info);
-		__add_resultcb(newinfo.launched_pid, newinfo.cb_func, newinfo.priv_data);
+		__add_resultcb(newinfo.launched_pid, newinfo.cb_func, newinfo.priv_data, newinfo.seq_num);
 
 		_D("change callback, fwd pid: %d", newinfo.launched_pid);
 
@@ -271,6 +322,8 @@ API int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void *data)
 {
 	int ret;
+	char num_str[128] = { 0, };
+	int num;
 
 	if (!aul_is_initialized()) {
 		if (aul_launch_init(NULL, NULL) < 0)
@@ -281,10 +334,16 @@ API int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 		return AUL_R_EINVAL;
 
 	pthread_mutex_lock(&result_lock);
+
+	num = __get_seq_num();
+	snprintf(num_str, sizeof(num_str), "%d", num);
+	bundle_del(kb, AUL_K_SEQ_NUM);
+	bundle_add(kb, AUL_K_SEQ_NUM, num_str);
+
 	ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
 
 	if (ret > 0)
-		__add_resultcb(ret, cbfunc, data);
+		__add_resultcb(ret, cbfunc, data, num);
 	pthread_mutex_unlock(&result_lock);
 
 	return ret;
@@ -357,6 +416,7 @@ end:
 API int aul_create_result_bundle(bundle *inb, bundle **outb)
 {
 	const char *pid_str;
+	const char *num_str;
 
 	*outb = NULL;
 
@@ -393,6 +453,15 @@ API int aul_create_result_bundle(bundle *inb, bundle **outb)
 		return AUL_R_EINVAL;
 	}
 	bundle_add(*outb, AUL_K_CALLER_PID, pid_str);
+
+	num_str = bundle_get_val(inb, AUL_K_SEQ_NUM);
+	if (num_str == NULL) {
+		_E("original msg doest not have seq num");
+		bundle_free(*outb);
+		*outb = NULL;
+		return AUL_R_EINVAL;
+	}
+	bundle_add(*outb, AUL_K_SEQ_NUM, num_str);
 
 end:
 	return AUL_R_OK;
@@ -466,9 +535,11 @@ API int aul_subapp_terminate_request_pid(int pid)
 	if (pid <= 0)
 		return AUL_R_EINVAL;
 
-	info = __find_resultcb(pid);
-	if (info)
+	info = __get_first_resultcb(pid);
+	while (info != NULL) {
 		__remove_resultcb(info);
+		info = __get_first_resultcb(pid);
+	}
 
 	snprintf(pid_str, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_TERM_REQ_BY_PID, pid_str, NULL);
@@ -487,12 +558,15 @@ API int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data)
 	if (pid <= 0)
 		return AUL_R_EINVAL;
 
-	info = __find_resultcb(pid);
+	info = __get_first_resultcb(pid);
 	if (info == NULL)
 		return AUL_R_ERROR;
 
-	info->caller_cb = caller_cb;
-	info->caller_data = data;
+	while (info != NULL) {
+		info->caller_cb = caller_cb;
+		info->caller_data = data;
+		info = __get_next_resultcb(info, pid);
+	}
 
 	return AUL_R_OK;
 }
@@ -504,12 +578,15 @@ API int aul_remove_caller_cb(int pid)
 	if (pid <= 0)
 		return AUL_R_EINVAL;
 
-	info = __find_resultcb(pid);
+	info = __get_first_resultcb(pid);
 	if (info == NULL)
 		return AUL_R_ERROR;
 
-	info->caller_cb = NULL;
-	info->caller_data = NULL;
+	while (info != NULL) {
+		info->caller_cb = NULL;
+		info->caller_data = NULL;
+		info = __get_next_resultcb(info, pid);
+	}
 
 	return AUL_R_OK;
 }
@@ -524,7 +601,7 @@ static gboolean __invoke_caller_cb(gpointer data)
 
 	launched_pid = GPOINTER_TO_INT(data);
 
-	info = __find_resultcb(launched_pid);
+	info = __get_first_resultcb(launched_pid);
 	if (info && info->caller_cb)
 		info->caller_cb(info->launched_pid, info->caller_data);
 
