@@ -30,6 +30,7 @@ BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(capi-system-info)
 BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(ttrace)
 %if %{with wayland}
 BuildRequires:  pkgconfig(ecore-wayland)
 BuildRequires:  pkgconfig(wayland-client)
