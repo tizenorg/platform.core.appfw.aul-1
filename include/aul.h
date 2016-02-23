@@ -2101,6 +2101,74 @@ int aul_app_get_pid(const char *appid);
  **/
 int aul_delete_rua_history(bundle *b);
 
+/**
+ * @par Description:
+ *	This API launches application with the given bundle asynchronously.
+ *  If the application is not running or a multiple-instance one, this API launches with the given bundle.
+ *	If the application is running, this API sends a RESET event to the App.
+ *	While the application is running, if the application cannot receive the RESET event,
+ *	this API returns a general error(AUL_R_ERROR).\n
+ * @par Purpose:
+ *      This API is for caller.
+ *      This API's purpose is to launch/reset application with given bundle.
+ * @par Typical use case:
+ *	If you know the target application's pkgname and bundle types,
+ *	you can use this API to launch/reset the application.
+ *
+ * @param[in]	pkgname		package name to be run as callee
+ * @param[in]	kb		bundle to be passed to callee
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild package name
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @code
+ * #include <aul.h>
+ * #include <bundle.h>
+ *
+ * int launch_inhouse_contact_app()
+ * {
+ *	bundle *b;
+ *	b = bundle_create();
+ *	bundle_add(b,"type","SIM");
+ *	aul_launch_app_async("org.tizen.contact",b);
+ * }
+ *
+ * @endcode
+ * @remark
+ *	This API is only available in User Session.
+ */
+int aul_launch_app_async(const char *appid, bundle *kb);
+
+/**
+ * @par Description:
+ *	This API launches application with the given bundle asynchronously.
+ *  If the application is not running or a multiple-instance one, this API launches with the given bundle.
+ *	If the application is running, this API sends a RESET event to the App.
+ *	While the application is running, if the application cannot receive the RESET event,
+ *	this API returns a general error(AUL_R_ERROR).\n
+ * @par Purpose:
+ *      This API is for caller.
+ *      This API's purpose is to launch/reset application with given bundle.
+ * @par Typical use case:
+ *	If you know the target application's pkgname and bundle types,
+ *	you can use this API to launch/reset the application.
+ *
+ * @param[in]	pkgname		package name to be run as callee
+ * @param[in]	kb		bundle to be passed to callee
+ * @param[in]	uid		User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild package name
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @remark
+ *	This API is only available in System Session.
+ */
+int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid);
+
 #ifdef __cplusplus
 	}
 #endif
