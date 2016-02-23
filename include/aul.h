@@ -2101,6 +2101,70 @@ int aul_app_get_pid(const char *appid);
  **/
 int aul_delete_rua_history(bundle *b);
 
+
+/**
+ * @par Description:
+ * This function sets the default application(application id) associated with operatioin, uri and mime-type.
+ *
+ * @param[in] b Bundle object Target application id and operation, uri and mime-type.
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @see None
+ * @remarks This API is only for Appfw internally.
+ *
+ * @par Sample code:
+ * @code
+#include <aul.h>
+#include <aul_svc.h>
+
+...
+{
+    int r;
+    bundle *b = bundle_create();
+
+    const char *appid = "org.tizen.test";
+    const char *operation = "test_operation";
+    const char *mime_type = "test_mime";
+    const char *uri = "test_uri";
+
+    aul_svc_set_operation(b, operation);
+    aul_svc_set_mime(b, mime_type);
+    aul_svc_set_uri(b, uri);
+
+    aul_svc_set_appid(b, appid)
+
+    r = aul_set_default_app_by_operation(b);
+}
+
+ * @endcode
+ **/
+int aul_set_default_app_by_operation(bundle *b);
+
+/**
+ * @par Description:
+ * This API unset the default application(application id) associated with operation, uri and mime-type.
+ *
+ * @param[in] app_id    The ID of the application
+ *
+ * @return 0 if success, negative value(<0) if fail
+ *
+ * @pre None.
+ * @post None.
+ * @see None.
+ * @remarks None.
+ *
+ * @par Sample code:
+ * @code
+#include <aul.h>
+
+...
+{
+    aul_unset_default_app_by_operation("org.tizen.test");
+}
+ * @endcode
+ *
+ */
+int aul_unset_default_app_by_operation(const char *app_id);
 #ifdef __cplusplus
 	}
 #endif
