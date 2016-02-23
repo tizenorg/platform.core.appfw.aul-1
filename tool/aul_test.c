@@ -466,6 +466,47 @@ static int update_running_list()
 	return 0;
 }
 
+int launch_async_test()
+{
+	static int num = 0;
+	int ret = 0;
+	bundle *kb = NULL;
+
+	kb = create_internal_bundle(3);
+	if (kb == NULL)
+		return -1;
+
+	printf("[aul_launch_app_async %d test] %s \n", num++, gargv[2]);
+
+	ret = aul_launch_app_async(gargv[2], kb);
+
+	if (kb) {
+		bundle_free(kb);
+		kb = NULL;
+	}
+	return ret;
+}
+
+int launch_async_test_for_uid()
+{
+	static int num = 0;
+	int ret = 0;
+	bundle *kb = NULL;
+
+	kb = create_internal_bundle(3);
+	if (kb == NULL)
+		return -1;
+
+	printf("[aul_launch_app_async_for_uid %d test] %s \n", num++, gargv[2]);
+
+	ret = aul_launch_app_async_for_uid(gargv[2], kb, atoi(gargv[3]));
+
+	if (kb) {
+		bundle_free(kb);
+		kb = NULL;
+	}
+	return ret;
+}
 
 /*
 static int set_pkg_func()
@@ -624,6 +665,10 @@ static test_func_t test_func[] = {
 		"[usage] get_status_pid <pid>"},
 	{"get_pid", get_pid, "aul_app_get_pid test",
 		"[usage] get_pid <appid>"},
+	{"launch_async", launch_async_test, "aul_launch_app_async test",
+		"[usage] launch_async <appid> <key1> <val1> <key2> <val2> ..."},
+	{"launch_async_for_uid", launch_async_test_for_uid, "aul_launch_app_async_for_uid test",
+		"[usage] launch_async_for_uid <appid> <uid> <key1> <val1> <key2> <val2> ..."},
 };
 
 int callfunc(char *testname)

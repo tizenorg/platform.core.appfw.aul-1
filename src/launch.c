@@ -204,6 +204,23 @@ static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int o
 	return res;
 }
 
+static int __send_cmd_async_for_uid_opt(int pid, uid_t uid,
+					int cmd, bundle *kb, int opt)
+{
+	int res;
+
+	res = aul_sock_send_bundle_async(pid, uid, cmd, kb,
+					opt | AUL_SOCK_NOREPLY);
+	if (res > 0) {
+		close(res);
+		res = 0;
+	} else {
+		res = __get_aul_error(res);
+	}
+
+	return res;
+}
+
 /**
  * @brief	encode kb and send it to 'pid'
  * @param[in]	pid		receiver's pid
@@ -223,6 +240,12 @@ API int app_send_cmd_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 API int app_send_cmd_with_queue_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 {
 	return __send_cmd_for_uid_opt(pid, uid, cmd, kb, AUL_SOCK_QUEUE);
+}
+
+API int app_send_cmd_with_queue_noreply_for_uid(int pid, uid_t uid,
+					int cmd, bundle *kb)
+{
+	return __send_cmd_async_for_uid_opt(pid, uid, cmd, kb, AUL_SOCK_QUEUE);
 }
 
 API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
@@ -354,6 +377,7 @@ int app_request_to_launchpad_with_fd(int cmd, const char *appid, bundle *kb, int
 		switch (cmd) {
 		case APP_START:
 		case APP_START_RES:
+		case APP_START_ASYNC:
 			b = bundle_dup(kb);
 			ret = __app_launch_local(b);
 			break;
@@ -401,7 +425,11 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 
 	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
-	ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd, kb);
+
+	if (cmd == APP_START_ASYNC)
+		ret = app_send_cmd_with_queue_noreply_for_uid(AUL_UTIL_PID, uid, cmd, kb);
+	else
+		ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd, kb);
 
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
@@ -410,6 +438,7 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 		switch (cmd) {
 		case APP_START:
 		case APP_START_RES:
+		case APP_START_ASYNC:
 			b = bundle_dup(kb);
 			ret = __app_launch_local(b);
 			break;
@@ -483,6 +512,7 @@ int aul_sock_handler(int fd)
 	switch (pkt->cmd) {
 	case APP_START:	/* run in callee */
 	case APP_START_RES:
+	case APP_START_ASYNC:
 		app_start(kbundle);
 		break;
 
@@ -977,5 +1007,30 @@ API int aul_app_register_pid(const char *appid, int pid)
 	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, APP_REGISTER_PID, b);
 	bundle_free(b);
 
+	return ret;
+}
+
+API int aul_launch_app_async(const char *appid, bundle *kb)
+{
+	int ret;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad(APP_START_ASYNC, appid, kb);
+	return ret;
+}
+
+API int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid)
+{
+	int ret;
+	char buf[MAX_PID_STR_BUFSZ];
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+	snprintf(buf, sizeof(buf), "%d", uid);
+	bundle_add(kb, AUL_K_TARGET_UID, buf);
+
+	ret = app_request_to_launchpad_for_uid(APP_START_ASYNC, appid, kb, uid);
 	return ret;
 }
