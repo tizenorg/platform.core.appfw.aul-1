@@ -354,6 +354,7 @@ int app_request_to_launchpad_with_fd(int cmd, const char *appid, bundle *kb, int
 		switch (cmd) {
 		case APP_START:
 		case APP_START_RES:
+		case APP_START_ASYNC:
 			b = bundle_dup(kb);
 			ret = __app_launch_local(b);
 			break;
@@ -410,6 +411,7 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 		switch (cmd) {
 		case APP_START:
 		case APP_START_RES:
+		case APP_START_ASYNC:
 			b = bundle_dup(kb);
 			ret = __app_launch_local(b);
 			break;
@@ -483,6 +485,7 @@ int aul_sock_handler(int fd)
 	switch (pkt->cmd) {
 	case APP_START:	/* run in callee */
 	case APP_START_RES:
+	case APP_START_ASYNC:
 		app_start(kbundle);
 		break;
 
@@ -977,5 +980,30 @@ API int aul_app_register_pid(const char *appid, int pid)
 	ret = app_send_cmd_with_noreply(AUL_UTIL_PID, APP_REGISTER_PID, b);
 	bundle_free(b);
 
+	return ret;
+}
+
+API int aul_launch_app_async(const char *appid, bundle *kb)
+{
+	int ret;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad(APP_START_ASYNC, appid, kb);
+	return ret;
+}
+
+API int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid)
+{
+	int ret;
+	char buf[MAX_PID_STR_BUFSZ];
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+	snprintf(buf, sizeof(buf), "%d", uid);
+	bundle_add(kb, AUL_K_TARGET_UID, buf);
+
+	ret = app_request_to_launchpad_for_uid(APP_START_ASYNC, appid, kb, uid);
 	return ret;
 }
