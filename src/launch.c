@@ -25,6 +25,7 @@
 #include <dirent.h>
 #include <glib.h>
 #include <gio/gio.h>
+#include <ttrace.h>
 
 #include <bundle_internal.h>
 
@@ -391,6 +392,7 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	int ret = 0;
 	bundle *b;
 
+	traceBegin(TTRACE_TAG_APPLICATION_MANAGER, "AUL:REQ_TO_PAD");
 	SECURE_LOGD("launch request : %s", appid);
 	if (kb == NULL) {
 		kb = bundle_create();
@@ -427,6 +429,8 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	/* cleanup */
 	if (must_free)
 		bundle_free(kb);
+
+	traceEnd(TTRACE_TAG_APPLICATION_MANAGER);
 
 	return ret;
 }
