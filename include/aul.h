@@ -183,6 +183,9 @@ typedef enum _aul_type{
 #define AUL_K_COM_RESULT	"__AUL_COM_RESULT__"
 /** AUL internal private key */
 #define AUL_K_ROOT_PATH		"__AUL_ROOT_PATH__"
+/** AUL internal private key */
+#define AUL_K_SEQ_NUM		"__AUL_SEQ_NUM__"
+
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -1773,12 +1776,12 @@ int aul_add_caller_cb(int pid,  void (*caller_cb) (int, void *), void *data);
 /*
  * This API is only for Appfw internally.
  */
-int aul_remove_caller_cb(int pid);
+int aul_remove_caller_cb(int pid, void *data);
 
 /*
  * This API is only for Appfw internally.
  */
-int aul_invoke_caller_cb(int pid);
+int aul_invoke_caller_cb(void *data);
 
 /*
  * This API is only for Appfw internally.
