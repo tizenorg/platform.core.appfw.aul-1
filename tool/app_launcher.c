@@ -136,6 +136,27 @@ static int __get_gles(void)
 	return gles;
 }
 
+static void __set_pkg_api_version(bundle *kb, const char *pkgid)
+{
+	int ret;
+	char *api_version = NULL;
+	pkgmgrinfo_pkginfo_h handle;
+
+	ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &handle);
+	if (ret != PMINFO_R_OK)
+		return;
+
+	ret = pkgmgrinfo_pkginfo_get_api_version(handle, &api_version);
+	if (ret != PMINFO_R_OK) {
+		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+		return;
+	}
+
+	printf("pkg api_version: %s\n", api_version);
+	bundle_add(kb, AUL_K_API_VERSION, api_version);
+	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+}
+
 static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 {
 	pkgmgrinfo_appinfo_h handle;
@@ -209,6 +230,7 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 	bundle_add(kb, AUL_K_PACKAGETYPE, pkgtype);
 
 	aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
+	__set_pkg_api_version(kb, pkgid);
 
 end:
 	pkgmgrinfo_appinfo_destroy_appinfo(handle);
