@@ -43,10 +43,9 @@ API int aul_status_update(int status)
 
 	app_status = status;
 
-	ret = aul_sock_send_raw_async(AUL_UTIL_PID, getuid(), APP_STATUS_UPDATE,
-		(unsigned char *)&status, sizeof(status), AUL_SOCK_NONE);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_STATUS_UPDATE,
+		(unsigned char *)&status, sizeof(status), AUL_SOCK_NOREPLY);
 	if (ret > 0) {
-		close(ret);
 		ret = 0;
 
 		while (cb) {
