@@ -228,17 +228,7 @@ API int app_send_cmd_with_queue_for_uid(int pid, uid_t uid, int cmd, bundle *kb)
 
 API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 {
-	int res;
-
-	res = aul_sock_send_bundle_async(pid, getuid(), cmd, kb, AUL_SOCK_NOREPLY);
-	if (res > 0) {
-		close(res);
-		res = 0;
-	} else {
-		res = __get_aul_error(res);
-	}
-
-	return res;
+	return __send_cmd_for_uid_opt(pid, getuid(), cmd, kb, AUL_SOCK_NOREPLY);
 }
 
 API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bundle *kb)
@@ -251,8 +241,8 @@ API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bund
 	if (fd < 0)
 		return -1;
 
-	res = aul_sock_send_bundle_async_with_fd(fd, cmd,
-			kb, AUL_SOCK_NONE);
+	res = aul_sock_send_bundle_with_fd(fd, cmd,
+			kb, AUL_SOCK_ASYNC);
 	if (res < 0) {
 		close(fd);
 		return res;

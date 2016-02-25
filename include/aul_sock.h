@@ -41,8 +41,8 @@ typedef struct _app_pkt_t {
 
 typedef enum {
 	AUL_SOCK_NONE = 0x0, /* default */
-	AUL_SOCK_NOREPLY = 0x1, /* no reply required in app_sock_handler */
-	AUL_SOCK_CLOSE = 0x2, /* close socket after sent */
+	AUL_SOCK_NOREPLY = 0x1, /* return immediately after packet sent without reply */
+	AUL_SOCK_ASYNC = 0x2, /* leave fd in open and return fd of client socket */
 	AUL_SOCK_QUEUE = 0x4, /* add request to pending list in case of receiver is busy */
 	AUL_SOCK_BUNDLE = 0x8, /* has bundle */
 } aul_sock_opt_e;
@@ -65,32 +65,12 @@ int aul_sock_send_bundle(int pid, uid_t uid, int cmd, bundle *kb, int opt);
 /*
  * This API is only for Appfw internally.
  */
-int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt);
+int aul_sock_send_raw_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt);
 
 /*
  * This API is only for Appfw internally.
  */
-int aul_sock_send_bundle_async(int pid, uid_t uid, int cmd, bundle *kb, int opt);
-
-/*
- * This API is only for Appfw internally.
- */
-int aul_sock_send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt);
-
-/*
- * This API is only for Appfw internally.
- */
-int aul_sock_send_bundle_async_with_fd(int fd, int cmd, bundle *kb, int opt);
-
-/*
- * This API is only for Appfw internally.
- */
-int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt, int *ret_fd);
-
-/*
- * This API is only for Appfw internally.
- */
-int aul_sock_send_bundle_with_fd_reply(int pid, uid_t uid, int cmd, bundle *kb, int opt, int *ret_fd);
+int aul_sock_send_bundle_with_fd(int fd, int cmd, bundle *kb, int opt);
 
 /*
  * This API is only for Appfw internally.
