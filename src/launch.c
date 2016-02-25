@@ -152,49 +152,6 @@ static int __get_aul_error(int res)
 	return ret;
 }
 
-static int __app_send_cmd_with_fd(int pid, int uid, int cmd, bundle *kb, int *ret_fd)
-{
-	int res = AUL_R_OK;
-
-	if ((res = aul_sock_send_bundle_with_fd_reply(pid, uid, cmd, kb, AUL_SOCK_NONE, ret_fd)) < 0) {
-		switch (res) {
-		case -EINVAL:
-			res = AUL_R_EINVAL;
-			break;
-		case -ECOMM:
-			res = AUL_R_ECOMM;
-			break;
-		case -EAGAIN:
-			res = AUL_R_ETIMEOUT;
-			break;
-		case -ELOCALLAUNCH_ID:
-			res = AUL_R_LOCAL;
-			break;
-		case -EILLEGALACCESS:
-			res = AUL_R_EILLACC;
-			break;
-		case -ETERMINATING:
-			res = AUL_R_ETERMINATING;
-			break;
-		case -ENOLAUNCHPAD:
-			res = AUL_R_ENOLAUNCHPAD;
-			break;
-#ifdef _APPFW_FEATURE_APP_CONTROL_LITE
-		case -EUGLOCAL_LAUNCH:
-			res = AUL_R_UG_LOCAL;
-			break;
-#endif
-		case -EREJECTED:
-			res = AUL_R_EREJECTED;
-			break;
-		default:
-			res = AUL_R_ERROR;
-		}
-	}
-
-	return res;
-}
-
 static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int opt)
 {
 	int res;
@@ -210,14 +167,11 @@ static int __send_cmd_async_for_uid_opt(int pid, uid_t uid,
 {
 	int res;
 
-	res = aul_sock_send_bundle_async(pid, uid, cmd, kb,
-					opt | AUL_SOCK_NOREPLY);
-	if (res > 0) {
-		close(res);
+	res = aul_sock_send_bundle(pid, uid, cmd, kb, AUL_SOCK_NOREPLY);
+	if (res > 0)
 		res = 0;
-	} else {
+	else
 		res = __get_aul_error(res);
-	}
 
 	return res;
 }
@@ -251,17 +205,7 @@ API int app_send_cmd_with_queue_noreply_for_uid(int pid, uid_t uid,
 
 API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 {
-	int res;
-
-	res = aul_sock_send_bundle_async(pid, getuid(), cmd, kb, AUL_SOCK_NOREPLY);
-	if (res > 0) {
-		close(res);
-		res = 0;
-	} else {
-		res = __get_aul_error(res);
-	}
-
-	return res;
+	return __send_cmd_for_uid_opt(pid, getuid(), cmd, kb, AUL_SOCK_NOREPLY);
 }
 
 API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bundle *kb)
@@ -274,8 +218,8 @@ API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bund
 	if (fd < 0)
 		return -1;
 
-	res = aul_sock_send_bundle_async_with_fd(fd, cmd,
-			kb, AUL_SOCK_NONE);
+	res = aul_sock_send_bundle_with_fd(fd, cmd,
+			kb, AUL_SOCK_ASYNC);
 	if (res < 0) {
 		close(fd);
 		return res;
@@ -354,52 +298,6 @@ static int __app_resume_local()
 
 	return 0;
 }
-
-int app_request_to_launchpad_with_fd(int cmd, const char *appid, bundle *kb, int *fd, int uid)
-{
-	int must_free = 0;
-	int ret = 0;
-	bundle *b;
-
-	SECURE_LOGD("launch request : %s", appid);
-	if (kb == NULL) {
-		kb = bundle_create();
-		must_free = 1;
-	} else {
-		__clear_internal_key(kb);
-	}
-
-	ret = __app_send_cmd_with_fd(AUL_UTIL_PID, uid, cmd, kb, fd);
-
-	_D("launch request result : %d", ret);
-	if (ret == AUL_R_LOCAL) {
-		_E("app_request_to_launchpad : Same Process Send Local");
-
-		switch (cmd) {
-		case APP_START:
-		case APP_START_RES:
-		case APP_START_ASYNC:
-			b = bundle_dup(kb);
-			ret = __app_launch_local(b);
-			break;
-		case APP_OPEN:
-		case APP_RESUME:
-		case APP_RESUME_BY_PID:
-			ret = __app_resume_local();
-			break;
-		default:
-			_E("no support packet");
-		}
-
-	}
-
-	/* cleanup */
-	if (must_free)
-		bundle_free(kb);
-
-	return ret;
-}
-
 
 /**
  * @brief	start caller with kb
@@ -653,12 +551,56 @@ API void aul_finalize()
 
 API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
 {
-	return app_request_to_launchpad_with_fd(APP_GET_DC_SOCKET_PAIR, NULL, kb, fd, getuid());
+	bundle *b = kb;
+	int ret;
+	int fds[1] = {0};
+
+	if (!fd)
+		return AUL_R_EINVAL;
+
+	if (b)
+		__clear_internal_key(b);
+	else {
+		b = bundle_create();
+		if (!b)
+			return AUL_R_ERROR;
+	}
+
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), APP_GET_DC_SOCKET_PAIR, b, AUL_SOCK_ASYNC);
+
+	if (ret) {
+		ret = aul_sock_recv_reply_sock_fd(ret, fds, 1);
+
+		if (ret == 0)
+			fd[0] = fds[0];
+	}
+
+	if (kb == NULL)
+		bundle_free(b);
+
+	return ret;
 }
 
 API int aul_request_message_port_socket_pair(int *fd)
 {
-	return app_request_to_launchpad_with_fd(APP_GET_MP_SOCKET_PAIR, NULL, NULL, fd, getuid());
+	int ret;
+	int fds[2] = {0,};
+
+	if (!fd)
+		return AUL_R_EINVAL;
+
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), APP_GET_MP_SOCKET_PAIR, NULL, AUL_SOCK_ASYNC);
+
+	if (ret) {
+		ret = aul_sock_recv_reply_sock_fd(ret, fds, 2);
+
+		if (ret == 0) {
+			fd[0] = fds[0];
+			fd[1] = fds[1];
+ 		}
+	}
+
+	return ret;
 }
 
 API int aul_launch_app(const char *appid, bundle *kb)
