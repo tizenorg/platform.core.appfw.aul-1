@@ -273,47 +273,8 @@ static int __send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int
 	return 0;
 }
 
-API int aul_sock_send_raw_async_with_fd(int fd, int cmd,
-		unsigned char *kb_data, int datalen, int opt)
+API int aul_sock_send_raw_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt)
 {
-	int ret;
-
-	ret = __send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
-	if (opt & AUL_SOCK_CLOSE)
-		close(fd);
-
-	return ret;
-}
-
-API int aul_sock_send_bundle_async_with_fd(int fd, int cmd,
-		bundle *kb, int opt)
-{
-	bundle_raw *kb_data = NULL;
-	int datalen;
-	int res;
-
-	if (!kb)
-		return -EINVAL;
-
-	res = bundle_encode(kb, &kb_data, &datalen);
-	if (res != BUNDLE_ERROR_NONE)
-		return -EINVAL;
-
-	res = aul_sock_send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
-
-	if (kb_data)
-		free(kb_data);
-
-	return res;
-}
-
-/*
- * @brief	Send data (in raw) to the process with 'pid' via socket
- */
-API int aul_sock_send_raw(int pid, uid_t uid, int cmd,
-		unsigned char *kb_data, int datalen, int opt)
-{
-	int fd;
 	int len;
 	int res;
 
@@ -322,17 +283,16 @@ API int aul_sock_send_raw(int pid, uid_t uid, int cmd,
 		return -EINVAL;
 	}
 
-	_D("pid(%d): cmd(%d)", pid, cmd);
-
-	fd = __create_client_sock(pid, uid);
-	if (fd < 0)
-		return -ECOMM;
+	_D("fd(%d): cmd(%d)", fd, cmd);
 
 	res = __send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
-	if (res < 0) {
+	if (res < 0 || opt & AUL_SOCK_NOREPLY) {
 		close(fd);
 		return res;
 	}
+
+	if (opt & AUL_SOCK_ASYNC)
+		return fd;
 
 retry_recv:
 	len = recv(fd, &res, sizeof(int), 0);
@@ -354,6 +314,49 @@ retry_recv:
 	return res;
 }
 
+API int aul_sock_send_bundle_with_fd(int fd, int cmd, bundle *kb, int opt)
+{
+	bundle_raw *kb_data = NULL;
+	int datalen;
+	int res;
+
+	if (!kb)
+		return -EINVAL;
+
+	res = bundle_encode(kb, &kb_data, &datalen);
+	if (res != BUNDLE_ERROR_NONE)
+		return -EINVAL;
+
+	res = aul_sock_send_raw_with_fd(fd, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+
+	if (kb_data)
+		free(kb_data);
+
+	return res;
+}
+
+/*
+ * @brief	Send data (in raw) to the process with 'pid' via socket
+ */
+API int aul_sock_send_raw(int pid, uid_t uid, int cmd,
+		unsigned char *kb_data, int datalen, int opt)
+{
+	int fd;
+
+	if (kb_data == NULL) {
+		_E("keybundle error");
+		return -EINVAL;
+	}
+
+	_D("pid(%d): cmd(%d)", pid, cmd);
+
+	fd = __create_client_sock(pid, uid);
+	if (fd < 0)
+		return -ECOMM;
+
+	return aul_sock_send_raw_with_fd(fd, cmd, kb_data, datalen, opt);
+}
+
 API int aul_sock_send_bundle(int pid, uid_t uid, int cmd, bundle *kb, int opt)
 {
 	bundle_raw *kb_data = NULL;
@@ -368,47 +371,6 @@ API int aul_sock_send_bundle(int pid, uid_t uid, int cmd, bundle *kb, int opt)
 		return -EINVAL;
 
 	res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
-
-	if (kb_data)
-		free(kb_data);
-
-	return res;
-}
-
-API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt)
-{
-	int fd;
-
-	if (kb_data == NULL) {
-		_E("keybundle error\n");
-		return -EINVAL;
-	}
-
-	_D("pid(%d) : cmd(%d)", pid, cmd);
-
-	fd = __create_client_sock(pid, uid);
-	if (fd < 0)
-		return -ECOMM;
-
-	__send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
-
-	return fd;
-}
-
-API int aul_sock_send_bundle_async(int pid, uid_t uid, int cmd, bundle *kb, int opt)
-{
-	bundle_raw *kb_data = NULL;
-	int datalen;
-	int res;
-
-	if (!kb)
-		return -EINVAL;
-
-	res = bundle_encode(kb, &kb_data, &datalen);
-	if (res != BUNDLE_ERROR_NONE)
-		return -EINVAL;
-
-	res = aul_sock_send_raw_async(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
 
 	if (kb_data)
 		free(kb_data);
@@ -489,24 +451,13 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	return pkt;
 }
 
-API app_pkt_t *aul_sock_send_raw_with_pkt_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt)
+API int aul_sock_recv_reply_pkt(int fd, app_pkt_t **ret_pkt)
 {
-	int fd;
 	int len;
 	int ret;
 	int recv_opt;
 	app_pkt_t *pkt = NULL;
 	unsigned char buf[AUL_SOCK_MAXBUFF];
-
-	fd = __create_client_sock(pid, uid);
-	if (fd < 0)
-		return NULL;
-
-	ret = __send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
-	if (ret < 0) {
-		close(fd);
-		return NULL;
-	}
 
 retry_recv:
 	/* receive header(cmd, datalen) */
@@ -517,8 +468,12 @@ retry_recv:
 
 	if (len < AUL_PKT_HEADER_SIZE) {
 		_E("recv error");
+		if (len == sizeof(int)) {
+			
+		}
 		close(fd);
-		return NULL;
+		*ret_pkt = NULL;
+		return AUL_R_ECOMM;
 	}
 	memcpy(&cmd, buf, sizeof(int));
 	memcpy(&len, buf + sizeof(int), sizeof(int));
@@ -528,7 +483,8 @@ retry_recv:
 	pkt = (app_pkt_t *)calloc(1, AUL_PKT_HEADER_SIZE + len + 1);
 	if (pkt == NULL) {
 		close(fd);
-		return NULL;
+		*ret_pkt = NULL;
+		return AUL_R_ECOMM;
 	}
 	pkt->cmd = cmd;
 	pkt->len = len;
@@ -544,7 +500,8 @@ retry_recv:
 				_E("recv error %s\n", strerror(errno));
 				free(pkt);
 				close(fd);
-				return NULL;
+				*ret_pkt = NULL;
+				return AUL_R_ECOMM;
 			}
 		}
 		len += ret;
@@ -552,29 +509,8 @@ retry_recv:
 	}
 	close(fd);
 
-	return pkt;
-}
-
-API app_pkt_t *aul_sock_send_bundle_with_pkt_reply(int pid, uid_t uid, int cmd, bundle *kb, int opt)
-{
-	bundle_raw *kb_data = NULL;
-	int datalen;
-	int res;
-	app_pkt_t *pkt;
-
-	if (!kb)
-		return NULL;
-
-	res = bundle_encode(kb, &kb_data, &datalen);
-	if (res != BUNDLE_ERROR_NONE)
-		return NULL;
-
-	pkt = aul_sock_send_raw_with_pkt_reply(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
-
-	if (kb_data)
-		free(kb_data);
-
-	return pkt;
+	*ret_pkt = pkt;
+	return AUL_R_OK;
 }
 
 static int __get_descriptors(struct cmsghdr *cmsg, struct msghdr *msg, int *fds, int maxdesc)
@@ -652,7 +588,7 @@ static int __recv_message(int sock, struct iovec *vec, int vec_max_size, int *ve
 	return ret;
 }
 
-int __recv_socket_fd(int fd, int cmd, int *ret_fd)
+int aul_sock_recv_reply_sock_fd(int fd, int *ret_fd, int fd_size)
 {
 	int fds[2] = {0,};
 	char recv_buff[1024];
@@ -668,154 +604,18 @@ int __recv_socket_fd(int fd, int cmd, int *ret_fd)
 		_E("Error[%d]. while receiving message\n", -ret);
 		if (fds_len > 0)
 			close(fds[0]);
-		return -ECOMM;
-	}
 
-	if (fds_len > 0) {
-		if (cmd == APP_GET_DC_SOCKET_PAIR) {
-			_D("fds : %d", fds[0]);
-			ret_fd[0] = fds[0];
-		} else if (cmd == APP_GET_MP_SOCKET_PAIR) {
-			_D("mp fds : %d %d", fds[0], fds[1]);
-			ret_fd[0] = fds[0];
-			ret_fd[1] = fds[1];
-		}
-	}
-	return 0;
-}
-
-int aul_sock_send_raw_with_fd_reply(int pid, uid_t uid, int cmd, unsigned char *kb_data, int datalen, int opt, int *ret_fd)
-{
-	int fd;
-	int len;
-	int res;
-	app_pkt_t *pkt;
-	int sent = 0;
-
-	if (kb_data == NULL ||
-			datalen > AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
-		_E("keybundle error");
-		return -EINVAL;
-	}
-
-	_D("pid(%d) : cmd(%d)", pid, cmd);
-
-	fd = __create_client_sock(pid, uid);
-	if (fd < 0) {
-		_E("cannot create a client socket: %d", fd);
-		return -ECOMM;
-	}
-
-	pkt = (app_pkt_t *)malloc(AUL_PKT_HEADER_SIZE + datalen);
-	if (pkt == NULL) {
-		_E("Malloc Failed!");
-		return -ENOMEM;
-	}
-
-	pkt->cmd = cmd;
-	pkt->len = datalen;
-	pkt->opt = opt;
-	memcpy(pkt->data, kb_data, pkt->len);
-	while (sent != AUL_PKT_HEADER_SIZE + pkt->len) {
-		len = send(fd, pkt, AUL_PKT_HEADER_SIZE + pkt->len - sent, 0);
-		if (len <= 0) {
-			_E("send error fd:%d (errno %d)", fd, errno);
-			free(pkt);
-			close(fd);
-			return -ECOMM;
-		}
-		sent += len;
-	}
-
-	free(pkt);
-
-retry_recv:
-	if (cmd == APP_GET_DC_SOCKET_PAIR || APP_GET_MP_SOCKET_PAIR) {
-		res = __recv_socket_fd(fd, cmd, ret_fd);
+		ret = -ECOMM;
+	} else if ((fds_len == fd_size) && (fds_len == 2)) {
+		ret_fd[0] = fds[0];
+		ret_fd[1] = fds[1];
+	} else if ((fds_len == fd_size) && (fds_len == 1)) {
+		ret_fd[0] = fds[0];
 	} else {
-		len = recv(fd, &res, sizeof(int), 0);
-		if (len == -1) {
-			if (errno == EAGAIN) {
-				_E("recv timeout : cmd(%d) %s", cmd,
-						strerror(errno));
-				res = -EAGAIN;
-			} else if (errno == EINTR) {
-				_E("recv : %s", strerror(errno));
-				goto retry_recv;
-			} else {
-				_E("recv error : %s", strerror(errno));
-				res = -ECOMM;
-			}
-		}
+		_E("wrong number of FD recevied. Expected:%d Actual:%d\n", fd_size, fds_len);
+		ret = -ECOMM;
 	}
+
 	close(fd);
-
-	return res;
-}
-
-int aul_sock_send_bundle_with_fd_reply(int pid, uid_t uid, int cmd, bundle *kb, int opt, int *ret_fd)
-{
-	bundle_raw *kb_data = NULL;
-	int datalen;
-	int res;
-
-	if (!kb)
-		return -EINVAL;
-
-	res = bundle_encode(kb, &kb_data, &datalen);
-	if (res != BUNDLE_ERROR_NONE)
-		return -EINVAL;
-
-	res = aul_sock_send_raw_with_fd_reply(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE, ret_fd);
-
-	if (kb_data)
-		free(kb_data);
-
-	return res;
-}
-
-int aul_sock_create_launchpad_client(const char *pad_type, uid_t uid)
-{
-	int fd = -1;
-	struct sockaddr_un saddr = { 0, };
-	int retry = 1;
-	int ret = -1;
-
-	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-	/*  support above version 2.6.27*/
-	if (fd < 0) {
-		if (errno == EINVAL) {
-			fd = socket(AF_UNIX, SOCK_STREAM, 0);
-			if (fd < 0) {
-				_E("second chance - socket create error");
-				return -1;
-			}
-		} else {
-			_E("socket error");
-			return -1;
-		}
-	}
-
-	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
-				"/run/user/%d/%s", uid, pad_type);
-retry_con:
-	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr,
-				sizeof(saddr), 100 * 1000);
-	if (ret < -1) {
-		_E("maybe peer not launched or peer daed\n");
-		if (retry > 0) {
-			usleep(100 * 1000);
-			retry--;
-			goto retry_con;
-		}
-	}
-	if (ret < 0) {
-		close(fd);
-		return -1;
-	}
-
-	__set_sock_option(fd, 1);
-
-	return fd;
+	return ret;
 }

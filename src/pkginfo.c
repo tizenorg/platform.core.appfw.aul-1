@@ -77,13 +77,20 @@ API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 	char *token;
 	char *pkt_data;
 	aul_app_info info;
+	int ret;
 
 	memset(&info, 0, sizeof(info));
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_RUNNING_INFO, NULL, 0, AUL_SOCK_NONE);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_RUNNING_INFO, NULL, 0, AUL_SOCK_ASYNC);
+
+	if (ret)
+		ret = aul_sock_recv_reply_pkt(ret, pkt);
+
+	if (ret < 0)
+		return ret;
+
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
@@ -111,19 +118,26 @@ API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 API int aul_app_get_all_running_app_info(aul_app_info_iter_fn enum_fn,
 					void *user_param)
 {
-	app_pkt_t *pkt;
+	app_pkt_t *pkt = NULL;
 	char *saveptr1;
 	char *saveptr2;
 	char *token;
 	char *pkt_data;
 	aul_app_info info;
+	int ret;
 
 	memset(&info, 0, sizeof(info));
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_ALL_RUNNING_INFO, NULL, 0, AUL_SOCK_NONE);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_ALL_RUNNING_INFO, NULL, 0, AUL_SOCK_ASYNC);
+
+	if (ret)
+		ret = aul_sock_recv_reply_pkt(ret, pkt);
+
+	if (ret < 0)
+		return ret;
+
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
@@ -215,16 +229,23 @@ static int __get_appid_bypid(int pid, char *appid, int len)
 
 API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid)
 {
-	app_pkt_t *pkt;
+	app_pkt_t *pkt = NULL;
 	int pgid;
 	int ret;
 
 	if (pid != getpid()) {
-		pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, uid,
-				APP_GET_APPID_BYPID, (unsigned char *)&pid,
-				sizeof(pid), AUL_SOCK_NONE);
+		ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_APPID_BYPID, 
+				(unsigned char *)&pid,
+				sizeof(pid), AUL_SOCK_ASYNC);
+		if (ret)
+			ret = aul_sock_recv_reply_pkt(ret, pkt);
+
+		if (ret < 0)
+			return ret;
+
 		if (pkt == NULL)
 			return AUL_R_ERROR;
+
 		if (pkt->cmd == APP_GET_INFO_ERROR) {
 			free(pkt);
 			return AUL_R_ERROR;
@@ -261,6 +282,7 @@ API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid
 {
 	app_pkt_t *pkt = NULL;
 	int pgid;
+	int ret;
 	int cmd = APP_GET_PKGID_BYPID;
 	int cpid = getpid();
 
@@ -290,11 +312,17 @@ API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid
 	if (pkgid == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, uid, cmd,
-			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_NONE);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, cmd, (unsigned char *)&pid, sizeof(pid), AUL_SOCK_ASYNC);
+
+	if (ret)
+		ret = aul_sock_recv_reply_pkt(ret, pkt);
+
+	if (ret < 0)
+		return ret;
 
 	if (pkt == NULL)
 		return AUL_R_ERROR;
+
 	if (pkt->cmd == APP_GET_INFO_ERROR) {
 		free(pkt);
 		return AUL_R_ERROR;
@@ -312,7 +340,8 @@ API int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 
 API int aul_delete_rua_history(bundle *b)
 {
-	app_pkt_t *ret = NULL;
+	int ret;
+	app_pkt_t *pkt = NULL;
 	bundle_raw *br = NULL;
 	int datalen = 0;
 	int result = 0;
@@ -321,19 +350,32 @@ API int aul_delete_rua_history(bundle *b)
 	if (b != NULL)
 		bundle_encode(b, &br, &datalen);
 
-	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_REMOVE_HISTORY, br, datalen, AUL_SOCK_NONE);
-	if (ret != NULL) {
-		if (ret->len > 0) {
-			memcpy(&result, ret->data, ret->len);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+			APP_REMOVE_HISTORY, br, datalen, AUL_SOCK_ASYNC);
+	if (ret)
+		aul_sock_recv_reply_pkt(ret, pkt);
+
+	if (ret < 0)
+		return ret;
+
+	if (pkt != NULL) {
+		if (pkt->len > 0) {
+			memcpy(&result, pkt->data, pkt->len);
 		} else {
 			if (br != NULL)
 				free(br);
-			return -1;
+			free(pkt);
+
+			return AUL_R_ERROR;
 		}
-	}
+
+		free(pkt);
+	} else
+		result = AUL_R_ERROR;
+
 	if (br != NULL)
 		free(br);
+
 	return result;
 }
 
