@@ -60,36 +60,43 @@ API int aul_app_group_set_window(int wid)
 
 API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 {
-	app_pkt_t *ret = NULL;
+	int ret;
+	app_pkt_t *pkt = NULL;
 	int c;
 
 	*cnt = 0;
 	*pids = NULL;
-	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_LEADER_PIDS, NULL, 0, AUL_SOCK_NONE);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_GET_LEADER_PIDS,
+				NULL, 0, AUL_SOCK_ASYNC);
+	if (ret)
+		aul_sock_recv_reply_pkt(ret, pkt);
 
-	if (ret == NULL)
+	if (ret < 0)
 		return;
 
-	c = ret->len / sizeof(int);
-	if (c > 0 && ret->len <= AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
-		*pids = malloc(ret->len);
+	if (pkt == NULL)
+		return;
+
+	c = pkt->len / sizeof(int);
+	if (c > 0 && pkt->len <= AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
+		*pids = malloc(pkt->len);
 		if (*pids == NULL) {
 			_E("out of memory");
-			free(ret);
+			free(pkt);
 			return;
 		}
 
-		memcpy(*pids, ret->data, ret->len);
+		memcpy(*pids, pkt->data, pkt->len);
 		*cnt = c;
 	}
 
-	free(ret);
+	free(pkt);
 }
 
 API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 {
-	app_pkt_t *ret = NULL;
+	int ret;
+	app_pkt_t *pkt = NULL;
 	bundle *b;
 	char buf[128];
 	int c;
@@ -106,28 +113,36 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 	snprintf(buf, 128, "%d", leader_pid);
 	bundle_add_str(b, AUL_K_LEADER_PID, buf);
 
-	ret = aul_sock_send_bundle_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_GROUP_PIDS, b, AUL_SOCK_NONE);
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_GROUP_PIDS, b, AUL_SOCK_ASYNC);
 
-	if (ret == NULL) {
+	if (ret)
+		aul_sock_recv_reply_pkt(ret, pkt);
+
+	if (ret < 0) {
 		bundle_free(b);
 		return;
 	}
 
-	c = ret->len / sizeof(int);
-	if (c > 0 && ret->len <= AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
-		*pids = malloc(ret->len);
+	if (pkt == NULL) {
+		bundle_free(b);
+		return;
+	}
+
+	c = pkt->len / sizeof(int);
+	if (c > 0 && pkt->len <= AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
+		*pids = malloc(pkt->len);
 		if (*pids == NULL) {
 			_E("out of memory");
 			goto clear;
 		}
 
-		memcpy(*pids, ret->data, ret->len);
+		memcpy(*pids, pkt->data, pkt->len);
 		*cnt = c;
 	}
 
 clear:
-	free(ret);
+	free(pkt);
 	bundle_free(b);
 }
 
@@ -200,29 +215,37 @@ API void aul_app_group_lower(int *exit)
 
 API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 {
-	app_pkt_t *ret = NULL;
+	int ret;
+	app_pkt_t *pkt = NULL;
 	int c;
 
 	*cnt = 0;
 	*pids = NULL;
-	ret = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_GROUP_GET_IDLE_PIDS, NULL, 0, AUL_SOCK_NONE);
-	if (ret == NULL)
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_IDLE_PIDS, NULL, 0, AUL_SOCK_ASYNC);
+
+	if (ret)
+		aul_sock_recv_reply_pkt(ret, pkt);
+
+	if (ret < 0)
 		return;
 
-	c = ret->len / sizeof(int);
-	if (c > 0 && ret->len <= AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
-		*pids = malloc(ret->len);
+	if (pkt == NULL)
+		return;
+
+	c = pkt->len / sizeof(int);
+	if (c > 0 && pkt->len <= AUL_SOCK_MAXBUFF - AUL_PKT_HEADER_SIZE) {
+		*pids = malloc(pkt->len);
 		if (*pids == NULL) {
 			_E("out of memory");
-			free(ret);
+			free(pkt);
 			return;
 		}
 
-		memcpy(*pids, ret->data, ret->len);
+		memcpy(*pids, pkt->data, pkt->len);
 		*cnt = c;
 	}
 
-	free(ret);
+	free(pkt);
 }
 
