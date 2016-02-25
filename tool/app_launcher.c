@@ -50,6 +50,7 @@ struct launch_arg {
 	int argc;
 	int flag_debug;
 	int sync;
+	char op;
 } launch_arg;
 
 static bundle *_create_internal_bundle(struct launch_arg *args)
@@ -91,6 +92,10 @@ static gboolean run_func(void *data)
 	struct launch_arg *launch_arg_data = (struct launch_arg *)data;
 
 	kb = _create_internal_bundle(launch_arg_data);
+
+	if (launch_arg_data->op == 'e')
+		aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
+
 	pid = aul_launch_app((char *)launch_arg_data->appid, kb);
 
 	if (kb) {
@@ -287,6 +292,7 @@ static void print_usage(char *program)
 			"   -r [tizen application ID] --is-running        Check whether application is running by tizen application ID,\n"
 			"                                                 If widget is running, 0(zero) will be returned.\n"
 			"   -f [tizen application ID] --fast-start        Fast launch app with tizen application ID\n"
+			"   -e [tizen application ID] --direct-start	  Direct Launch app with tizen application ID\n"
 			"   -d                        --debug             Activate debug mode\n"
 	      );
 }
@@ -402,6 +408,7 @@ int main(int argc, char **argv)
 		{ "terminate", required_argument, 0, 't' },
 		{ "is-running", required_argument, 0, 'r' },
 		{ "fast-launch", required_argument, 0, 'f' },
+		{ "direct-launch", required_argument, 0, 'd' },
 		{ "debug", no_argument, 0, 'd' },
 		{ 0, 0, 0, 0 }
 	};
@@ -448,6 +455,7 @@ int main(int argc, char **argv)
 		case 't':
 		case 'r':
 		case 'f':
+		case 'e':
 			if (strlen(optarg) > 255) {
 				print_usage(argv[0]);
 				return -1;
@@ -476,7 +484,7 @@ int main(int argc, char **argv)
 		args.argc = argc - optind;
 		args.argv = &argv[optind];
 	}
-	if ((op == 's') || (op == 'k') || (op == 'r') || (op == 'f')) {
+	if ((op == 's') || (op == 'k') || (op == 'r') || (op == 'f') || (op == 'e')) {
 		if (is_app_installed(args.appid) <= 0) {
 			printf("The app with ID: %s is not avaible "
 					"for the user %d \n",
@@ -485,11 +493,12 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (op == 's') {
+	if ((op == 's') || (op == 'e')) {
 		if (strlen(args.appid) <= 0) {
 			printf("result: %s\n", "failed");
 			return -1;
 		}
+		args.op = op;
 		aul_launch_init(NULL, NULL);
 		g_idle_add(run_func, args.appid);
 		mainloop = g_main_loop_new(NULL, FALSE);
