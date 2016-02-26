@@ -634,102 +634,6 @@ int _svc_db_adjust_list_with_submode(int mainapp_mode, char *win_id, GSList **pk
 	return 0;
 }
 
-int _svc_db_get_list_with_condition(char *op, char *uri, char *mime,
-					GSList **pkg_list, uid_t uid)
-{
-	char query[QUERY_MAX_LEN];
-	sqlite3_stmt* stmt;
-	int ret;
-	GSList *iter = NULL;
-	char *str = NULL;
-	char *pkgname = NULL;
-	int found;
-
-	if (__init_app_info_db(uid) < 0)
-		return 0;
-
-	snprintf(query, QUERY_MAX_LEN,
-			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ac.app_control like '%%%s|%s|%s%%' and ai.component_type='uiapp'",
-			op, uri, mime);
-	SECURE_LOGD("query : %s\n", query);
-
-	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
-	if (ret != SQLITE_OK) {
-		_E("prepare error, ret = %d, extended = %d\n",
-				ret, sqlite3_extended_errcode(app_info_db));
-		return -1;
-	}
-
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		str = (char *)sqlite3_column_text(stmt, 0);
-		found = 0;
-		for (iter = *pkg_list; iter != NULL; iter = g_slist_next(iter)) {
-			pkgname = (char *)iter->data;
-			if (strncmp(str, pkgname, MAX_PACKAGE_STR_SIZE - 1) == 0) {
-				found = 1;
-				break;
-			}
-		}
-		if (found == 0) {
-			pkgname = strdup(str);
-			*pkg_list = g_slist_append(*pkg_list, (void *)pkgname);
-			_D("%s is added", pkgname);
-		}
-	}
-
-	ret = sqlite3_finalize(stmt);
-
-	return 0;
-}
-
-int _svc_db_get_list_with_collation(char *op, char *uri, char *mime,
-					GSList **pkg_list, uid_t uid)
-{
-	char query[QUERY_MAX_LEN];
-	sqlite3_stmt* stmt;
-	int ret;
-	GSList *iter = NULL;
-	char *str = NULL;
-	char *pkgname = NULL;
-	int found;
-
-	if (__init_app_info_db(uid) < 0)
-		return 0;
-
-	snprintf(query, QUERY_MAX_LEN,
-			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ac.app_control='%s|%s|%s' collate appsvc_collation and ai.component_type='uiapp'",
-			op, uri, mime);
-	SECURE_LOGD("query : %s\n", query);
-
-	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
-	if (ret != SQLITE_OK) {
-		_E("prepare error, ret = %d, extended = %d\n",
-				ret, sqlite3_extended_errcode(app_info_db));
-		return -1;
-	}
-
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		str = (char *)sqlite3_column_text(stmt, 0);
-		found = 0;
-		for (iter = *pkg_list; iter != NULL; iter = g_slist_next(iter)) {
-			pkgname = (char *)iter->data;
-			if (strncmp(str, pkgname, MAX_PACKAGE_STR_SIZE - 1) == 0) {
-				found = 1;
-				break;
-			}
-		}
-		if (found == 0) {
-			pkgname = strdup(str);
-			*pkg_list = g_slist_append(*pkg_list, (void *)pkgname);
-			_D("%s is added", pkgname);
-		}
-	}
-
-	ret = sqlite3_finalize(stmt);
-
-	return 0;
-}
-
 int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
@@ -773,4 +677,103 @@ int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid)
 
 	return 0;
 }
+
+char *_svc_db_query_builder_add(char *old_query, char *op, char *uri, char *mime, bool collate)
+{
+	char query[QUERY_MAX_LEN];
+
+	if (collate) {
+		if (old_query) {
+			snprintf(query, QUERY_MAX_LEN,
+				"%s, '%s|%s|%s' collate appsvc_collation ",
+				old_query, op, uri, mime);
+			free(old_query);
+		} else {
+			snprintf(query, QUERY_MAX_LEN,
+				"'%s|%s|%s' collate appsvc_collation ",
+				op, uri, mime);
+		}
+
+	} else {
+		if (old_query) {
+			snprintf(query, QUERY_MAX_LEN,
+				"%s OR ac.app_control like '%%%s|%s|%s%%' ",
+				old_query, op, uri, mime);
+			free(old_query);
+		} else {
+			snprintf(query, QUERY_MAX_LEN,
+			"ac.app_control like '%%%s|%s|%s%%' ",
+			op, uri, mime);
+		}
+	}
+
+	return strdup(query);
+}
+
+char *_svc_db_query_builder_build(char *old_query, bool collate)
+{
+	char query[QUERY_MAX_LEN];
+
+	if (old_query == NULL)
+		return NULL;
+
+	if (collate) {
+		snprintf(query, QUERY_MAX_LEN,
+			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and ac.app_control in(%s)",
+			old_query);
+	} else {
+		snprintf(query, QUERY_MAX_LEN,
+			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s)",
+			old_query);
+	}
+	free(old_query);
+
+	return strdup(query);
+}
+
+int _svc_db_exec_query(const char *query, GSList **pkg_list, uid_t uid)
+{
+	sqlite3_stmt* stmt;
+	int ret;
+	GSList *iter = NULL;
+	char *str = NULL;
+	char *pkgname = NULL;
+	int found;
+
+	_E("GOGO ++");
+	if (__init_app_info_db(uid) < 0)
+		return 0;
+
+	SECURE_LOGD("GOGO query : %s\n", query);
+
+	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
+	if (ret != SQLITE_OK) {
+		_E("prepare error, ret = %d, extended = %d\n",
+				ret, sqlite3_extended_errcode(app_info_db));
+		return -1;
+	}
+
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		str = (char *)sqlite3_column_text(stmt, 0);
+		found = 0;
+		for (iter = *pkg_list; iter != NULL; iter = g_slist_next(iter)) {
+			pkgname = (char *)iter->data;
+			if (strncmp(str, pkgname, MAX_PACKAGE_STR_SIZE - 1) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 0) {
+			pkgname = strdup(str);
+			*pkg_list = g_slist_append(*pkg_list, (void *)pkgname);
+			_D("%s is added", pkgname);
+		}
+	}
+
+	ret = sqlite3_finalize(stmt);
+	_E("GOGO --");
+
+	return 0;
+}
+
 
