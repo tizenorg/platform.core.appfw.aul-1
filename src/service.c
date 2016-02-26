@@ -471,6 +471,7 @@ static int __get_list_with_condition_mime_extened(char *op, char *uri,
 					GSList **pkg_list, uid_t uid)
 {
 	char *tmp;
+	char *query = NULL;
 
 	tmp = malloc(MAX_MIME_STR_SIZE);
 	if (tmp == NULL) {
@@ -478,19 +479,49 @@ static int __get_list_with_condition_mime_extened(char *op, char *uri,
 		return -1;
 	}
 
-	_svc_db_get_list_with_condition(op, uri, mime, pkg_list, uid);
+	query = _svc_db_query_builder_add(query, op, uri, mime);
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(s_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE - 1, "%s/*", m_type);
-		_svc_db_get_list_with_condition(op, uri, tmp, pkg_list, uid);
+		query = _svc_db_query_builder_add(query, op, uri, tmp);
 	}
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(m_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE - 1, "*/*");
-		_svc_db_get_list_with_condition(op, uri, tmp, pkg_list, uid);
+		query = _svc_db_query_builder_add(query, op, uri, tmp);
+	}
+	query = _svc_db_query_builder_build(query);
+	_svc_db_get_list_with_condition2(query, pkg_list, uid);
+
+	free(tmp);
+	if (query)
+		free(query);
+
+	return 0;
+}
+
+static char* __get_list_with_condition_mime_extened2(char *query, char *op, char *uri,
+					char *mime, char *m_type, char *s_type)
+{
+	char *tmp;
+
+	tmp = malloc(MAX_MIME_STR_SIZE);
+	if (tmp == NULL) {
+		_E("out of memory");
+		return NULL;
+	}
+
+	query = _svc_db_query_builder_add(query, op, uri, mime);
+	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(s_type, "%", 1) != 0)) {
+		snprintf(tmp, MAX_MIME_STR_SIZE - 1, "%s/*", m_type);
+		query = _svc_db_query_builder_add(query, op, uri, tmp);
+	}
+	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(m_type, "%", 1) != 0)) {
+		snprintf(tmp, MAX_MIME_STR_SIZE - 1, "*/*");
+		query = _svc_db_query_builder_add(query, op, uri, tmp);
 	}
 
 	free(tmp);
 
-	return 0;
+	return query;
 }
 
 static int __get_list_with_condition_mime_extened_with_collation(char *op,
@@ -830,21 +861,28 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 		pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri_r_info, uid);
 
 		if (pkgname == NULL) {
-			__get_list_with_condition_mime_extened(info.op, info.uri_r_info,
-					info.mime, info.m_type, info.s_type, &pkg_list, uid);
+			char *query = NULL;
+
+			query = __get_list_with_condition_mime_extened2(query, info.op, info.uri_r_info,
+					info.mime, info.m_type, info.s_type);
 			pkg_count = g_slist_length(pkg_list);
 			if (pkg_count > 0) {
-				__get_list_with_condition_mime_extened(info.op, info.scheme,
-					info.mime, info.m_type, info.s_type, &pkg_list, uid);
+				query = __get_list_with_condition_mime_extened2(query, info.op, info.scheme,
+					info.mime, info.m_type, info.s_type);
 
-				__get_list_with_condition_mime_extened(info.op, "*",
-					info.mime, info.m_type, info.s_type, &pkg_list, uid);
+				query = __get_list_with_condition_mime_extened2(query, info.op, "*",
+					info.mime, info.m_type, info.s_type);
 
 				if (info.scheme && (strcmp(info.scheme, "file") == 0)
 					&& info.mime && (strcmp(info.mime, "NULL") != 0)) {
-					__get_list_with_condition_mime_extened(info.op, "NULL",
-						info.mime, info.m_type, info.s_type, &pkg_list, uid);
+					query = __get_list_with_condition_mime_extened2(query, info.op, "NULL",
+						info.mime, info.m_type, info.s_type);
 				}
+
+				query = _svc_db_query_builder_build(query);
+				_svc_db_get_list_with_condition2(query, &pkg_list, uid);
+				if (query)
+					free(query);
 
 				if (info.category)
 					__get_list_with_category(info.category, &pkg_list, uid);
@@ -886,17 +924,25 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.scheme, uid);
 
 	if (pkgname == NULL) {
-		__get_list_with_condition_mime_extened(info.op, info.scheme,
-			info.mime, info.m_type, info.s_type, &pkg_list, uid);
+		char *query = NULL;
 
-		__get_list_with_condition_mime_extened(info.op, "*",
-			info.mime, info.m_type, info.s_type, &pkg_list, uid);
+		query = __get_list_with_condition_mime_extened2(query, info.op, info.scheme,
+			info.mime, info.m_type, info.s_type);
+
+		query = __get_list_with_condition_mime_extened2(query, info.op, "*",
+			info.mime, info.m_type, info.s_type);
 
 		if (info.scheme && (strcmp(info.scheme, "file") == 0)
 			&& info.mime && (strcmp(info.mime, "NULL") != 0)) {
-			__get_list_with_condition_mime_extened(info.op, "NULL",
-				info.mime, info.m_type, info.s_type, &pkg_list, uid);
+			query = __get_list_with_condition_mime_extened2(query, info.op, "NULL",
+				info.mime, info.m_type, info.s_type);
 		}
+
+		query = _svc_db_query_builder_build(query);
+		_svc_db_get_list_with_condition2(query, &pkg_list, uid);
+
+		if (query)
+			free(query);
 
 		if (info.category)
 			__get_list_with_category(info.category, &pkg_list, uid);

@@ -46,7 +46,9 @@ int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pk
 int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid);
 int _svc_db_delete_all(uid_t uid);
 
-
+char *_svc_db_query_builder_add(char *old_query, char *op, char *uri, char *mime);
+char *_svc_db_query_builder_build(char *old_query);
+int _svc_db_get_list_with_condition2(const char *query,	GSList **pkg_list, uid_t uid);
 
 #ifdef __cplusplus
 }
