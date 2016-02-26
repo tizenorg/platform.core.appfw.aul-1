@@ -41,12 +41,13 @@ int _svc_db_delete_with_pkgname(const char *pkg_name, uid_t uid);
 char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri, uid_t uid);
 int _svc_db_is_defapp(const char *pkg_name, uid_t uid);
 int _svc_db_adjust_list_with_submode(int mainapp_mode, char *win_id, GSList **pkg_list, uid_t uid);
-int _svc_db_get_list_with_condition(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid);
 int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid);
 int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid);
 int _svc_db_delete_all(uid_t uid);
 
-
+char *_svc_db_query_builder_add(char *old_query, char *op, char *uri, char *mime);
+char *_svc_db_query_builder_build(char *old_query);
+int _svc_db_exec_query(const char *query, GSList **pkg_list, uid_t uid);
 
 #ifdef __cplusplus
 }
