@@ -710,22 +710,49 @@ char *_svc_db_query_builder_add(char *old_query, char *op, char *uri, char *mime
 	return strdup(query);
 }
 
-char *_svc_db_query_builder_build(char *old_query, bool collate)
+char *_svc_db_query_builder_and(char *q1, char *q2)
+{
+	char query[QUERY_MAX_LEN];
+
+	snprintf(query, QUERY_MAX_LEN, "(%s) and (%s)", q1, q2);
+	free(q1);
+	free(q2);
+
+	return strdup(query);
+}
+
+char *_svc_db_query_builder_or(char *q1, char *q2)
+{
+	char query[QUERY_MAX_LEN];
+
+	snprintf(query, QUERY_MAX_LEN, "(%s) or (%s)", q1, q2);
+	free(q1);
+	free(q2);
+
+	return strdup(query);
+}
+
+char *_svc_db_query_builder_in(const char *field, char *args)
+{
+	char query[QUERY_MAX_LEN];
+
+	snprintf(query, QUERY_MAX_LEN, "%s in(%s)", field, args);
+	free(args);
+
+	return strdup(query);
+}
+
+char *_svc_db_query_builder_build(char *old_query)
 {
 	char query[QUERY_MAX_LEN];
 
 	if (old_query == NULL)
 		return NULL;
 
-	if (collate) {
-		snprintf(query, QUERY_MAX_LEN,
-			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and ac.app_control in(%s)",
-			old_query);
-	} else {
-		snprintf(query, QUERY_MAX_LEN,
-			"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s)",
-			old_query);
-	}
+	snprintf(query, QUERY_MAX_LEN,
+		"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s)",
+		old_query);
+
 	free(old_query);
 
 	return strdup(query);
