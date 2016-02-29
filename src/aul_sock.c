@@ -156,8 +156,12 @@ static int __create_client_sock(int pid, uid_t uid)
 	}
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
-			"/run/user/%d/%d", uid, pid);
+	if (pid == AUL_UTIL_PID)
+		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
+				"/run/amd/%d", uid);
+	else
+		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
+				"/run/user/%d/%d", uid, pid);
  retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
