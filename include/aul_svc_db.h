@@ -44,8 +44,11 @@ int _svc_db_adjust_list_with_submode(int mainapp_mode, char *win_id, GSList **pk
 int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid);
 int _svc_db_delete_all(uid_t uid);
 
+char *_svc_db_query_builder_in(const char *field, char *args);
+char *_svc_db_query_builder_and(char *q1, char *q2);
+char *_svc_db_query_builder_or(char *q1, char *q2);
 char *_svc_db_query_builder_add(char *old_query, char *op, char *uri, char *mime, bool collate);
-char *_svc_db_query_builder_build(char *old_query, bool collate);
+char *_svc_db_query_builder_build(char *old_query);
 int _svc_db_exec_query(const char *query, GSList **pkg_list, uid_t uid);
 
 #ifdef __cplusplus
