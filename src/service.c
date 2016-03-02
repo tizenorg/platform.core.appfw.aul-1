@@ -695,6 +695,13 @@ API int aul_svc_run_service(bundle *b, int request_code,
 	return aul_svc_run_service_for_uid(b, request_code, cbfunc, data, getuid());
 }
 
+static void __request_input_lock(uid_t uid)
+{
+	unsigned char dummy[1] = { 0 };
+
+	aul_sock_send_raw(AUL_UTIL_PID, uid, APP_INPUT_LOCK, dummy, 0, AUL_SOCK_NONE);
+}
+
 API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 				aul_svc_res_fn cbfunc, void *data, uid_t uid)
 {
@@ -752,6 +759,8 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 		ret = AUL_SVC_RET_EILLACC;
 		goto end;
 	}
+
+	__request_input_lock(uid);
 
 	/*uri*/
 	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri, uid);
