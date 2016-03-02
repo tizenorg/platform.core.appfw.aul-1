@@ -374,3 +374,20 @@ API int aul_unset_default_app_by_operation(const char *app_id)
 
 	return AUL_R_OK;
 }
+
+API int aul_app_context_set_event_cb_privilege_check(void)
+{
+	int ret;
+	unsigned char dummy[1] = { 0 };
+
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_CONTEXT_SET_EVENT_CB,
+					dummy, 0, AUL_SOCK_NONE);
+	if (ret != 0) {
+		if (ret == -EILLEGALACCESS)
+			return AUL_R_EILLACC;
+		else
+			return AUL_R_ERROR;
+	}
+
+	return AUL_R_OK;
+}

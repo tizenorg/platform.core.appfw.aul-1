@@ -2228,6 +2228,11 @@ int aul_launch_app_async(const char *appid, bundle *kb);
  */
 int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_app_context_set_event_cb_privilege_check(void);
+
 #ifdef __cplusplus
 	}
 #endif
