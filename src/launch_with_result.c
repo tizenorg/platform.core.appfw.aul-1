@@ -159,6 +159,8 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 	const char *fwdpid_str;
 	const char *num_str;
 
+	if (launched_pid < 0)
+		return -1;
 
 	if (((info = __find_resultcb(launched_pid, kb)) == NULL)
 	    || (launched_pid < 0)) {
