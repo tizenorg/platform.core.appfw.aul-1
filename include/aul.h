@@ -470,6 +470,36 @@ int aul_open_app(const char *appid);
 
 /**
  * @par Description:
+ *  This API launches application, as menu screen launches the app.
+ *  Thus, if the applocation is running, this API sends a RESUME event to the app.
+ *  If the application is not running, this API launches the app.
+ *  While the application is running, if the application cannot receive the RESUME event,
+ *  AUL tries to raise the application's default window.
+ *
+ * @par Purpose:
+ *      This API is for caller.
+ *      This API's purpose is to resume/launch application
+ * @par Typical use case:
+ *	If you only want to show application with previous state or default state, Use this API.
+ *
+ * @param[in]	pkgname		package name to be resume as callee
+ * @param[in]	uid		User ID
+ * @return	callee's pid if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild package name
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @remark
+ *	If you don't want to launch the app,
+ *	you should check app's running state with aul_app_is_running.
+ *	This API will launch the application if the application is not running.
+ *	This API is only available in System Session.
+ */
+int aul_open_app_for_uid(const char *appid, uid_t uid);
+
+/**
+ * @par Description:
  *	This API trigger to resume application
  * 	If the application is running, this API send a resume event to the App.
  *	If the application is not running, this API returns fail.
@@ -512,6 +542,37 @@ int aul_open_app(const char *appid);
  *	This API is only available in User Session.
 */
 int aul_resume_app(const char *appid);
+
+/**
+ * @par Description:
+ *	This API trigger to resume application
+ * 	If the application is running, this API send a resume event to the App.
+ *	If the application is not running, this API returns fail.
+ *	Although the application is running, if the application cannot receive resume event,
+ *	AUL try to raise the application's default windows.
+ * @par Purpose:
+ *      This API is for caller.
+ *      This API's purpose is to send resume event.
+ * @par Typical use case:
+ *	If you only want to show application with previous state or default state, Use this API.
+ *
+ * @param[in]	pkgname		package name to be resume as callee
+ * @param[in]	uid		User ID
+ * @return	callee's pid if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild package name
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @remark
+ *	If you don't want to launch the app,
+ *	you should check app's running state with aul_app_is_running.
+ *	This API will launch the application if the application is not running.
+ *	If you want to only resume without launching in multiple instance application model,
+ *	you should use aul_resume_pid.
+ *	This API is only available in System Session.
+ */
+int aul_resume_app_for_uid(const char *appid, uid_t uid);
 
 /**
  * @par Description:
@@ -559,6 +620,33 @@ int aul_resume_pid(int pid);
 
 /**
  * @par Description:
+ *	This API trigger to resume application
+ *	If the application is running, this API send a resume event to the App.
+ *	If the application is not running, this API return AUL_R_ERROR.
+ *	Although the application is running, if the application cannot receive resume event,
+ *	AUL try to raise the application's default windows.
+ * @par Purpose:
+ *      This API is for caller.
+ *      This API's purpose is to send resume event.
+ * @par Typical use case:
+ *	In multiple application model, If you want to only resume specific application, Use this API
+ *
+ * @param[in]	pid	application's pid to be resumed
+ * @param[in]	uid	User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild pid
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error (include application is not running)
+ * @warning	This API need to require root or inhouse permisssion \n
+ *		If you have not the permission, this API return AUL_R_ERROR. \n
+ * @remark
+ *	This API is only available in System Session.
+*/
+int aul_resume_pid_for_uid(int pid, uid_t uid);
+
+/**
+ * @par Description:
  *	This API trigger to terminate application
  *
  *	If the application is running, this API send a terminate event to the App. \n
@@ -602,6 +690,34 @@ int aul_terminate_pid(int pid);
 
 /**
  * @par Description:
+ *	This API trigger to terminate application
+ *
+ *	If the application is running, this API send a terminate event to the App. \n
+ *	If the app cannot receive the event, AUL kill forcely the application.\n
+ * @par Purpose:
+ *      This API's purpose is to kill application
+ * @par Typical use case:
+ *	In general, Application like Task Manager use this API.
+ *
+ *		This API need to require root or inhouse permisssion. \n
+ *
+ * @param[in]	pid	application's pid to be terminated
+ * @param[in]	uid	User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild pid
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ * @warning	This API need to require root or inhouse permisssion. \n
+ *
+ * @remark
+ *	If you have not the permission, this API return AUL_R_ERROR. \n
+ *	This API is only available in System Session.
+ */
+int aul_terminate_pid_for_uid(int pid, uid_t uid);
+
+/**
+ * @par Description:
  *	This API trigger to terminate application asynchronously
  *
  *	If the application is running, this API send a terminate event to the App. \n
@@ -625,6 +741,33 @@ int aul_terminate_pid(int pid);
  *	This API is only available in User Session.
 */
 int aul_terminate_pid_async(int pid);
+
+/**
+ * @par Description:
+ *	This API trigger to terminate application asynchronously
+ *
+ *	If the application is running, this API send a terminate event to the App. \n
+ *	If the app cannot receive the event, AUL kill forcely the application.\n
+ * @par Purpose:
+ *      This API's purpose is to kill application
+ * @par Typical use case:
+ *	In general, Application like Task Manager use this API.
+ *
+ *		This API need to require root or inhouse permisssion. \n
+ *
+ * @param[in]	pid	application's pid to be terminated
+ * @param[in]	uid	User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild pid
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ * @warning	This API need to require root or inhouse permisssion. \n
+ * @remark
+ *	If you have not the permission, this API return AUL_R_ERROR. \n
+ *	This API is only available in System Session.
+ */
+int aul_terminate_pid_async_for_uid(int pid, uid_t uid);
 
 /**
  *@brief Running application's information structure retrieved by AUL
@@ -740,6 +883,30 @@ int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
 
 /**
  * @par Description:
+ *	This API use to get running application list.
+ *	This API call iter_fn with each aul_app_info of running apps when running application is found.
+ * @par Purpose:
+ *	If you want to get running application list, use this API
+ * @par Typical use case:
+ *	In general, this API is used by task manager appllication. (running application list viewer)
+ *
+ * @param[in]	iter_fn		iterator function
+ * @param[in]	data		user-supplied data for iter_fn
+ * @param[in]	uid		User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- internal error
+ *
+ * @remark
+ *	This API should use if you want to know running application which has desktop files.
+ *	If you want to get all process list, you must iterate process information by using proc filesystem
+ *	Or, If you want to get all window list, you must iterate XWindows by using XWindow APIs
+ *	This API is only available in System Session.
+ */
+int aul_app_get_running_app_info_for_uid(aul_app_info_iter_fn iter_fn, void *data, uid_t uid);
+
+/**
+ * @par Description:
  *	This API use to get all running application list, including sub app.
  *	This API call iter_fn with each aul_app_info of running apps when running application is found.
  * @par Purpose:
@@ -782,6 +949,30 @@ int aul_app_get_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
  *	This API is only available in User Session.
  */
 int aul_app_get_all_running_app_info(aul_app_info_iter_fn iter_fn, void *data);
+
+/**
+ * @par Description:
+ *	This API use to get all running application list, including sub app.
+ *	This API call iter_fn with each aul_app_info of running apps when running application is found.
+ * @par Purpose:
+ *	If you want to get all running application list, use this API
+ * @par Typical use case:
+ *	In general, this API is used by task manager application. (running application list viewer)
+ *
+ * @param[in]	iter_fn		iterator function
+ * @param[in]	data		user-supplied data for iter_fn
+ * @param[in]	uid		User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- internal error
+ *
+ * @remark
+ *	This API should use if you want to know running application which has desktop files.
+ *	If you want to get all process list, you must iterate process information by using proc filesystem
+ *	Or, If you want to get all window list, you must iterate XWindows by using XWindow APIs
+ *	This API is only available in System Session.
+ */
+int aul_app_get_all_running_app_info_for_uid(aul_app_info_iter_fn iter_fn, void *data, uid_t uid);
 
 /**
  * @par Description:
@@ -1538,6 +1729,29 @@ int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), voi
 int aul_app_get_status_bypid(int pid);
 
 /**
+ * @par Description:
+ *	This API gets status of specified application process id.
+ * @par Purpose:
+ *	This API's purpose is to get the application's status.
+ *
+ * @param[in]	pid	pid of application
+ * @param[in]	uid	User ID
+ * @return	0 or greater if success, nagative value if fail
+ * @retval	STATUS_LAUNCHING
+ * @retval	STATUS_CREATED
+ * @retval	STATUS_FOCUS
+ * @retval	STATUS_VISIBLE
+ * @retval	STATUS_BG
+ * @retval	STATUS_DYING
+ * @retval	STATUS_HOME
+ * @retval	STATUS_NORESTART
+ *
+ * @remark
+ *	This API is only available in System Session.
+ */
+int aul_app_get_status_bypid_for_uid(int pid, uid_t uid);
+
+/**
  * @par Description
  * 	This API sets callback function that on application status changed.
  * @par Purpose:
@@ -1898,7 +2112,17 @@ int aul_pause_app(const char *appid);
 /*
  * This API is only for Appfw internally.
  */
+int aul_pause_app_for_uid(const char *appid, uid_t uid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 int aul_pause_pid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_pause_pid_for_uid(int pid, uid_t uid);
 
 /*
  * This API is only for Appfw internally.
@@ -2047,6 +2271,25 @@ int aul_add_loader(const char *loader_path, bundle *extra);
 
 /**
  * @par Description:
+ *	This API create custom launchpad-loader
+ * @par Purpose:
+ *      This API's purpose is to make a slot for custom loader.
+ *      Once it is made, added loader will make a candidate process to use.
+ *
+ * @param[in]	loader_path	The file name of the custom loader binary including full path
+ * @param[in]	extra		A bundle to be passed to the custom loader
+ * @param[in]	uid		User ID
+ * @return	Loader ID if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only for Appfw internally.
+ *	This API is only available in System Session.
+*/
+int aul_add_loader_for_uid(const char *loader_path, bundle *extra, uid_t uid);
+
+
+/**
+ * @par Description:
  *	This API destroy custom launchpad-loader
  * @par Purpose:
  *      This API's purpose is to remove a slot for custom loader.
@@ -2062,6 +2305,23 @@ int aul_add_loader(const char *loader_path, bundle *extra);
 int aul_remove_loader(int loader_id);
 
 /**
+ * @par Description:
+ *	This API destroy custom launchpad-loader
+ * @par Purpose:
+ *      This API's purpose is to remove a slot for custom loader.
+ *      Once it is removed, the prepared process will be removed as well.
+ *
+ * @param[in]	loader_id	Loader ID
+ * @param[in]	uid		User ID
+ * @return	0 if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only for Appfw internally.
+ *	This API is only available in System Session.
+*/
+int aul_remove_loader_for_uid(int loader_id, uid_t uid);
+
+/**
  * @par Description
  *	This API gets specified application process id.
  * @par Purpose:
@@ -2075,6 +2335,20 @@ int aul_remove_loader(int loader_id);
  */
 int aul_app_get_pid(const char *appid);
 
+/**
+ * @par Description
+ *	This API gets specified application process id.
+ * @par Purpose:
+ *	The purpose of this API is to get the pid of specified application.
+ *
+ * @param[in]	appid	application name
+ * @param[in]	uid	User ID
+ * @return	callee's pid if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only available in System Session.
+ */
+int aul_app_get_pid_for_uid(const char *appid, uid_t uid);
 
 /**
  * @par Description:

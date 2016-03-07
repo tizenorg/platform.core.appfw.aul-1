@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <bundle_internal.h>
 
 #include "aul.h"
 #include "aul_api.h"
@@ -48,6 +49,19 @@ API int aul_app_get_pid(const char *appid)
 	return ret;
 }
 
+API int aul_app_get_pid_for_uid(const char *appid, uid_t uid)
+{
+	int ret = 0;
+
+	if (appid == NULL)
+		return -1;
+
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_PID,
+			(unsigned char *)appid, strlen(appid), AUL_SOCK_NONE);
+
+	return ret;
+}
+
 API int aul_app_is_running(const char *appid)
 {
 	return aul_app_is_running_for_uid(appid, getuid());
@@ -72,18 +86,38 @@ API int aul_app_is_running_for_uid(const char *appid, uid_t uid)
 API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 					void *user_param)
 {
+	return aul_app_get_running_app_info_for_uid(enum_fn, user_param, getuid());;
+}
+
+API int aul_app_get_running_app_info_for_uid(aul_app_info_iter_fn enum_fn,
+					void *user_param, uid_t uid)
+{
 	app_pkt_t *pkt = NULL;
 	char *saveptr1, *saveptr2;
 	char *token;
 	char *pkt_data;
 	aul_app_info info;
+	bundle *kb;
+	char buf[MAX_UID_STR_BUFSZ];
 
 	memset(&info, 0, sizeof(info));
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_RUNNING_INFO, NULL, 0, AUL_SOCK_NONE);
+	kb = bundle_create();
+	if (kb == NULL) {
+		_E("out of memory");
+		return AUL_R_ERROR;
+	}
+
+	if (getuid() != uid) {
+		snprintf(buf, sizeof(buf), "%d", uid);
+		bundle_add(kb, AUL_K_TARGET_UID, buf);
+	}
+
+	pkt = aul_sock_send_bundle_with_pkt_reply(AUL_UTIL_PID, uid,
+			APP_RUNNING_INFO, kb, AUL_SOCK_NONE);
+	bundle_free(kb);
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
@@ -111,19 +145,39 @@ API int aul_app_get_running_app_info(aul_app_info_iter_fn enum_fn,
 API int aul_app_get_all_running_app_info(aul_app_info_iter_fn enum_fn,
 					void *user_param)
 {
+	return aul_app_get_all_running_appinfo_for_uid(enum_fn, user_param, getuid());
+}
+
+API int aul_app_get_all_running_app_info_for_uid(aul_app_info_iter_fn enum_fn,
+					void *user_param, uid_t uid)
+{
 	app_pkt_t *pkt;
 	char *saveptr1;
 	char *saveptr2;
 	char *token;
 	char *pkt_data;
 	aul_app_info info;
+	bundle *kb;
+	char buf[MAX_UID_STR_BUFSZ];
 
 	memset(&info, 0, sizeof(info));
 	if (enum_fn == NULL)
 		return AUL_R_EINVAL;
 
-	pkt = aul_sock_send_raw_with_pkt_reply(AUL_UTIL_PID, getuid(),
-			APP_ALL_RUNNING_INFO, NULL, 0, AUL_SOCK_NONE);
+	kb = bundle_create();
+	if (kb == NULL) {
+		_E("out of memory");
+		return AUL_R_ERROR;
+	}
+
+	if (getuid() != uid) {
+		snprintf(buf, sizeof(buf), "%d", uid);
+		bundle_add(kb, AUL_K_TARGET_UID, buf);
+	}
+
+	pkt = aul_sock_send_bundle_with_pkt_reply(AUL_UTIL_PID, uid,
+			APP_ALL_RUNNING_INFO, kb, AUL_SOCK_NONE);
+	bundle_free(kb);
 	if (pkt == NULL)
 		return AUL_R_ERROR;
 
