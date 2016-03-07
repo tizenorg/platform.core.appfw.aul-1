@@ -391,6 +391,10 @@ API int aul_sock_send_raw_async(int pid, uid_t uid, int cmd, unsigned char *kb_d
 		return -ECOMM;
 
 	__send_raw_async_with_fd(fd, cmd, kb_data, datalen, opt);
+	if (opt & AUL_SOCK_CLOSE) {
+		close(fd);
+		return 0;
+	}
 
 	return fd;
 }
