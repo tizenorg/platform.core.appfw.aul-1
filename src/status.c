@@ -64,12 +64,17 @@ API int aul_status_update(int status)
 
 API  int aul_app_get_status_bypid(int pid)
 {
+	return aul_app_get_status_bypid_for_uid(pid, getuid());
+}
+
+API  int aul_app_get_status_bypid_for_uid(int pid, uid_t uid)
+{
 	int ret;
 
 	if (pid == getpid())
 		return app_status;
 
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GET_STATUS,
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_STATUS,
 			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_NONE);
 
 	return ret;
