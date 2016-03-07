@@ -466,7 +466,7 @@ static int update_running_list()
 	return 0;
 }
 
-int launch_async_test()
+static int launch_async_test()
 {
 	static int num = 0;
 	int ret = 0;
@@ -487,7 +487,7 @@ int launch_async_test()
 	return ret;
 }
 
-int launch_async_test_for_uid()
+static int launch_async_test_for_uid()
 {
 	static int num = 0;
 	int ret = 0;
@@ -506,6 +506,100 @@ int launch_async_test_for_uid()
 		kb = NULL;
 	}
 	return ret;
+}
+
+static int open_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_open_app_for_uid %d test] %s \n", num++, gargv[2]);
+	return aul_open_app_for_uid(gargv[2], atoi(gargv[3]));
+}
+
+static int resume_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_resume_app_for_uid %d test] %s \n", num++, gargv[2]);
+	return aul_resume_app_for_uid(gargv[2], atoi(gargv[3]));
+}
+
+static int resume_pid_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_resume_pid_for_uid %d test] %d \n", num++, apn_pid);
+	return aul_resume_pid_for_uid(apn_pid, atoi(gargv[3]));
+}
+
+static int term_pid_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_terminate_pid_for_uid %d test] %d \n", num++, apn_pid);
+	return aul_terminate_pid_for_uid(apn_pid, atoi(gargv[3]));
+}
+
+static int term_pid_async_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_terminate_pid_async_for_uid %d test] %d \n", num++, apn_pid);
+	return aul_terminate_pid_async_for_uid(apn_pid, atoi(gargv[3]));
+}
+
+static int get_allpkg_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_app_get_running_app_info_for_uid %d test] \n", num++);
+	return aul_app_get_running_app_info_for_uid(iterfunc, NULL, atoi(gargv[3]));
+}
+
+static int get_all_app_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_app_get_all_running_app_info_for_uid %d test] \n", num++);
+	return aul_app_get_all_running_app_info_for_uid(iterfunc_status, NULL, atoi(gargv[2]));
+}
+
+static int get_status_pid_for_uid()
+{
+	int ret;
+
+	ret = aul_app_get_status_bypid_for_uid(apn_pid, atoi(gargv[3]));
+
+	printf("pid: %d uid: %d status: %d", apn_pid, atoi(gargv[3]), ret);
+	if (ret >= STATUS_LAUNCHING && ret <= STATUS_NORESTART)
+		printf("(%s)", status_text[ret]);
+	printf("\n");
+
+	return 0;
+}
+
+static int get_pid_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_app_get_pid_for_uid %d test] %s \n", num++, gargv[2]);
+	return aul_app_get_pid_for_uid(gargv[2], atoi(gargv[3]));
+}
+
+static int pause_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_pause_app_for_uid %d test] %s \n", num++, gargv[2]);
+	return aul_pause_app_for_uid(gargv[2], atoi(gargv[3]));
+}
+
+static int pause_pid_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_pause_pid_for_uid %d test] %d \n", num++, apn_pid);
+	return aul_pause_pid_for_uid(apn_pid, atoi(gargv[3]));
 }
 
 /*
@@ -669,6 +763,28 @@ static test_func_t test_func[] = {
 		"[usage] launch_async <appid> <key1> <val1> <key2> <val2> ..."},
 	{"launch_async_for_uid", launch_async_test_for_uid, "aul_launch_app_async_for_uid test",
 		"[usage] launch_async_for_uid <appid> <uid> <key1> <val1> <key2> <val2> ..."},
+	{"open_for_uid", open_test_for_uid, "aul_open_app_for_uid test",
+		"[usage] open_for_uid <appid> <uid>"},
+	{"resume_for_uid", resume_test_for_uid, "aul_resume_app_for_uid test",
+		"[usage] resume_for_uid <appid> <uid>"},
+	{"resume_pid_for_uid", resume_pid_test_for_uid, "aul_resume_pid_for_uid test",
+		"[usage] resume_pid_for_uid <pid> <uid>"},
+	{"term_pid_for_uid", term_pid_test_for_uid, "aul_terminate_pid_for_uid test",
+		"[usage] term_pid_for_uid <pid> <uid>"},
+	{"term_pid_async_for_uid", term_pid_async_test_for_uid, "aul_terminate_pid_async_for_uid test",
+		"[usage] term_pid_async_for_uid <pid> <uid>"},
+	{"getallpkg_for_uid", get_allpkg_test_for_uid, "aul_app_get_running_app_info_for_uid test",
+		"[usage] getallpkg_for_uid all <uid>"},
+	{"getallappstatus_for_uid", get_all_app_test_for_uid, "aul_app_get_all_running_app_info_for_uid test",
+		"[usage] getallappstatus_for_uid <uid>"},
+	{"get_status_pid_for_uid", get_status_pid_for_uid, "aul_app_get_status_bypid_for_uid test",
+		"[usage] get_status_pid_for_uid <pid> <uid>"},
+	{"get_pid_for_uid", get_pid_for_uid, "aul_app_get_pid_for_uid test",
+		"[usage] get_pid_for_uid <appid> <uid>"},
+	{"pause_for_uid", pause_test_for_uid, "aul_pause_app_for_uid test",
+		"[usage] pasue_for_uid <appid> <uid>"},
+	{"pause_pid_for_uid", pause_pid_test_for_uid, "aul_pause_pid_for_uid test",
+		"[usage] pause_pid_for_uid <pid> <uid>"},
 };
 
 int callfunc(char *testname)
