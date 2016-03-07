@@ -75,6 +75,19 @@ API  int aul_app_get_status_bypid(int pid)
 	return ret;
 }
 
+API  int aul_app_get_status_bypid_for_uid(int pid, uid_t uid)
+{
+	int ret;
+
+	if (pid == getpid())
+		return app_status;
+
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_STATUS,
+			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_NONE);
+
+	return ret;
+}
+
 API int aul_add_status_local_cb(int (*func)(int status, void *data), void *data)
 {
 	app_status_cb_info_t *cb = app_status_cb;
