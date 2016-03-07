@@ -308,6 +308,7 @@ static void __clear_internal_key(bundle *kb)
 	bundle_del(kb, AUL_K_WAIT_RESULT);
 	bundle_del(kb, AUL_K_SEND_RESULT);
 	bundle_del(kb, AUL_K_ARGV0);
+	bundle_del(kb, AUL_K_TARGET_UID);
 }
 
 static inline void __set_stime(bundle *kb)
@@ -415,6 +416,7 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	int must_free = 0;
 	int ret = 0;
 	bundle *b;
+	char buf[MAX_UID_STR_BUFSZ];
 
 	traceBegin(TTRACE_TAG_APPLICATION_MANAGER, "AUL:REQ_TO_PAD");
 	SECURE_LOGD("launch request : %s", appid);
@@ -423,6 +425,11 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 		must_free = 1;
 	} else {
 		__clear_internal_key(kb);
+	}
+
+	if (getuid() != uid) {
+		snprintf(buf, sizeof(buf), "%u", uid);
+		bundle_add(kb, AUL_K_TARGET_UID, buf);
 	}
 
 	bundle_add(kb, AUL_K_APPID, appid);
@@ -675,11 +682,9 @@ API int aul_launch_app(const char *appid, bundle *kb)
 API int aul_launch_app_for_uid(const char *appid, bundle *kb, uid_t uid)
 {
 	int ret;
-	char buf[MAX_PID_STR_BUFSZ];
+
 	if (appid == NULL)
 		return AUL_R_EINVAL;
-	snprintf(buf, MAX_UID_STR_BUFSZ, "%d", uid);
-	bundle_add(kb, AUL_K_TARGET_UID, buf);
 
 	ret = app_request_to_launchpad_for_uid(APP_START, appid, kb, uid);
 	return ret;
@@ -696,6 +701,17 @@ API int aul_open_app(const char *appid)
 	return ret;
 }
 
+API int aul_open_app_for_uid(const char *appid, uid_t uid)
+{
+	int ret;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad_for_uid(APP_OPEN, appid, NULL, uid);
+	return ret;
+}
+
 API int aul_resume_app(const char *appid)
 {
 	int ret;
@@ -704,6 +720,17 @@ API int aul_resume_app(const char *appid)
 		return AUL_R_EINVAL;
 
 	ret = app_request_to_launchpad(APP_RESUME, appid, NULL);
+	return ret;
+}
+
+API int aul_resume_app_for_uid(const char *appid, uid_t uid)
+{
+	int ret;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad_for_uid(APP_RESUME, appid, NULL, uid);
 	return ret;
 }
 
@@ -720,6 +747,19 @@ API int aul_resume_pid(int pid)
 	return ret;
 }
 
+API int aul_resume_pid_for_uid(int pid, uid_t uid)
+{
+	char pkgname[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad_for_uid(APP_RESUME_BY_PID, pkgname, NULL, uid);
+	return ret;
+}
+
 API int aul_terminate_pid(int pid)
 {
 	char pkgname[MAX_PID_STR_BUFSZ];
@@ -730,6 +770,19 @@ API int aul_terminate_pid(int pid)
 
 	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_TERM_BY_PID, pkgname, NULL);
+	return ret;
+}
+
+API int aul_terminate_pid_for_uid(int pid, uid_t uid)
+{
+	char pkgname[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad_for_uid(APP_TERM_BY_PID, pkgname, NULL, uid);
 	return ret;
 }
 
@@ -769,6 +822,19 @@ API int aul_terminate_pid_async(int pid)
 
 	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_TERM_BY_PID_ASYNC, pkgname, NULL);
+	return ret;
+}
+
+API int aul_terminate_pid_async_for_uid(int pid, uid_t uid)
+{
+	char pkgname[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pkgname, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad_for_uid(APP_TERM_BY_PID_ASYNC, pkgname, NULL, uid);
 	return ret;
 }
 
@@ -838,6 +904,17 @@ API int aul_pause_app(const char *appid)
 	return ret;
 }
 
+API int aul_pause_app_for_uid(const char *appid, uid_t uid)
+{
+	int ret;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	ret = app_request_to_launchpad_for_uid(APP_PAUSE, appid, NULL, uid);
+	return ret;
+}
+
 API int aul_pause_pid(int pid)
 {
 	char app_pid[MAX_PID_STR_BUFSZ];
@@ -848,6 +925,19 @@ API int aul_pause_pid(int pid)
 
 	snprintf(app_pid, MAX_PID_STR_BUFSZ, "%d", pid);
 	ret = app_request_to_launchpad(APP_PAUSE_BY_PID, app_pid, NULL);
+	return ret;
+}
+
+API int aul_pause_pid_for_uid(int pid, uid_t uid)
+{
+	char app_pid[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(app_pid, MAX_PID_STR_BUFSZ, "%d", pid);
+	ret = app_request_to_launchpad_for_uid(APP_PAUSE_BY_PID, app_pid, NULL, uid);
 	return ret;
 }
 
@@ -944,10 +1034,16 @@ API int aul_check_tep_mount(const char *tep_path)
 
 API int aul_add_loader(const char *loader_path, bundle *kb)
 {
+	return aul_add_loader_for_uid(loader_path, kb, getuid());
+}
+
+API int aul_add_loader_for_uid(const char *loader_path, bundle *kb, uid_t uid)
+{
 	int ret;
 	bundle *b;
 	bundle_raw *kb_raw;
 	int len;
+	char buf[MAX_UID_STR_BUFSZ];
 
 	if (loader_path == NULL)
 		return AUL_R_EINVAL;
@@ -959,7 +1055,7 @@ API int aul_add_loader(const char *loader_path, bundle *kb)
 	bundle_add_str(b, AUL_K_LOADER_PATH, loader_path);
 
 	if (kb) {
-		ret = bundle_encode(b, &kb_raw, &len);
+		ret = bundle_encode(kb, &kb_raw, &len);
 		if (ret != BUNDLE_ERROR_NONE) {
 			bundle_free(b);
 			return AUL_R_EINVAL;
@@ -968,7 +1064,10 @@ API int aul_add_loader(const char *loader_path, bundle *kb)
 		bundle_add_str(b, AUL_K_LOADER_EXTRA, (const char *)kb_raw);
 	}
 
-	ret = app_send_cmd(AUL_UTIL_PID, APP_ADD_LOADER, b);
+	snprintf(buf, sizeof(buf), "%d", uid);
+	bundle_add_str(b, AUL_K_TARGET_UID, buf);
+
+	ret = app_send_cmd_for_uid(AUL_UTIL_PID, uid, APP_ADD_LOADER, b);
 
 	bundle_free(b);
 	if (kb_raw)
@@ -979,17 +1078,31 @@ API int aul_add_loader(const char *loader_path, bundle *kb)
 
 API int aul_remove_loader(int loader_id)
 {
+	return aul_remove_loader_for_uid(loader_id, getuid());
+}
+
+API int aul_remove_loader_for_uid(int loader_id, uid_t uid)
+{
 	char lid[MAX_PID_STR_BUFSZ];
 	int ret;
 	bundle *b;
+	char buf[MAX_UID_STR_BUFSZ];
 
 	if (loader_id <= 0)
 		return AUL_R_EINVAL;
 
 	b = bundle_create();
-	snprintf(lid, MAX_PID_STR_BUFSZ, "%d", loader_id);
+	if (b == NULL) {
+		_E("out of memory");
+		return AUL_R_ERROR;
+	}
+
+	snprintf(lid, sizeof(lid), "%d", loader_id);
 	bundle_add_str(b, AUL_K_LOADER_ID, lid);
-	ret = app_send_cmd(AUL_UTIL_PID, APP_REMOVE_LOADER, b);
+	snprintf(buf, sizeof(buf), "%d", uid);
+	bundle_add_str(b, AUL_K_TARGET_UID, buf);
+
+	ret = app_send_cmd_for_uid(AUL_UTIL_PID, uid, APP_REMOVE_LOADER, b);
 	bundle_free(b);
 
 	return ret;
@@ -1028,12 +1141,9 @@ API int aul_launch_app_async(const char *appid, bundle *kb)
 API int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid)
 {
 	int ret;
-	char buf[MAX_PID_STR_BUFSZ];
 
 	if (appid == NULL)
 		return AUL_R_EINVAL;
-	snprintf(buf, sizeof(buf), "%d", uid);
-	bundle_add(kb, AUL_K_TARGET_UID, buf);
 
 	ret = app_request_to_launchpad_for_uid(APP_START_ASYNC, appid, kb, uid);
 	return ret;
