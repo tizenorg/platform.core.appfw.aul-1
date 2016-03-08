@@ -51,95 +51,6 @@ static int (*cooldown_handler) (const char *cooldown_status, void *data);
 static void *cooldown_data;
 
 static GDBusConnection *system_conn = NULL;
-static GDBusConnection *session_conn = NULL;
-
-static void __session_dbus_signal_handler(GDBusConnection *connection,
-					const gchar *sender_name,
-					const gchar *object_path,
-					const gchar *interface_name,
-					const gchar *signal_name,
-					GVariant *parameters,
-					gpointer user_data)
-{
-	guint pid;
-	gchar *appid;
-
-	if (g_strcmp0(signal_name, AUL_DBUS_APPDEAD_SIGNAL) == 0) {
-		g_variant_get(parameters, "(u)", &pid);
-
-		if (app_dead_handler)
-			app_dead_handler((int)pid, app_dead_data);
-	} else if (g_strcmp0(signal_name, AUL_DBUS_APPLAUNCH_SIGNAL) == 0) {
-		g_variant_get(parameters, "(us)", &pid, &appid);
-
-		if (app_launch_handler)
-			app_launch_handler((int)pid, app_launch_data);
-
-		if (app_launch_handler2)
-			app_launch_handler2((int)pid,
-					(const char *)appid, app_launch_data2);
-
-		g_free(appid);
-	}
-}
-
-static guint __session_dbus_register_signal(const char *object_path,
-					const char *interface_name,
-					const char *signal_name)
-{
-	guint s_id;
-	GError *err = NULL;
-	GDBusConnection *conn = NULL;
-
-	if (session_conn == NULL) {
-		conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &err);
-		if (conn == NULL) {
-			_E("g_bus_get_sync() is failed. %s", err->message);
-			g_error_free(err);
-			return 0;
-		}
-		session_conn = conn;
-	}
-
-	s_id = g_dbus_connection_signal_subscribe(session_conn,
-					NULL,
-					interface_name,
-					signal_name,
-					object_path,
-					NULL,
-					G_DBUS_SIGNAL_FLAGS_NONE,
-					__session_dbus_signal_handler,
-					NULL,
-					NULL);
-	if (s_id == 0) {
-		_E("g_dbus_connection_signal_subscribe() is failed.");
-		if (conn) {
-			g_object_unref(conn);
-			session_conn = NULL;
-		}
-	}
-
-	g_clear_error(&err);
-
-	return s_id;
-}
-
-static guint __session_dbus_unregister_signal(guint s_id)
-{
-	if (session_conn == NULL)
-		return s_id;
-
-	g_dbus_connection_signal_unsubscribe(session_conn, s_id);
-
-	if (app_dead_handler == NULL
-			&& app_launch_handler == NULL
-			&& app_launch_handler2 == NULL) {
-		g_object_unref(session_conn);
-		session_conn = NULL;
-	}
-
-	return 0;
-}
 
 static void __system_dbus_signal_handler(GDBusConnection *connection,
 					const gchar *sender_name,
@@ -152,6 +63,8 @@ static void __system_dbus_signal_handler(GDBusConnection *connection,
 	gchar *cooldown_status;
 	gint pid = -1;
 	gint status;
+	guint upid;
+	gchar *appid;
 
 	if (g_strcmp0(signal_name, SYSTEM_SIGNAL_BOOTING_DONE) == 0) {
 		if (booting_done_handler)
@@ -171,6 +84,22 @@ static void __system_dbus_signal_handler(GDBusConnection *connection,
 					cooldown_data);
 
 		g_free(cooldown_status);
+	}else if (g_strcmp0(signal_name, AUL_DBUS_APPDEAD_SIGNAL) == 0) {
+		g_variant_get(parameters, "(u)", &upid);
+
+		if (app_dead_handler)
+			app_dead_handler((int)upid, app_dead_data);
+	} else if (g_strcmp0(signal_name, AUL_DBUS_APPLAUNCH_SIGNAL) == 0) {
+		g_variant_get(parameters, "(us)", &upid, &appid);
+
+		if (app_launch_handler)
+			app_launch_handler((int)upid, app_launch_data);
+
+		if (app_launch_handler2)
+			app_launch_handler2((int)upid,
+					(const char *)appid, app_launch_data2);
+
+		g_free(appid);
 	}
 }
 
@@ -224,7 +153,10 @@ static guint __system_dbus_unregister_signal(guint s_id)
 
 	if (booting_done_handler == NULL
 			&& status_handler == NULL
-			&& cooldown_handler == NULL) {
+			&& cooldown_handler == NULL
+			&& app_dead_handler == NULL
+			&& app_launch_handler == NULL
+			&& app_launch_handler2 == NULL) {
 		g_object_unref(system_conn);
 		system_conn = NULL;
 	}
@@ -238,14 +170,14 @@ API int aul_listen_app_dead_signal(int (*func)(int, void *), void *data)
 	app_dead_data = data;
 
 	if (app_dead_handler && app_dead_subscription_id == 0) {
-		app_dead_subscription_id = __session_dbus_register_signal(
+		app_dead_subscription_id = __system_dbus_register_signal(
 					AUL_DBUS_PATH,
 					AUL_DBUS_SIGNAL_INTERFACE,
 					AUL_DBUS_APPDEAD_SIGNAL);
 		if (app_dead_subscription_id == 0)
 			return AUL_R_ERROR;
 	} else if (app_dead_handler == NULL && app_dead_subscription_id) {
-		app_dead_subscription_id = __session_dbus_unregister_signal(
+		app_dead_subscription_id = __system_dbus_unregister_signal(
 					app_dead_subscription_id);
 		if (app_dead_subscription_id)
 			return AUL_R_ERROR;
@@ -260,14 +192,14 @@ API int aul_listen_app_launch_signal(int (*func)(int, void *), void *data)
 	app_launch_data = data;
 
 	if (app_launch_handler && app_launch_subscription_id == 0) {
-		app_launch_subscription_id = __session_dbus_register_signal(
+		app_launch_subscription_id = __system_dbus_register_signal(
 					AUL_DBUS_PATH,
 					AUL_DBUS_SIGNAL_INTERFACE,
 					AUL_DBUS_APPLAUNCH_SIGNAL);
 		if (app_launch_subscription_id == 0)
 			return AUL_R_ERROR;
 	} else if (app_launch_handler == NULL && app_launch_subscription_id) {
-		app_launch_subscription_id = __session_dbus_unregister_signal(
+		app_launch_subscription_id = __system_dbus_unregister_signal(
 					app_launch_subscription_id);
 		if (app_launch_subscription_id)
 			return AUL_R_ERROR;
@@ -283,14 +215,14 @@ API int aul_listen_app_launch_signal_v2(int (*func)(int, const char *, void *),
 	app_launch_data2 = data;
 
 	if (app_launch_handler2 && app_launch_subscription_id2 == 0) {
-		app_launch_subscription_id2 = __session_dbus_register_signal(
+		app_launch_subscription_id2 = __system_dbus_register_signal(
 					AUL_DBUS_PATH,
 					AUL_DBUS_SIGNAL_INTERFACE,
 					AUL_DBUS_APPLAUNCH_SIGNAL);
 		if (app_launch_subscription_id2 == 0)
 			return AUL_R_ERROR;
 	} else if (app_launch_handler == NULL && app_launch_subscription_id2) {
-		app_launch_subscription_id2 = __session_dbus_unregister_signal(
+		app_launch_subscription_id2 = __system_dbus_unregister_signal(
 					app_launch_subscription_id2);
 		if (app_launch_subscription_id2)
 			return AUL_R_ERROR;
