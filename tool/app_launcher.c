@@ -44,6 +44,8 @@
 
 static GMainLoop *mainloop = NULL;
 
+static uid_t uid;
+
 struct launch_arg {
 	char appid[256];
 	char **argv;
@@ -99,7 +101,7 @@ static gboolean run_func(void *data)
 		aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
 	}
 
-	pid = aul_launch_app((char *)launch_arg_data->appid, kb);
+	pid = aul_launch_app_for_uid((char *)launch_arg_data->appid, kb, uid);
 
 	if (kb) {
 		bundle_free(kb);
@@ -181,7 +183,7 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 	if (kb == NULL)
 		return -1;
 
-	ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, getuid(), &handle);
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &handle);
 	if (ret != PMINFO_R_OK)
 		return -1;
 
@@ -263,7 +265,7 @@ static gboolean fast_run_func(void *data)
 	}
 
 	pid = app_send_cmd_to_launchpad(LAUNCHPAD_PROCESS_POOL_SOCK,
-			getuid(), 0, kb);
+			uid, 0, kb);
 	bundle_free(kb);
 	if (pid > 0) {
 		printf("... successfully launched pid = %d\n", pid);
@@ -297,6 +299,7 @@ static void print_usage(char *program)
 			"   -f [tizen application ID] --fast-start        Fast launch app with tizen application ID\n"
 			"   -e [tizen application ID] --direct-start      Direct Launch app with tizen application ID\n"
 			"   -d                        --debug             Activate debug mode\n"
+			"   -u [uid]                  --user              Specify user. Use with other commands.\n"
 	      );
 }
 
@@ -322,12 +325,12 @@ static int list_app(void)
 {
 	int ret = 0;
 
-	printf("\tApplication List for user %lu\n", (long)getuid());
+	printf("\tApplication List for user %lu\n", (long)uid);
 	printf("\tUser's Application \n");
 	printf("\t Name \t AppID \n");
 	printf("\t=================================================\n");
 	if (pkgmgrinfo_appinfo_get_usr_installed_list(__appinfo_list_cb,
-				getuid(), NULL) != PMINFO_R_OK)
+				uid, NULL) != PMINFO_R_OK)
 		ret = -1;
 	printf("\t=================================================\n");
 	return ret;
@@ -355,7 +358,7 @@ static int __iterfunc_term(const aul_app_info *info, void *data)
 	if (!data)
 		return 0;
 	if (strcmp(info->appid, data) == 0) {
-		aul_terminate_pid(info->pid);
+		aul_terminate_pid_for_uid(info->pid, uid);
 		printf("\t Terminate appId: %s (%d)\n", info->appid, info->pid);
 	}
 	return 0;
@@ -379,7 +382,7 @@ static int is_app_installed(char *appid)
 	}
 
 	if (pkgmgrinfo_appinfo_usr_filter_count(filter, &is_installed,
-				getuid())) {
+				uid)) {
 		printf("Failed to get filter count\n");
 		pkgmgrinfo_appinfo_filter_destroy(filter);
 		return -1;
@@ -413,14 +416,17 @@ int main(int argc, char **argv)
 		{ "fast-launch", required_argument, 0, 'f' },
 		{ "direct-launch", required_argument, 0, 'e' },
 		{ "debug", no_argument, 0, 'd' },
+		{ "user", required_argument, 0, 'u' },
 		{ 0, 0, 0, 0 }
 	};
 	memset(&args, 0, sizeof(struct launch_arg));
 
+	uid = getuid();
+
 	do {
 		next_opt = getopt_long(argc,
 				argv,
-				"hlSs:k:t:r:f:e:d",
+				"hlSs:k:t:r:f:e:du:",
 				long_options,
 				&opt_idx);
 
@@ -434,23 +440,14 @@ int main(int argc, char **argv)
 		case 'l':
 			if (disp_list)
 				break;
-			if (list_app()) {
-				printf("Fail to display the list of "
-						"installed applications\n");
-				return -1;
-			}
+
+			op = next_opt;
 			disp_list = true;
 			break;
 		case 'S':
 			if (disp_run_list)
 				break;
-			printf("\t appId (PID)\n");
-			if (aul_app_get_running_app_info(__iterfunc_status,
-						NULL)) {
-				printf("Fail to display the list of "
-						"Running applications\n");
-				return -1;
-			}
+			op = next_opt;
 			disp_run_list = true;
 			break;
 		case 's':
@@ -474,6 +471,9 @@ int main(int argc, char **argv)
 			break;
 		case -1:
 			break;
+		case 'u':
+			uid = atoi(optarg);
+			break;	
 		default:
 			print_usage(argv[0]);
 			break;
@@ -483,6 +483,22 @@ int main(int argc, char **argv)
 	if (argc == 1)
 		print_usage(argv[0]);
 
+	if (op == 'S') {
+		printf("\t appId (PID)\n");
+		if (aul_app_get_running_app_info_for_uid(__iterfunc_status,
+					NULL, uid)) {
+			printf("Fail to display the list of "
+					"Running applications\n");
+			return -1;
+		}
+	} else if (op == 'l') {
+		if (list_app()) {
+			printf("Fail to display the list of "
+					"installed applications\n");
+			return -1;
+		}
+	}
+
 	if (optind < argc) {
 		args.argc = argc - optind;
 		args.argv = &argv[optind];
@@ -491,7 +507,7 @@ int main(int argc, char **argv)
 		if (is_app_installed(args.appid) <= 0) {
 			printf("The app with ID: %s is not avaible "
 					"for the user %d \n",
-					args.appid, getuid());
+					args.appid, uid);
 			return -1;
 		}
 	}
@@ -502,7 +518,6 @@ int main(int argc, char **argv)
 			return -1;
 		}
 		args.op = op;
-		aul_launch_init(NULL, NULL);
 		g_idle_add(run_func, args.appid);
 		mainloop = g_main_loop_new(NULL, FALSE);
 		if (!mainloop) {
@@ -512,25 +527,25 @@ int main(int argc, char **argv)
 		g_main_loop_run(mainloop);
 		return 0;
 	} else if (op == 'k') {
-		is_running = aul_app_is_running(args.appid);
+		is_running = aul_app_is_running_for_uid(args.appid, uid);
 		if (true == is_running) {
-			aul_app_get_running_app_info(__iterfunc_kill,
-					args.appid);
+			aul_app_get_running_app_info_for_uid(__iterfunc_kill,
+					args.appid, uid);
 		} else {
 			printf("result: %s\n", "App isn't running");
 			return 1;
 		}
 	} else if (op == 't') {
-		is_running = aul_app_is_running(args.appid);
+		is_running = aul_app_is_running_for_uid(args.appid, uid);
 		if (true == is_running) {
-			aul_app_get_running_app_info(__iterfunc_term,
-					args.appid);
+			aul_app_get_running_app_info_for_uid(__iterfunc_term,
+					args.appid, uid);
 		} else {
 			printf("result: %s\n", "App isn't running");
 			return 1;
 		}
 	} else if (op == 'r') {
-		is_running = aul_app_is_running(args.appid);
+		is_running = aul_app_is_running_for_uid(args.appid, uid);
 		if (true == is_running) {
 			printf("result: %s\n", "running");
 			return 0;
@@ -543,10 +558,9 @@ int main(int argc, char **argv)
 			printf("result: failed\n");
 			return -1;
 		}
-		aul_launch_init(NULL, NULL);
 
 		snprintf(path, sizeof(path), "/run/user/%d/%s",
-						getuid(), AMD_READY);
+						uid, AMD_READY);
 		if (access(path, F_OK) == 0)
 			g_idle_add(run_func, args.appid);
 		else
