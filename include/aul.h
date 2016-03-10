@@ -56,7 +56,8 @@ enum app_status {
 	STATUS_DYING,
 	STATUS_HOME,
 	STATUS_NORESTART,
-	STATUS_SERVICE
+	STATUS_SERVICE,
+	STATUS_UNFOCUS,
 };
 
 typedef enum _aul_type{
@@ -1699,6 +1700,7 @@ int aul_listen_app_launch_signal_v2(int (*func) (int, const char *, void *), voi
  * @retval	STATUS_DYING
  * @retval	STATUS_HOME
  * @retval	STATUS_NORESTART
+ * @retval	STATUS_UNFOCUS
  * @see
  *	aul_status_update
  * @code
@@ -1745,6 +1747,7 @@ int aul_app_get_status_bypid(int pid);
  * @retval	STATUS_DYING
  * @retval	STATUS_HOME
  * @retval	STATUS_NORESTART
+ * @retval	STATUS_UNFOCUS
  *
  * @remark
  *	This API is only available to System user.
@@ -1777,7 +1780,7 @@ int aul_app_get_status_bypid_for_uid(int pid, uid_t uid);
  *	if (status == STATUS_VISIBLE)
  *		printf("%d resume\n", getpid());
  *
- *	if (status == STATUS_BG0
+ *	if (status == STATUS_BG)
  *		printf("%d pause\n", getpid());
  * }
  *

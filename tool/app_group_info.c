@@ -127,6 +127,9 @@ static void print_app_status(int status)
 	case STATUS_NORESTART:
 		printf("  - status   : STATUS_NORESTART \n");
 		break;
+	case STATUS_UNFOCUS:
+		printf("  - status   : STATUS_UNFOCUS \n");
+		break;
 	default:
 		printf("  - status error or unknown status\n");
 		break;

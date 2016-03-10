@@ -435,6 +435,7 @@ static char *status_text[] = {
 	"STATUS_HOME",
 	"STATUS_NORESTART",
 	"STATUS_SERVICE",
+	"STATUS_UNFOCUS",
 };
 
 static int get_status_pid()
