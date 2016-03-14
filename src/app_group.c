@@ -249,3 +249,20 @@ API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 	free(pkt);
 }
 
+API int aul_app_group_activate_below(const char *below_appid)
+{
+	int ret;
+	bundle *b;
+
+	if (below_appid == NULL)
+		return -1;
+
+	b = bundle_create();
+	bundle_add_str(b, AUL_K_APPID, below_appid);
+	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_ACTIVATE_BELOW, b);
+	bundle_free(b);
+
+	return ret;
+}
+
+
