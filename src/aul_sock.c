@@ -155,6 +155,9 @@ static int __create_client_sock(int pid, uid_t uid)
 		}
 	}
 
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+	uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
+#endif
 	saddr.sun_family = AF_UNIX;
 	if (pid == AUL_UTIL_PID)
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
