@@ -2142,31 +2142,6 @@ int aul_running_list_update(char *appid, char *app_path, char *pid);
 /*
  * This API is only for Appfw internally.
  */
-void aul_app_group_add(int leader_pid, int pid, int wid);
-
-/*
- * This API is only for Appfw internally.
- */
-void aul_app_group_remove(int pid);
-
-/*
- * This API is only for Appfw internally.
- */
-void aul_app_group_attach_window(int parent_wid, int child_wid);
-
-/*
- * This API is only for Appfw internally.
- */
-void aul_app_group_detach_window(int child_wid);
-
-/*
- * This API is only for Appfw internally.
- */
-int aul_app_group_get_window(int pid);
-
-/*
- * This API is only for Appfw internally.
- */
 int aul_app_group_get_window(int pid);
 
 /*
@@ -2213,6 +2188,22 @@ void aul_app_group_lower(int *exit);
  * This API is only for Appfw internally.
  */
 void aul_app_group_get_idle_pids(int *cnt, int **pids);
+
+/**
+ * @par Description:
+ *	This API puts some app below the caller app
+ * @par Purpose:
+ *      This API's purpose is to reorder window stack limitedly.
+ *
+ * @param[in]	blow_appid	The appid to be reordered below the caller app
+ * @return	Loader ID if success, negative value(<0) if fail
+ *
+ * @remark
+ *	The caller app should be resumed before calling this API.
+ *	blow_appid should be main app which have been launched before.
+ *	This API is only available in User Session.
+*/
+int aul_app_group_activate_below(const char *below_appid);
 
 /*
  * This API is only for Appfw internally.
