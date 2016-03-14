@@ -23,12 +23,21 @@
 #include <sys/xattr.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+#include <tzplatform_config.h>
+#endif
 
 #include "aul_api.h"
 #include "aul_sock.h"
 #include "aul_util.h"
 
 #define MAX_NR_OF_DESCRIPTORS 2
+
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+#define REGULAR_UID_MIN 5000
+static uid_t default_uid;
+static int default_uid_initialized;
+#endif
 
 static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, socklen_t salen,
 		   int nsec);
@@ -155,6 +164,16 @@ static int __create_client_sock(int pid, uid_t uid)
 		}
 	}
 
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+	if (uid < REGULAR_UID_MIN) {
+		if (!default_uid_initialized) {
+			default_uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
+			default_uid_initialized = 1;
+		}
+
+		uid = default_uid;
+	}
+#endif
 	saddr.sun_family = AF_UNIX;
 	if (pid == AUL_UTIL_PID)
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),

@@ -38,6 +38,12 @@ BuildRequires:  pkgconfig(tizen-extension-client)
 BuildRequires:  pkgconfig(libxml-2.0)
 %endif
 
+%if "%{?profile}" == "tv"
+%define appfw_feature_default_user 1
+%else
+%define appfw_feature_default_user 0
+%endif
+
 %description
 Application utility library
 
@@ -57,7 +63,6 @@ Requires:   %{name} = %{version}-%{release}
 %description test
 Application utility library (test tools)
 
-
 %prep
 %setup -q
 sed -i 's|TZ_SYS_DB|%{TZ_SYS_DB}|g' %{SOURCE1001}
@@ -68,14 +73,21 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
+%if 0%{?appfw_feature_default_user}
+_APPFW_FEATURE_DEFAULT_USER=ON
+%endif
+
 MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
-%cmake . -DFULLVER=%{version} -DMAJORVER=${MAJORVER} \
+%cmake -DFULLVER=%{version} \
+	-DMAJORVER=${MAJORVER} \
 %if %{with wayland}
--Dwith_wayland=TRUE\
+	-Dwith_wayland=TRUE \
 %endif
 %if %{with x}
--Dwith_x11=TRUE\
+	-Dwith_x11=TRUE \
 %endif
+	-D_APPFW_FEATURE_DEFAULT_USER:BOOL=${_APPFW_FEATURE_DEFAULT_USER} \
+	.
 
 %__make %{?_smp_mflags}
 
