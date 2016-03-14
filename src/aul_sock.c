@@ -23,6 +23,9 @@
 #include <sys/xattr.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+#include <tzplatform_config.h>
+#endif
 
 #include "aul_api.h"
 #include "aul_sock.h"
@@ -155,6 +158,9 @@ static int __create_client_sock(int pid, uid_t uid)
 		}
 	}
 
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+	uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
+#endif
 	saddr.sun_family = AF_UNIX;
 	if (pid == AUL_UTIL_PID)
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
