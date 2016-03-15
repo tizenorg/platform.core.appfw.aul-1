@@ -558,19 +558,17 @@ API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
 	if (!fd)
 		return AUL_R_EINVAL;
 
-	if (b)
+	if (b) {
 		__clear_internal_key(b);
-	else {
+	} else {
 		b = bundle_create();
 		if (!b)
 			return AUL_R_ERROR;
 	}
 
 	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), APP_GET_DC_SOCKET_PAIR, b, AUL_SOCK_ASYNC);
-
 	if (ret) {
 		ret = aul_sock_recv_reply_sock_fd(ret, fds, 1);
-
 		if (ret == 0)
 			fd[0] = fds[0];
 	}
@@ -589,8 +587,8 @@ API int aul_request_message_port_socket_pair(int *fd)
 	if (!fd)
 		return AUL_R_EINVAL;
 
-	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
-			APP_GET_MP_SOCKET_PAIR, NULL, AUL_SOCK_ASYNC);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+			APP_GET_MP_SOCKET_PAIR, NULL, 0, AUL_SOCK_ASYNC);
 	if (ret) {
 		ret = aul_sock_recv_reply_sock_fd(ret, fds, 2);
 		if (ret == 0) {

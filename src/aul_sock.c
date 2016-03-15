@@ -582,7 +582,7 @@ static int __recv_message(int sock, struct iovec *vec, int vec_max_size, int *ve
 		}
 	}
 
-	return ret;
+	return 0;
 }
 
 int aul_sock_recv_reply_sock_fd(int fd, int *ret_fd, int fd_size)
