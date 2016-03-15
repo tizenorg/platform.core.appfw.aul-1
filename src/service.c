@@ -804,7 +804,7 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 					cbfunc, data, uid);
 			goto end;
 		}
-	} else {
+	} else if (pkg_count > 1) {
 		bundle_add(b, AUL_SVC_K_URI_R_INFO, info.uri);
 		ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code,
 				cbfunc, data, uid);
@@ -865,7 +865,7 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 						cbfunc, data, uid);
 				goto end;
 			}
-		} else {
+		} else if (pkg_count > 1) {
 			bundle_add(b, AUL_SVC_K_URI_R_INFO, info.uri_r_info);
 			ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code,
 					cbfunc, data, uid);
