@@ -252,7 +252,7 @@ API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid
 	int ret;
 
 	if (pid != getpid()) {
-		ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_APPID_BYPID, 
+		ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_APPID_BYPID,
 				(unsigned char *)&pid,
 				sizeof(pid), AUL_SOCK_ASYNC);
 		if (ret)

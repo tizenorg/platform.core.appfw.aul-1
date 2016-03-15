@@ -277,6 +277,7 @@ API int aul_sock_send_raw_with_fd(int fd, int cmd, unsigned char *kb_data, int d
 {
 	int len;
 	int res;
+	char buf[1024];
 
 	_D("fd(%d): cmd(%d)", fd, cmd);
 
@@ -293,13 +294,14 @@ retry_recv:
 	len = recv(fd, &res, sizeof(int), 0);
 	if (len == -1) {
 		if (errno == EAGAIN) {
-			_E("recv timeout : %s", strerror(errno));
+			_E("recv timeout : %s",
+					strerror_r(errno, buf, sizeof(buf)));
 			res = -EAGAIN;
 		} else if (errno == EINTR) {
-			_D("recv : %s", strerror(errno));
+			_D("recv : %s", strerror_r(errno, buf, sizeof(buf)));
 			goto retry_recv;
 		} else {
-			_E("recv error : %s", strerror(errno));
+			_E("recv error : %s", strerror_r(errno, buf, sizeof(buf)));
 			res = -ECOMM;
 		}
 	}
@@ -449,6 +451,7 @@ API int aul_sock_recv_reply_pkt(int fd, app_pkt_t **ret_pkt)
 	int recv_opt;
 	app_pkt_t *pkt = NULL;
 	unsigned char buf[AUL_SOCK_MAXBUFF];
+	char err_buf[1024];
 
 retry_recv:
 	/* receive header(cmd, datalen) */
@@ -490,7 +493,8 @@ retry_recv:
 			if (errno == EINTR) {
 				continue;
 			} else {
-				_E("recv error %s\n", strerror(errno));
+				_E("recv error %s\n", strerror_r(errno,
+						err_buf, sizeof(err_buf)));
 				free(pkt);
 				close(fd);
 				*ret_pkt = NULL;

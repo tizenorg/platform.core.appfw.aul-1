@@ -72,7 +72,8 @@ static int __find_pid_by_appid(const char *dname, const char *appid,
 API int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid), void *priv)
 {
 	DIR *dp;
-	struct dirent *dentry;
+	struct dirent dentry;
+	struct dirent *result = NULL;
 	int pid;
 	int ret;
 	char buf[MAX_LOCAL_BUFSZ];
@@ -86,13 +87,13 @@ API int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid
 	if (iterfunc == NULL)
 		iterfunc = __find_pid_by_appid;
 
-	while ((dentry = readdir(dp)) != NULL) {
-		if (!isdigit(dentry->d_name[0]))
+	while (readdir_r(dp, &dentry, &result) == 0 && result != NULL) {
+		if (!isdigit(dentry.d_name[0]))
 			continue;
 
-		uid = aul_proc_get_usr_bypid(atoi(dentry->d_name));
+		uid = aul_proc_get_usr_bypid(atoi(dentry.d_name));
 
-		snprintf(buf, sizeof(buf), "/proc/%s/attr/current", dentry->d_name);
+		snprintf(buf, sizeof(buf), "/proc/%s/attr/current", dentry.d_name);
 		ret = __read_proc(buf, buf, sizeof(buf));
 		if (ret <= 0)
 			continue;
@@ -102,7 +103,7 @@ API int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid
 		if (p == NULL)
 			continue;
 		p = p + strlen(APP_LABEL_PREFIX);
-		pid = iterfunc(dentry->d_name, p, priv, uid);
+		pid = iterfunc(dentry.d_name, p, priv, uid);
 
 		if (pid > 0) {
 			closedir(dp);
