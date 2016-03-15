@@ -585,6 +585,21 @@ static int __get_list_with_submode(char *operation, char *win_id,
 	return 0;
 }
 
+static void __free_pkg_list(GSList *list)
+{
+	char *list_item;
+	GSList *iter = NULL;
+
+	if (list == NULL)
+		return;
+
+	for (iter = list; iter != NULL; iter = g_slist_next(iter)) {
+		list_item = (char *)iter->data;
+		g_free(list_item);
+	}
+	g_slist_free(list);
+}
+
 API int aul_svc_set_operation(bundle *b, const char *operation)
 {
 	if (b == NULL) {
@@ -705,8 +720,6 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 	int ret = -1;
 
 	GSList *pkg_list = NULL;
-	GSList *iter = NULL;
-	char *list_item;
 	char *query = NULL;
 	char *query2 = NULL;
 
@@ -804,17 +817,13 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 					cbfunc, data, uid);
 			goto end;
 		}
-	} else {
+	} else if (pkg_count > 1) {
 		bundle_add(b, AUL_SVC_K_URI_R_INFO, info.uri);
 		ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code,
 				cbfunc, data, uid);
 		goto end;
 	}
-	for (iter = pkg_list; iter != NULL; iter = g_slist_next(iter)) {
-		list_item = (char *)iter->data;
-		g_free(list_item);
-	}
-	g_slist_free(pkg_list);
+	__free_pkg_list(pkg_list);
 	pkg_list = NULL;
 
 	/*scheme & host*/
@@ -865,19 +874,14 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 						cbfunc, data, uid);
 				goto end;
 			}
-		} else {
+		} else if (pkg_count > 1) {
 			bundle_add(b, AUL_SVC_K_URI_R_INFO, info.uri_r_info);
 			ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code,
 					cbfunc, data, uid);
 			goto end;
 		}
 
-		for (iter = pkg_list; iter != NULL; iter = g_slist_next(iter)) {
-			list_item = (char *)iter->data;
-			g_free(list_item);
-		}
-
-		g_slist_free(pkg_list);
+		__free_pkg_list(pkg_list);
 		pkg_list = NULL;
 	}
 
@@ -934,13 +938,8 @@ API int aul_svc_run_service_for_uid(bundle *b, int request_code,
 				cbfunc, data, uid);
 	}
 
-	for (iter = pkg_list; iter != NULL; iter = g_slist_next(iter)) {
-		list_item = (char *)iter->data;
-		g_free(list_item);
-	}
-	g_slist_free(pkg_list);
-
 end:
+	__free_pkg_list(pkg_list);
 	__free_resolve_info_data(&info);
 
 	return ret;
