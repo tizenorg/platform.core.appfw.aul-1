@@ -35,6 +35,11 @@ API int aul_app_group_get_window(int pid)
 	char buf[128];
 
 	b = bundle_create();
+	if (b == NULL) {
+		_E("out of memory");
+		return -1;
+	}
+
 	snprintf(buf, 128, "%d", pid);
 	bundle_add_str(b, AUL_K_PID, buf);
 	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_GET_WINDOW, b);
@@ -50,6 +55,12 @@ API int aul_app_group_set_window(int wid)
 	char buf[128];
 
 	b = bundle_create();
+
+	if (b == NULL) {
+		_E("out of memory");
+		return -1;
+	}
+
 	snprintf(buf, 128, "%d", wid);
 	bundle_add_str(b, AUL_K_WID, buf);
 	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_SET_WINDOW, b);
@@ -153,6 +164,12 @@ API int aul_app_group_get_leader_pid(int pid)
 	char buf[128];
 
 	b = bundle_create();
+
+	if (b == NULL) {
+		_E("out of memory");
+		return -1;
+	}
+
 	snprintf(buf, 128, "%d", pid);
 	bundle_add_str(b, AUL_K_PID, buf);
 	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_GET_LEADER_PID, b);
@@ -196,6 +213,12 @@ API int aul_app_group_get_fg_flag(int pid)
 	char buf[128];
 
 	b = bundle_create();
+
+	if (b == NULL) {
+		_E("out of memory");
+		return -1;
+	}
+
 	snprintf(buf, 128, "%d", pid);
 	bundle_add_str(b, AUL_K_PID, buf);
 	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_GET_FG, b);
@@ -248,4 +271,27 @@ API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 
 	free(pkt);
 }
+
+API int aul_app_group_activate_below(const char *below_appid)
+{
+	int ret;
+	bundle *b;
+
+	if (below_appid == NULL)
+		return -1;
+
+	b = bundle_create();
+
+	if (b == NULL) {
+		_E("out of memory");
+		return -1;
+	}
+
+	bundle_add_str(b, AUL_K_APPID, below_appid);
+	ret = app_send_cmd(AUL_UTIL_PID, APP_GROUP_ACTIVATE_BELOW, b);
+	bundle_free(b);
+
+	return ret;
+}
+
 
