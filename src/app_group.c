@@ -72,20 +72,20 @@ API int aul_app_group_set_window(int wid)
 API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 {
 	int ret;
+	int fd;
 	app_pkt_t *pkt = NULL;
 	int c;
 
 	*cnt = 0;
 	*pids = NULL;
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_GET_LEADER_PIDS,
+	fd = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_GET_LEADER_PIDS,
 				NULL, 0, AUL_SOCK_ASYNC);
-	if (ret)
-		ret = aul_sock_recv_reply_pkt(ret, &pkt);
-
-	if (ret < 0)
+	if (fd > 0)
+		ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	else
 		return;
 
-	if (pkt == NULL)
+	if (pkt == NULL || ret < 0)
 		return;
 
 	c = pkt->len / sizeof(int);
@@ -107,6 +107,7 @@ API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 {
 	int ret;
+	int fd;
 	app_pkt_t *pkt = NULL;
 	bundle *b;
 	char buf[128];
@@ -124,18 +125,17 @@ API void aul_app_group_get_group_pids(int leader_pid, int *cnt, int **pids)
 	snprintf(buf, 128, "%d", leader_pid);
 	bundle_add_str(b, AUL_K_LEADER_PID, buf);
 
-	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
+	fd = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
 			APP_GROUP_GET_GROUP_PIDS, b, AUL_SOCK_ASYNC);
 
-	if (ret)
-		ret = aul_sock_recv_reply_pkt(ret, &pkt);
-
-	if (ret < 0) {
+	if (fd > 0) {
+		ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	} else {
 		bundle_free(b);
 		return;
 	}
 
-	if (pkt == NULL) {
+	if (ret < 0 || pkt == NULL) {
 		bundle_free(b);
 		return;
 	}
@@ -239,21 +239,21 @@ API void aul_app_group_lower(int *exit)
 API void aul_app_group_get_idle_pids(int *cnt, int **pids)
 {
 	int ret;
+	int fd;
 	app_pkt_t *pkt = NULL;
 	int c;
 
 	*cnt = 0;
 	*pids = NULL;
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+	fd = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
 			APP_GROUP_GET_IDLE_PIDS, NULL, 0, AUL_SOCK_ASYNC);
 
-	if (ret)
-		ret = aul_sock_recv_reply_pkt(ret, &pkt);
-
-	if (ret < 0)
+	if (fd > 0)
+		ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	else
 		return;
 
-	if (pkt == NULL)
+	if (pkt == NULL || ret < 0)
 		return;
 
 	c = pkt->len / sizeof(int);
