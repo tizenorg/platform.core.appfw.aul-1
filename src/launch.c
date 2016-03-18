@@ -589,7 +589,7 @@ API int aul_request_message_port_socket_pair(int *fd)
 	if (!fd)
 		return AUL_R_EINVAL;
 
-	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), APP_GET_MP_SOCKET_PAIR, NULL, AUL_SOCK_ASYNC);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GET_MP_SOCKET_PAIR, NULL, 0, AUL_SOCK_ASYNC);
 
 	if (ret) {
 		ret = aul_sock_recv_reply_sock_fd(ret, fds, 2);
