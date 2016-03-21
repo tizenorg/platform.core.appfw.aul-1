@@ -76,6 +76,10 @@ enum app_cmd {
 
 	APP_REGISTER_PID,
 
+	/* background category */
+	APP_WAKE,
+	APP_SUSPEND,
+
 	/* for special purpose */
 	AMD_RELOAD_APPINFO,
 	/* reserved for AMD Agent */

@@ -113,6 +113,20 @@ static int app_pause(void)
 	return 0;
 }
 
+static int app_prepare_to_suspend()
+{
+	_D("[__SUSPEND__]");
+	__call_aul_handler(AUL_SUSPEND, NULL);
+	return 0;
+}
+
+static int app_prepare_to_wake()
+{
+	_D("[__WAKE__]");
+	__call_aul_handler(AUL_WAKE, NULL);
+	return 0;
+}
+
 static int __get_aul_error(int res)
 {
 	int ret;
@@ -454,6 +468,12 @@ int aul_sock_handler(int fd)
 		break;
 	case APP_COM_MESSAGE:
 		app_com_recv(kbundle);
+		break;
+	case APP_WAKE:
+		app_prepare_to_wake();
+		break;
+	case APP_SUSPEND:
+		app_prepare_to_suspend();
 		break;
 	default:
 		_E("no support packet");

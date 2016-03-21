@@ -65,6 +65,8 @@ typedef enum _aul_type{
 	AUL_TERMINATE,
 	AUL_TERMINATE_BGAPP,
 	AUL_PAUSE,
+	AUL_WAKE,
+	AUL_SUSPEND,
 }aul_type;
 
 /** AUL public key - To check caller's secuirty */
@@ -187,7 +189,8 @@ typedef enum _aul_type{
 #define AUL_K_SEQ_NUM		"__AUL_SEQ_NUM__"
 /** AUL internal private key */
 #define AUL_K_API_VERSION	"__AUL_API_VERSION__"
-
+/** AUL internal private key */
+#define AUL_K_ALLOWED_BG	"__AUL_ALLOWED_BG__"
 
 /**
  * @brief	This is callback function for aul_launch_init
