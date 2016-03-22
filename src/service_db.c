@@ -37,10 +37,6 @@
 #define SVC_COLLATION "appsvc_collation"
 
 #define QUERY_ATTACH "attach database '%s' as Global"
-#define QUERY_CREATE_VIEW_1 "CREATE temp VIEW package_app_app_control as select * "\
-	"from (select  *,0 as for_all_users from  main.package_app_app_control union select *,1 as for_all_users from Global.package_app_app_control)"
-#define QUERY_CREATE_VIEW_2 "CREATE temp VIEW package_app_info as select * "\
-	"from (select  *,0 as for_all_users from  main.package_app_info union select *,1 as for_all_users from Global.package_app_info)"
 #define QUERY_CREATE_TABLE_APPSVC "create table if not exists appsvc " \
 	"(operation text, " \
 	"mime_type text, " \
@@ -62,20 +58,6 @@ static int __attach_create_view_appinfo_db(sqlite3 *handle, uid_t uid)
 				 NULL, NULL, &error_message)) {
 			_D("Don't execute query = %s error message = %s\n",
 				   query_attach, error_message);
-			sqlite3_free(error_message);
-		}
-		if (SQLITE_OK !=
-			sqlite3_exec(handle, QUERY_CREATE_VIEW_1,
-				NULL, NULL, &error_message)) {
-			_D("Don't execute query = %s error message = %s\n",
-				QUERY_CREATE_VIEW_1, error_message);
-			sqlite3_free(error_message);
-		}
-		if (SQLITE_OK !=
-			sqlite3_exec(handle, QUERY_CREATE_VIEW_2,
-				NULL, NULL, &error_message)) {
-			_D("Don't execute query = %s error message = %s\n",
-				QUERY_CREATE_VIEW_2, error_message);
 			sqlite3_free(error_message);
 		}
 	}
@@ -739,8 +721,12 @@ char *_svc_db_query_builder_build(char *old_query)
 		return NULL;
 
 	snprintf(query, QUERY_MAX_LEN,
-		"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s)",
-		old_query);
+		"select ac.app_id from Global.package_app_app_control as ac, Global.package_app_info as ai\
+			where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s) \
+		UNION \
+		select ac.app_id from package_app_app_control as ac, package_app_info as ai \
+			where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s)  ",
+		old_query, old_query);
 
 	free(old_query);
 
