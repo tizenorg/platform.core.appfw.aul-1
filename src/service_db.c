@@ -37,10 +37,6 @@
 #define SVC_COLLATION "appsvc_collation"
 
 #define QUERY_ATTACH "attach database '%s' as Global"
-#define QUERY_CREATE_VIEW_1 "CREATE temp VIEW package_app_app_control as select * "\
-	"from (select  *,0 as for_all_users from  main.package_app_app_control union select *,1 as for_all_users from Global.package_app_app_control)"
-#define QUERY_CREATE_VIEW_2 "CREATE temp VIEW package_app_info as select * "\
-	"from (select  *,0 as for_all_users from  main.package_app_info union select *,1 as for_all_users from Global.package_app_info)"
 #define QUERY_CREATE_TABLE_APPSVC "create table if not exists appsvc " \
 	"(operation text, " \
 	"mime_type text, " \
@@ -62,20 +58,6 @@ static int __attach_create_view_appinfo_db(sqlite3 *handle, uid_t uid)
 				 NULL, NULL, &error_message)) {
 			_D("Don't execute query = %s error message = %s\n",
 				   query_attach, error_message);
-			sqlite3_free(error_message);
-		}
-		if (SQLITE_OK !=
-			sqlite3_exec(handle, QUERY_CREATE_VIEW_1,
-				NULL, NULL, &error_message)) {
-			_D("Don't execute query = %s error message = %s\n",
-				QUERY_CREATE_VIEW_1, error_message);
-			sqlite3_free(error_message);
-		}
-		if (SQLITE_OK !=
-			sqlite3_exec(handle, QUERY_CREATE_VIEW_2,
-				NULL, NULL, &error_message)) {
-			_D("Don't execute query = %s error message = %s\n",
-				QUERY_CREATE_VIEW_2, error_message);
 			sqlite3_free(error_message);
 		}
 	}
@@ -480,7 +462,7 @@ int _svc_db_is_defapp(const char *pkg_name, uid_t uid)
 		return 0;
 
 	snprintf(query, QUERY_MAX_LEN,
-			"select count(*) from appsvc where pkg_name = '%s';", pkg_name);
+			"SELECT COUNT(*) FROM appsvc WHERE pkg_name = '%s';", pkg_name);
 
 	ret = sqlite3_prepare(svc_db, query, sizeof(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
@@ -531,7 +513,7 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri,
 
 
 	snprintf(query, QUERY_MAX_LEN,
-			"select pkg_name from appsvc where operation='%s' and mime_type='%s' and uri='%s'",
+			"SELECT pkg_name FROM appsvc WHERE operation='%s' AND mime_type='%s' AND uri='%s'",
 			op, m, u);
 
 	SECURE_LOGD("query : %s\n", query);
@@ -594,7 +576,7 @@ int _svc_db_adjust_list_with_submode(int mainapp_mode, char *win_id, GSList **pk
 	if (__init_app_info_db(uid) < 0)
 		return 0;
 
-	snprintf(query, QUERY_MAX_LEN, "select ac.app_id, ai.app_submode_mainid from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.app_submode_mainid!=''");
+	snprintf(query, QUERY_MAX_LEN, "SELECT ac.app_id, ai.app_submode_mainid FROM Global.package_app_app_control AS ac, Global.package_app_info AS ai WHERE ac.app_id = ai.app_id AND ai.app_submode_mainid!='' AND NOT EXISTS (SELECT 1 FROM package_app_info AS mai WHERE mai.app_id = ai.app_id) UNION SELECT ac.app_id, ai.app_submode_mainid FROM package_app_app_control AS ac, package_app_info AS ai WHERE ac.app_id = ai.app_id AND ai.app_submode_mainid!=''");
 	ret = sqlite3_prepare(app_info_db, query, sizeof(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
 		_E("prepare error, ret = %d, extended = %d\n", ret,
@@ -647,7 +629,7 @@ int _svc_db_get_list_with_all_defapps(GSList **pkg_list, uid_t uid)
 	if (__init(uid, true) < 0)
 		return -1;
 
-	snprintf(query, QUERY_MAX_LEN, "select pkg_name from appsvc");
+	snprintf(query, QUERY_MAX_LEN, "SELECT pkg_name FROM appsvc");
 
 	ret = sqlite3_prepare(svc_db, query, sizeof(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
@@ -697,12 +679,12 @@ char *_svc_db_query_builder_add(char *old_query, char *op, char *uri, char *mime
 	} else {
 		if (old_query) {
 			snprintf(query, QUERY_MAX_LEN,
-				"%s OR ac.app_control like '%%%s|%s|%s%%' ",
+				"%s OR ac.app_control LIKE '%%%s|%s|%s%%' ",
 				old_query, op, uri, mime);
 			free(old_query);
 		} else {
 			snprintf(query, QUERY_MAX_LEN,
-			"ac.app_control like '%%%s|%s|%s%%' ",
+			"ac.app_control LIKE '%%%s|%s|%s%%' ",
 			op, uri, mime);
 		}
 	}
@@ -714,7 +696,7 @@ char *_svc_db_query_builder_or(char *q1, char *q2)
 {
 	char query[QUERY_MAX_LEN];
 
-	snprintf(query, QUERY_MAX_LEN, "(%s) or (%s)", q1, q2);
+	snprintf(query, QUERY_MAX_LEN, "(%s) OR (%s)", q1, q2);
 	free(q1);
 	free(q2);
 
@@ -725,7 +707,7 @@ char *_svc_db_query_builder_in(const char *field, char *args)
 {
 	char query[QUERY_MAX_LEN];
 
-	snprintf(query, QUERY_MAX_LEN, "%s in(%s)", field, args);
+	snprintf(query, QUERY_MAX_LEN, "%s IN(%s)", field, args);
 	free(args);
 
 	return strdup(query);
@@ -739,8 +721,10 @@ char *_svc_db_query_builder_build(char *old_query)
 		return NULL;
 
 	snprintf(query, QUERY_MAX_LEN,
-		"select ac.app_id from package_app_app_control as ac, package_app_info ai where ac.app_id = ai.app_id and ai.component_type='uiapp' and (%s)",
-		old_query);
+		"SELECT ac.app_id FROM Global.package_app_app_control AS ac, Global.package_app_info AS ai \
+		WHERE ac.app_id = ai.app_id AND ai.component_type='uiapp' AND NOT EXISTS (SELECT 1 FROM package_app_info AS mai WHERE mai.app_id = ai.app_id) AND (%s) \
+		UNION ALL SELECT ac.app_id FROM package_app_app_control AS ac, package_app_info AS ai WHERE ac.app_id = ai.app_id AND ai.component_type='uiapp' AND (%s) ",
+		old_query, old_query);
 
 	free(old_query);
 
@@ -759,7 +743,7 @@ int _svc_db_exec_query(const char *query, GSList **pkg_list, uid_t uid)
 	if (__init_app_info_db(uid) < 0)
 		return 0;
 
-	SECURE_LOGD("query : %s\n", query);
+	_D("exec query");
 
 	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
