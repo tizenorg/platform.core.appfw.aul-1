@@ -439,6 +439,7 @@ API int aul_create_result_bundle(bundle *inb, bundle **outb)
 	}
 	bundle_add(*outb, AUL_K_CALLER_PID, pid_str);
 
+end:
 	num_str = bundle_get_val(inb, AUL_K_SEQ_NUM);
 	if (num_str == NULL) {
 		_E("original msg does not have seq num");
@@ -448,7 +449,6 @@ API int aul_create_result_bundle(bundle *inb, bundle **outb)
 	}
 	bundle_add(*outb, AUL_K_SEQ_NUM, num_str);
 
-end:
 	return AUL_R_OK;
 }
 
