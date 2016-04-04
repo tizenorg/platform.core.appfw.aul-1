@@ -45,7 +45,7 @@ typedef enum _aul_return_val {
 	AUL_R_ENOINIT = -2,		/**< AUL handler NOT initialized */
 	AUL_R_ERROR = -1,		/**< General error */
 	AUL_R_OK = 0			/**< General success */
-}aul_return_val;
+} aul_return_val;
 
 enum app_status {
 	STATUS_LAUNCHING,
@@ -59,7 +59,7 @@ enum app_status {
 	STATUS_SERVICE
 };
 
-typedef enum _aul_type{
+typedef enum _aul_type {
 	AUL_START,
 	AUL_RESUME,
 	AUL_TERMINATE,
@@ -67,7 +67,7 @@ typedef enum _aul_type{
 	AUL_PAUSE,
 	AUL_WAKE,
 	AUL_SUSPEND,
-}aul_type;
+} aul_type;
 
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_PID	"__AUL_CALLER_PID__"
@@ -191,6 +191,8 @@ typedef enum _aul_type{
 #define AUL_K_API_VERSION	"__AUL_API_VERSION__"
 /** AUL internal private key */
 #define AUL_K_ALLOWED_BG	"__AUL_ALLOWED_BG__"
+/** AUL internal private key */
+#define AUL_K_LAUNCH_MODE	"__AUL_LAUNCH_MODE__"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -198,7 +200,7 @@ typedef enum _aul_type{
  * @param[in]	b	In case of RESET events, bundle which is received from peer
  * @param[in]	data	user-supplied data
  */
-typedef int (*aul_handler_fn) (aul_type type, bundle * b, void *data);
+typedef int (*aul_handler_fn)(aul_type type, bundle *b, void *data);
 
 /**
  * @par Description:
@@ -2191,6 +2193,11 @@ void aul_app_group_lower(int *exit);
  * This API is only for Appfw internally.
  */
 void aul_app_group_get_idle_pids(int *cnt, int **pids);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_app_set_launch_mode(bundle *b, const char *launch_mode);
 
 /**
  * @par Description:
