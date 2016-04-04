@@ -113,6 +113,9 @@ extern "C" {
 
 #define PAD_LOADER_ID_DIRECT	1
 
+/** AUL SVC internal private key */
+#define AUL_SVC_K_BG_LAUNCH	"__AUL_SVC_BG_LAUNCH__"
+
 /**
  * @brief Return values in appsvc.
  */
@@ -1101,6 +1104,19 @@ int aul_svc_subscribe_launch_result(bundle *b, const char *event);
  * @remarks This API is only for Appfw internally.
  */
 int aul_svc_set_loader_id(bundle *b, int loader_id);
+
+/**
+ * @par Description:
+ * This API sets the background launch mode.
+ * If the background launch mode is enabled, a window of the callee process doesn't appear on the screen.
+ *
+ * @param[in] b Bundle object
+ * @param[in] enabled boolean (true / false)
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @remarks This API is only for Appfw internally.
+ */
+int aul_svc_set_background_launch(bundle *b, int enabled);
 
 #ifdef __cplusplus
 }

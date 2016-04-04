@@ -1041,3 +1041,4 @@ API int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid)
 	ret = app_request_to_launchpad_for_uid(APP_START_ASYNC, appid, kb, uid);
 	return ret;
 }
+
