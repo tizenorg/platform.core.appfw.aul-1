@@ -1041,3 +1041,17 @@ API int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid)
 	ret = app_request_to_launchpad_for_uid(APP_START_ASYNC, appid, kb, uid);
 	return ret;
 }
+
+API int aul_app_set_background_launch(bundle *b, int enabled)
+{
+	if (b == NULL)
+		return AUL_R_EINVAL;
+
+	if (bundle_get_type(b, AUL_K_BG_LAUNCH) != BUNDLE_TYPE_NONE)
+		bundle_del(b, AUL_K_BG_LAUNCH);
+	if (enabled)
+		bundle_add_str(b, AUL_K_BG_LAUNCH, "true");
+
+	return AUL_R_OK;
+}
+
