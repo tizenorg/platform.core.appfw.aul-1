@@ -1369,3 +1369,19 @@ API int aul_svc_set_loader_id(bundle *b, int loader_id)
 	return __set_bundle(b, AUL_K_LOADER_ID, tmp);
 }
 
+API int aul_svc_set_background_launch(bundle *b, int enabled)
+{
+	if (b == NULL)
+		return AUL_R_EINVAL;
+
+	if (bundle_get_type(b, AUL_SVC_K_BG_LAUNCH) != BUNDLE_TYPE_NONE)
+		bundle_del(b, AUL_SVC_K_BG_LAUNCH);
+
+	if (enabled)
+		bundle_add_str(b, AUL_SVC_K_BG_LAUNCH, "enable");
+	else
+		bundle_add_str(b, AUL_SVC_K_BG_LAUNCH, "disable");
+
+	return AUL_R_OK;
+}
+
