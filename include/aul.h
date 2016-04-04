@@ -191,6 +191,8 @@ typedef enum _aul_type{
 #define AUL_K_API_VERSION	"__AUL_API_VERSION__"
 /** AUL internal private key */
 #define AUL_K_ALLOWED_BG	"__AUL_ALLOWED_BG__"
+/** AUL internal private key */
+#define AUL_K_LAUNCH_MODE	"__AUL_LAUNCH_MODE__"
 
 /**
  * @brief	This is callback function for aul_launch_init
