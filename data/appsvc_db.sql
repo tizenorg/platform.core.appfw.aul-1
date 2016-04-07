@@ -1,4 +1,4 @@
-PRAGMA journal_mode = PERSIST;
+PRAGMA journal_mode = WAL;
 
 CREATE TABLE IF NOT EXISTS appsvc (
         operation TEXT,
