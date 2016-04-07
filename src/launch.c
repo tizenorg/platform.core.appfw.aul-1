@@ -897,7 +897,7 @@ API int aul_is_tep_mount_dbus_done(const char *tep_string)
 		goto end;
 	}
 
-	ret = (int)g_variant_get_int32(body);
+	g_variant_get(body, "(i)", &ret);
 
 end:
 	if (msg)
