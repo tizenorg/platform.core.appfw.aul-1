@@ -658,17 +658,6 @@ int aul_sock_create_launchpad_client(const char *pad_type, uid_t uid)
 		}
 	}
 
-#ifdef _APPFW_FEATURE_DEFAULT_USER
-	if (uid < REGULAR_UID_MIN) {
-		if (!default_uid_initialized) {
-			default_uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
-			default_uid_initialized = 1;
-		}
-
-		uid = default_uid;
-	}
-#endif
-
 	saddr.sun_family = AF_UNIX;
 	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
 				"/run/user/%d/%s", uid, pad_type);
