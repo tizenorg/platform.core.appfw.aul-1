@@ -110,11 +110,9 @@ extern "C" {
 #define AUL_SVC_K_SHIFT_WINDOW "__K_SHIFT_WINDOW"
 #define AUL_SVC_K_RECYCLE "__K_RECYCLE"
 #define AUL_SVC_K_RELOCATE_BELOW "__K_RELOCATE_BELOW"
+#define AUL_SVC_K_BG_LAUNCH "__K_BG_LAUNCH"
 
 #define PAD_LOADER_ID_DIRECT	1
-
-/** AUL SVC internal private key */
-#define AUL_SVC_K_BG_LAUNCH	"__AUL_SVC_BG_LAUNCH__"
 
 /**
  * @brief Return values in appsvc.
