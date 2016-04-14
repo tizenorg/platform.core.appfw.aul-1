@@ -26,12 +26,17 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
-#include <glib.h>
 #include <linux/limits.h>
+#include <sys/inotify.h>
 
+#include <gio/gio.h>
+#include <glib.h>
 #include <pkgmgr-info.h>
 #include <bundle.h>
 #include <bundle_internal.h>
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+#include <tzplatform_config.h>
+#endif
 
 #include "aul.h"
 #include "aul_svc.h"
@@ -41,10 +46,10 @@
 #define LAUNCHPAD_PROCESS_POOL_SOCK ".launchpad-process-pool-sock"
 #define APP_TYPE_UI "uiapp"
 #define APP_TYPE_SERVICE "svcapp"
-
-static GMainLoop *mainloop = NULL;
-
-static uid_t uid;
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+#define REGULAR_UID_MIN 5000
+#endif
+#define INOTIFY_BUF (1024 * ((sizeof(struct inotify_event)) + 16))
 
 struct launch_arg {
 	char appid[256];
@@ -53,7 +58,21 @@ struct launch_arg {
 	int flag_debug;
 	int sync;
 	char op;
-} launch_arg;
+};
+
+struct amd_watch {
+	int fd;
+	int wd;
+	GIOChannel *io;
+	guint wid;
+	char *appid;
+	int pid;
+};
+
+static GMainLoop *mainloop = NULL;
+static uid_t uid;
+static int monitoring_dead_signal;
+static int monitoring_amd_ready;
 
 static bundle *_create_internal_bundle(struct launch_arg *args)
 {
@@ -82,6 +101,9 @@ static int __launch_app_dead_handler(int pid, void *data)
 	int listen_pid = (intptr_t)data;
 
 	if (listen_pid == pid)
+		monitoring_dead_signal = 0;
+
+	if (!monitoring_dead_signal && !monitoring_amd_ready)
 		g_main_loop_quit(mainloop);
 
 	return 0;
@@ -113,6 +135,7 @@ static gboolean run_func(void *data)
 				pid, launch_arg_data->flag_debug);
 		if (launch_arg_data->sync) {
 			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
+			monitoring_dead_signal = 1;
 			return FALSE;
 		}
 	} else {
@@ -248,6 +271,113 @@ end:
 	return ret;
 }
 
+static gboolean __amd_monitor_cb(GIOChannel *io, GIOCondition cond,
+		gpointer data)
+{
+	char buf[INOTIFY_BUF];
+	ssize_t len = 0;
+	int i = 0;
+	struct inotify_event *event;
+	char *p;
+	int fd = g_io_channel_unix_get_fd(io);
+	struct amd_watch *watch = (struct amd_watch *)data;
+
+	len = read(fd, buf, sizeof(buf));
+	if (len < 0)
+		return TRUE;
+
+	while (i < len) {
+		event = (struct inotify_event *)&buf[i];
+		if (event->len) {
+			p = event->name;
+			if (p && !strcmp(p, AMD_READY)) {
+				aul_app_register_pid(watch->appid, watch->pid);
+				monitoring_amd_ready = 0;
+				return FALSE;
+			}
+		}
+		i += offsetof(struct inotify_event, name) + event->len;
+	}
+
+	return TRUE;
+}
+
+static void __watch_destroy_cb(gpointer data)
+{
+	struct amd_watch *watch = (struct amd_watch *)data;
+
+	if (watch == NULL)
+		return;
+
+	g_io_channel_unref(watch->io);
+
+	if (watch->appid)
+		free(watch->appid);
+	if (watch->wd)
+		inotify_rm_watch(watch->fd, watch->wd);
+	close(watch->fd);
+	free(watch);
+
+	if (!monitoring_dead_signal && !monitoring_amd_ready)
+		g_main_loop_quit(mainloop);
+}
+
+static void __watch_amd_ready(const char *appid, int pid)
+{
+	char buf[PATH_MAX];
+	struct amd_watch *watch;
+
+	snprintf(buf, sizeof(buf), "/run/user/%d", uid);
+
+	watch = (struct amd_watch *)calloc(1, sizeof(struct amd_watch));
+	if (watch == NULL)
+		return;
+
+	watch->appid = strdup(appid);
+	if (watch->appid == NULL)
+		return;
+
+	watch->pid = pid;
+
+	watch->fd = inotify_init();
+	if (watch->fd < 0) {
+		free(watch);
+		return;
+	}
+
+	watch->wd = inotify_add_watch(watch->fd, buf, IN_CREATE);
+	if (watch->wd < 0) {
+		close(watch->fd);
+		free(watch);
+		return;
+	}
+
+	watch->io = g_io_channel_unix_new(watch->fd);
+	if (watch->io == 0) {
+		inotify_rm_watch(watch->fd, watch->wd);
+		close(watch->fd);
+		free(watch);
+		return;
+	}
+
+	watch->wid = g_io_add_watch_full(watch->io, G_PRIORITY_DEFAULT,
+			G_IO_IN, __amd_monitor_cb, watch, __watch_destroy_cb);
+	monitoring_amd_ready = 1;
+}
+
+static void __register_appinfo(const char *appid, int pid)
+{
+	char buf[PATH_MAX];
+
+	snprintf(buf, sizeof(buf), "/run/user/%d/%s", uid, AMD_READY);
+	if (access(buf, F_OK) == 0) {
+		aul_app_register_pid(appid, pid);
+		return;
+	}
+
+	__watch_amd_ready(appid, pid);
+}
+
 static gboolean fast_run_func(void *data)
 {
 	int pid;
@@ -269,12 +399,15 @@ static gboolean fast_run_func(void *data)
 	bundle_free(kb);
 	if (pid > 0) {
 		printf("... successfully launched pid = %d\n", pid);
-		aul_app_register_pid(launch_arg_data->appid, pid);
+		__register_appinfo(launch_arg_data->appid, pid);
 		if (launch_arg_data->sync) {
 			aul_listen_app_dead_signal(__launch_app_dead_handler,
 					(void *)(intptr_t)pid);
-			return FALSE;
+			monitoring_dead_signal = 1;
 		}
+
+		if (monitoring_dead_signal || monitoring_amd_ready)
+			return FALSE;
 	} else {
 		printf("... launch failed\n");
 	}
@@ -482,6 +615,11 @@ int main(int argc, char **argv)
 
 	if (argc == 1)
 		print_usage(argv[0]);
+
+#ifdef _APPFW_FEATURE_DEFAULT_USER
+	if (uid < REGULAR_UID_MIN)
+		uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
+#endif
 
 	if (op == 'S') {
 		printf("\t appId (PID)\n");
