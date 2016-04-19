@@ -62,8 +62,6 @@ extern "C" {
 #define AUL_SVC_OPERATION_FONT_SIZE      "http://tizen.org/appcontrol/operation/configure/font/size"
 #define AUL_SVC_OPERATION_LAUNCH_ON_EVENT    "http://tizen.org/appcontrol/operation/launch_on_event"
 
-
-
 /** AUL_SVC DATA SUBJECT*/
 #define AUL_SVC_DATA_SUBJECT     "http://tizen.org/appcontrol/data/subject"
 /** AUL_SVC DATA TYPE*/
@@ -91,6 +89,9 @@ extern "C" {
 #define AUL_SVC_K_URI_R_INFO        "__AUL_SVC_URI_R_INFO__"
 
 #define AUL_SVC_K_SELECTOR_EXTRA_LIST   "http://tizen.org/appcontrol/data/selector_extra_list"
+
+/** AUL SVC internal private key */
+#define AUL_SVC_OPERATION_WIDGET         "http://tizen.org/appcontrol/operation/widget"
 
 #ifdef _APPFW_FEATURE_MULTI_INSTANCE
 #define AUL_SVC_K_MULTI_INSTANCE    "multi_instance"
