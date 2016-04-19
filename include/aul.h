@@ -191,7 +191,10 @@ typedef enum _aul_type {
 #define AUL_K_API_VERSION	"__AUL_API_VERSION__"
 /** AUL internal private key */
 #define AUL_K_ALLOWED_BG	"__AUL_ALLOWED_BG__"
-
+/** AUL internal private key */
+#define AUL_K_OWNER_PID		"__AUL_OWNER_PID__"
+/** AUL internal private key */
+#define AUL_K_CHILD_PID		"__AUL_CHILD_PID__"
 /**
  * @brief	This is callback function for aul_launch_init
  * @param[in]	type    event's type received from system
@@ -1841,6 +1844,11 @@ int aul_add_status_local_cb(int (*func) (int, void *), void *data);
  *
  */
 int aul_remove_status_local_cb(int (*func) (int, void *), void *data);
+
+/*
+ * This API is only for appfw internally.
+ */
+int aul_set_process_group(int parent_pid, int child_pid);
 
 /*
  * This API is only for Appfw internally.

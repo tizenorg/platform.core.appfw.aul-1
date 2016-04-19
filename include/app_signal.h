@@ -72,7 +72,6 @@
 
 #define RESOURCED_PROC_PRELAUNCH_SIGNAL "ProcPrelaunch"
 #define RESOURCED_PROC_WATCHDOG_SIGNAL "ProcWatchdog"
-#define RESOURCED_PROC_GROUP_SIGNAL "ProcGroup"
 
 #define PROC_TYPE_EXCLUDE		"exclude"
 #define PROC_TYPE_INCLUDE		"include"

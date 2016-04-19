@@ -15,6 +15,7 @@
  */
 
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <aul.h>
@@ -168,6 +169,27 @@ API int aul_running_list_update(char *appid, char *app_path, char *pid)
 
 	if (kb != NULL)
 			bundle_free(kb);
+
+	return ret;
+}
+
+API int aul_set_process_group(int owner_pid, int child_pid)
+{
+	int ret = -1;
+	bundle *kb = NULL;
+	char pid_buf[MAX_PID_STR_BUFSZ] = {0,};
+
+	kb = bundle_create();
+
+	if (kb == NULL)
+		return -1;
+
+	snprintf(pid_buf, MAX_PID_STR_BUFSZ, "%d", owner_pid);
+	bundle_add(kb, AUL_K_OWNER_PID, pid_buf);
+	snprintf(pid_buf, MAX_PID_STR_BUFSZ, "%d", child_pid);
+	bundle_add(kb, AUL_K_CHILD_PID, pid_buf);
+	ret = app_send_cmd(AUL_UTIL_PID, APP_SET_PROCESS_GROUP, kb);
+	bundle_free(kb);
 
 	return ret;
 }
