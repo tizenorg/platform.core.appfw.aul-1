@@ -92,6 +92,9 @@ extern "C" {
 
 #define AUL_SVC_K_SELECTOR_EXTRA_LIST   "http://tizen.org/appcontrol/data/selector_extra_list"
 
+/** AUL SVC internal private key */
+#define AUL_SVC_OPERATION_LAUNCH_WIDGET         "http://tizen.org/appcontrol/operation/launch_widget"
+
 #ifdef _APPFW_FEATURE_MULTI_INSTANCE
 #define AUL_SVC_K_MULTI_INSTANCE    "multi_instance"
 #endif
