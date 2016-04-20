@@ -1042,3 +1042,11 @@ API int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid)
 	return ret;
 }
 
+API int aul_prepare_candidate_process(void)
+{
+	unsigned char dummy[1] = { 0 };
+
+	return aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+			APP_PREPARE_CANDIDATE_PROCESS, dummy, 0, AUL_SOCK_NONE);
+}
+
