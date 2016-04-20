@@ -2504,6 +2504,17 @@ int aul_launch_app_async(const char *appid, bundle *kb);
  */
 int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid);
 
+/**
+ * @par Description:
+ * This API request launchpad to make candidate processes.
+ *
+ * @return 0 if success, negative value(<0) if fail
+ *
+ * @remark
+ *	This API is only available in User Session.
+ */
+int aul_prepare_candidate_process(void);
+
 #ifdef __cplusplus
 	}
 #endif
