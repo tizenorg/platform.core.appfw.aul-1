@@ -153,7 +153,7 @@ API int aul_launch_argv_handler(int argc, char **argv)
 	if (b == NULL)
 		_E("bundle for APP_START is NULL");
 
-	if (g_idle_add(__app_start_internal, b) > 0)
+	if (g_idle_add_full(G_PRIORITY_HIGH, __app_start_internal, b, NULL) > 0)
 		return AUL_R_OK;
 	else
 		return AUL_R_ERROR;
