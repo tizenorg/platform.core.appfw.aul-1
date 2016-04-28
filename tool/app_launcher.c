@@ -56,6 +56,7 @@ struct launch_arg {
 	char **argv;
 	int argc;
 	int flag_debug;
+	int flag_web;
 	int sync;
 	char op;
 };
@@ -109,6 +110,21 @@ static int __launch_app_dead_handler(int pid, void *data)
 	return 0;
 }
 
+static void __reply_cb_func(bundle *b, int request_code, aul_svc_result_val result, void *data)
+{
+	char* port = NULL;
+	bundle_get_str(b, "port", &port);
+
+    if (port != NULL && strlen(port) > 0) {
+        printf("port: %s\n", port);
+        printf("result: %s\n", "launched");
+    } else {
+        printf("result: %s\n", "failed");
+    }
+
+    g_main_loop_quit(mainloop);
+}
+
 static gboolean run_func(void *data)
 {
 	int pid;
@@ -123,26 +139,36 @@ static gboolean run_func(void *data)
 		aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
 	}
 
-	pid = aul_launch_app_for_uid((char *)launch_arg_data->appid, kb, uid);
+	if (!launch_arg_data->flag_web) {
+		pid = aul_launch_app_for_uid((char *)launch_arg_data->appid, kb, uid);
 
-	if (kb) {
-		bundle_free(kb);
-		kb = NULL;
-	}
-
-	if (pid > 0) {
-		printf("... successfully launched pid = %d with debug %d\n",
-				pid, launch_arg_data->flag_debug);
-		if (launch_arg_data->sync) {
-			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
-			monitoring_dead_signal = 1;
-			return FALSE;
+		if (kb) {
+			bundle_free(kb);
+			kb = NULL;
 		}
-	} else {
-		printf("... launch failed\n");
-	}
 
-	g_main_loop_quit(mainloop);
+		if (pid > 0) {
+			printf("... successfully launched pid = %d with debug %d\n",
+					pid, launch_arg_data->flag_debug);
+			if (launch_arg_data->sync) {
+				aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
+				monitoring_dead_signal = 1;
+				return FALSE;
+			}
+		} else {
+			printf("... launch failed\n");
+		}
+
+		g_main_loop_quit(mainloop);
+	} else {
+		aul_svc_set_operation(kb, AUL_SVC_OPERATION_DEFAULT);
+		aul_svc_set_appid(kb, (char *)launch_arg_data->appid);
+		pid = aul_svc_run_service_for_uid(kb, 0, __reply_cb_func, (void*)NULL, uid);
+		if (pid <= 0) {
+			printf("... launch failed\n");
+			g_main_loop_quit(mainloop);
+		}
+	}
 
 	return FALSE;
 }
@@ -432,6 +458,7 @@ static void print_usage(char *program)
 			"   -f [tizen application ID] --fast-start        Fast launch app with tizen application ID\n"
 			"   -e [tizen application ID] --direct-start      Direct Launch app with tizen application ID\n"
 			"   -d                        --debug             Activate debug mode\n"
+			"   -w                        --web-debug         Activate web debug mode\n"
 			"   -u [uid]                  --user              Specify user. Use with other commands.\n"
 	      );
 }
@@ -549,6 +576,7 @@ int main(int argc, char **argv)
 		{ "fast-launch", required_argument, 0, 'f' },
 		{ "direct-launch", required_argument, 0, 'e' },
 		{ "debug", no_argument, 0, 'd' },
+		{ "web-debug", no_argument, 0, 'w' },
 		{ "user", required_argument, 0, 'u' },
 		{ 0, 0, 0, 0 }
 	};
@@ -559,7 +587,7 @@ int main(int argc, char **argv)
 	do {
 		next_opt = getopt_long(argc,
 				argv,
-				"hlSs:k:t:r:f:e:du:",
+				"hlSs:k:t:r:f:e:dwu:",
 				long_options,
 				&opt_idx);
 
@@ -599,6 +627,10 @@ int main(int argc, char **argv)
 			break;
 		case 'd':
 			args.flag_debug = 1;
+			break;
+		case 'w':
+			args.flag_debug = 1;
+			args.flag_web = 1;
 			break;
 		case '?':
 			break;
