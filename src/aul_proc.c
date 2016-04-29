@@ -138,7 +138,11 @@ API char *aul_proc_get_appid_bypid(int pid)
 	char *p;
 	int ret;
 
-	snprintf(buf, sizeof(buf), "/proc/%d/attr/current", pid);
+	if(pid == getpid())
+		strncpy(buf, "/proc/self/attr/current", sizeof(buf));
+	else
+		snprintf(buf, sizeof(buf), "/proc/%d/attr/current", pid);
+
 	ret = __read_proc(buf, buf, sizeof(buf));
 	if (ret <= 0)
 		return NULL;
