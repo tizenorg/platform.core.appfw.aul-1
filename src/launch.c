@@ -544,12 +544,34 @@ int aul_register_init_callback(
 	return 0;
 }
 
+int aul_getpid(void)
+{
+	int result = -1;
+	char buffer[96];
+	const char *path = "/proc/self/status";
+
+	FILE *status = fopen(path, "r");
+	while(EOF != fscanf(status, "%95s", buffer)) {
+		if (!strncmp(buffer, "Pid:", 5)) {
+			(void)(fscanf(status, "%d", &result)+1);
+			break;
+		}
+	}
+	fclose(status);
+
+	return result;
+}
+
 int aul_initialize()
 {
 	if (aul_initialized)
 		return AUL_R_ECANCELED;
 
-	aul_fd = aul_sock_create_server(getpid(), getuid());
+	int pid = aul_getpid();
+
+	_E("Process with pid: %d, have host pid: %d", getpid(), pid);
+
+	aul_fd = aul_sock_create_server(pid, getuid());
 	if (aul_fd < 0) {
 		_E("aul_init create sock failed");
 		return AUL_R_ECOMM;
