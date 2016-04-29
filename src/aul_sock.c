@@ -185,7 +185,7 @@ static int __create_client_sock(int pid, uid_t uid)
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
 	if (ret < -1) {
-		_E("maybe peer not launched or peer daed\n");
+		_E("maybe peer not launched or peer daed. Error connecting to %s:%s\n", saddr.sun_path, strerror(errno));
 		if (retry > 0) {
 			usleep(100 * 1000);
 			retry--;
