@@ -6,6 +6,14 @@ Reviewed-on: https://review.tizen.org/gerrit/67704
 Project: platform/core/appfw/aul-1
 Branch: refs/heads/tizen
 
+Verified+1: Semun Lee <sm79.lee@samsung.com>
+Code-Review+1: Semun Lee <sm79.lee@samsung.com>
+Submitted-by: Semun Lee <sm79.lee@samsung.com>
+Submitted-at: Fri, 29 Apr 2016 00:55:21 -0700
+Reviewed-on: https://review.tizen.org/gerrit/67704
+Project: platform/core/appfw/aul-1
+Branch: refs/heads/tizen
+
 Code-Review+2: Semun Lee <sm79.lee@samsung.com>
 Verified+1: Semun Lee <sm79.lee@samsung.com>
 Submitted-by: Semun Lee <sm79.lee@samsung.com>
