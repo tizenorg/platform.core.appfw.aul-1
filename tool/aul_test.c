@@ -602,6 +602,22 @@ static int pause_pid_test_for_uid()
 	return aul_pause_pid_for_uid(apn_pid, atoi(gargv[3]));
 }
 
+static int term_pid_sync_test()
+{
+	static int num = 0;
+
+	printf("[aul_terminate_pid_sync %d test] %d \n", num++, apn_pid);
+	return aul_terminate_pid_sync(apn_pid);
+}
+
+static int term_pid_sync_test_for_uid()
+{
+	static int num = 0;
+
+	printf("[aul_terminate_pid_sync_for_uid %d test] %d \n", num++, apn_pid);
+	return aul_terminate_pid_sync_for_uid(apn_pid, atoi(gargv[3]));
+}
+
 /*
 static int set_pkg_func()
 {
@@ -785,6 +801,10 @@ static test_func_t test_func[] = {
 		"[usage] pasue_for_uid <appid> <uid>"},
 	{"pause_pid_for_uid", pause_pid_test_for_uid, "aul_pause_pid_for_uid test",
 		"[usage] pause_pid_for_uid <pid> <uid>"},
+	{"term_pid_sync", term_pid_sync_test, "aul_terminate_pid_sync test",
+		"[usage] term_pid_sync <pid>"},
+	{"term_pid_sync_for_uid", term_pid_sync_test_for_uid, "aul_terminate_pid_sync_for_uid test",
+		"[usage] term_pid_sync_for_uid <pid> <uid>"},
 };
 
 int callfunc(char *testname)
