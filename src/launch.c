@@ -440,6 +440,7 @@ int aul_sock_handler(int fd)
 
 	case APP_TERM_BY_PID:	/* run in callee */
 	case APP_TERM_BY_PID_ASYNC:
+	case APP_TERM_BY_PID_SYNC:
 		app_terminate();
 		break;
 
@@ -1048,5 +1049,24 @@ API int aul_prepare_candidate_process(void)
 
 	return aul_sock_send_raw(AUL_UTIL_PID, getuid(),
 			APP_PREPARE_CANDIDATE_PROCESS, dummy, 0, AUL_SOCK_NONE);
+}
+
+API int aul_terminate_pid_sync(int pid)
+{
+	return aul_terminate_pid_sync_for_uid(pid, getuid());
+}
+
+API int aul_terminate_pid_sync_for_uid(int pid, uid_t uid)
+{
+	char pid_str[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pid_str, sizeof(pid_str), "%d", pid);
+	ret = app_request_to_launchpad_for_uid(APP_TERM_BY_PID_SYNC, pid_str,
+			NULL, uid);
+	return ret;
 }
 
