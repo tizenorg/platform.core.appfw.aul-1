@@ -776,6 +776,59 @@ int aul_terminate_pid_async(int pid);
 int aul_terminate_pid_async_for_uid(int pid, uid_t uid);
 
 /**
+ * @par Description:
+ *	This API trigger to terminate application synchronously
+ *
+ *	If the application is running, this API send a terminate event to the App. \n
+ *	If the app cannot receive the event, AUL kill forcely the application.\n
+ * @par Purpose:
+ *      This API's purpose is to kill application
+ * @par Typical use case:
+ *	In general, Application like Task Manager use this API.
+ *
+ *		This API need to require root or inhouse permisssion. \n
+ *
+ * @param[in]	pid	application's pid to be terminated
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild pid
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ * @warning	This API need to require root or inhouse permisssion. \n
+ * @remark
+ *	If you have not the permission, this API return AUL_R_ERROR. \n
+ *	This API is only available in User Session.
+*/
+int aul_terminate_pid_sync(int pid);
+
+/**
+ * @par Description:
+ *	This API trigger to terminate application synchronously
+ *
+ *	If the application is running, this API send a terminate event to the App. \n
+ *	If the app cannot receive the event, AUL kill forcely the application.\n
+ * @par Purpose:
+ *      This API's purpose is to kill application
+ * @par Typical use case:
+ *	In general, Application like Task Manager use this API.
+ *
+ *		This API need to require root or inhouse permisssion. \n
+ *
+ * @param[in]	pid	application's pid to be terminated
+ * @param[in]	uid	User ID
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invaild pid
+ * @retval	AUL_R_ECOM	- internal AUL IPC error
+ * @retval	AUL_R_ERROR	- general error
+ * @warning	This API need to require root or inhouse permisssion. \n
+ * @remark
+ *	If you have not the permission, this API return AUL_R_ERROR. \n
+ *	This API is only available to System user.
+ */
+int aul_terminate_pid_sync_for_uid(int pid, uid_t uid);
+
+/**
  *@brief Running application's information structure retrieved by AUL
  */
 typedef struct _aul_app_info {
