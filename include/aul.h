@@ -2289,10 +2289,65 @@ int aul_listen_booting_done_signal(int (*func) (int, void *), void *data);
  */
 int aul_listen_cooldown_signal(int (*func) (const char *, void *), void *data);
 
-/*
- * This API is only for Appfw internally.
+/**
+ * @par Description:
+ *	This API registers a callback function that will be called when the
+ *	status of the application is changed.
+ * @par Purpose:
+ *	The purpose of the API is to listen the status of the application is
+ *	changed.
+ *
+ * @param[in]	func		callback function
+ * @param[in]	data		user data
+ * @return	0 if success, negative value if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_ERROR	- general error
+ *
+ * @code
+ * #include <aul.h>
+ *
+ * int app_status_handler(int pid, int status, void *data)
+ * {
+ *	const char *app_status;
+ *
+ *	switch (status) {
+ *	case 0:
+ *		app_status = "STATUS_LAUNCHING";
+ *		break;
+ *	case 3:
+ *		app_status = "STATUS_VISIBLE";
+ *		break;
+ *	case 4:
+ *		app_status = "STATUS_BACKGROUND";
+ *		break;
+ *	case 5:
+ *		app_status = "STATUS_FOCUS";
+ *		break;
+ *	default:
+ *		app_status = "STATUS_UNKNOWN";
+ *	}
+ *
+ *	printf("pid: %d, status: %s", pid, status);
+ *	return 0;
+ * }
+ *
+ * int main(int argc, char **argv)
+ * {
+ *	int ret;
+ *
+ *	ret = aul_listen_app_status_signal(app_status_handler, NULL);
+ *	if (ret != AUL_R_OK) {
+ *		printf("Failed to add status handler");
+ *		return -1;
+ *	}
+ *
+ *	...
+ *
+ *	return 0;
+ * }
+ * @endcode
  */
-int aul_listen_app_status_signal(int (*func) (int, int, void *), void *data);
+int aul_listen_app_status_signal(int (*func)(int, int, void *), void *data);
 
 /*
  * This API is only for Appfw internally.
