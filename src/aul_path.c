@@ -45,9 +45,9 @@ static const char _SHARED_DATA_DIR[] = "shared/data/";
 static const char _SHARED_TRUSTED_DIR[] = "shared/trusted/";
 static const char _SHARED_RESOURCE_DIR[] = "shared/res/";
 
-static const char * __get_specific_path(const char *pkgid, uid_t uid)
+static const char *__get_specific_path(const char *pkgid, uid_t uid)
 {
-	const char * path;
+	const char *path;
 	char buf[PATH_MAX];
 
 	if (uid == ROOT_UID || uid == GLOBAL_USER) {
@@ -131,8 +131,8 @@ static int __get_path(char **path, const char *appid, const char *dir_name,
 	return AUL_R_OK;
 }
 
-static int __get_path_from_db(char **path, const char *appid, const char *dir_name,
-		uid_t uid)
+static int __get_path_from_db(char **path, const char *appid,
+		const char *dir_name, uid_t uid)
 {
 	char *_path;
 	char buf[PATH_MAX];
@@ -279,7 +279,8 @@ API const char *aul_get_app_tep_resource_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _TEP_RESOURCE_DIR, getuid(), __get_path_from_db);
+	return __get(&path, NULL, _TEP_RESOURCE_DIR, getuid(),
+			__get_path_from_db);
 }
 
 API int aul_get_app_shared_data_path(char **path)
@@ -299,7 +300,8 @@ API const char *aul_get_app_shared_resource_path(void)
 {
 	static char *path;
 
-	return __get(&path, NULL, _SHARED_RESOURCE_DIR, getuid(), __get_path_from_db);
+	return __get(&path, NULL, _SHARED_RESOURCE_DIR, getuid(),
+			__get_path_from_db);
 }
 
 API const char *aul_get_app_shared_trusted_path(void)

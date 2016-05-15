@@ -55,7 +55,6 @@ API int aul_app_group_set_window(int wid)
 	char buf[128];
 
 	b = bundle_create();
-
 	if (b == NULL) {
 		_E("out of memory");
 		return -1;
@@ -78,14 +77,13 @@ API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 
 	*cnt = 0;
 	*pids = NULL;
-	fd = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_GET_LEADER_PIDS,
-				NULL, 0, AUL_SOCK_ASYNC);
-	if (fd > 0)
-		ret = aul_sock_recv_reply_pkt(fd, &pkt);
-	else
+	fd = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_LEADER_PIDS, NULL, 0, AUL_SOCK_ASYNC);
+	if (fd <= 0)
 		return;
 
-	if (pkt == NULL || ret < 0)
+	ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	if (ret < 0 || pkt == NULL)
 		return;
 
 	c = pkt->len / sizeof(int);
@@ -180,17 +178,22 @@ API int aul_app_group_get_leader_pid(int pid)
 
 API int aul_app_group_clear_top(void)
 {
+	int ret;
 	unsigned char dummy[1] = { 0 };
-	return aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_CLEAR_TOP, dummy, 0, AUL_SOCK_NONE);
+
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_CLEAR_TOP,
+			dummy, 0, AUL_SOCK_NONE);
+
+	return ret;
 }
 
 API int aul_app_group_is_top(void)
 {
 	int lpid = aul_app_group_get_leader_pid(getpid());
+	int cnt;
+	int *pids = NULL;
 
 	if (lpid > 0) {
-		int cnt;
-		int *pids = NULL;
 		aul_app_group_get_group_pids(lpid, &cnt, &pids);
 		if (cnt > 0) {
 			if (pids[cnt-1] == getpid()) {
@@ -213,7 +216,6 @@ API int aul_app_group_get_fg_flag(int pid)
 	char buf[128];
 
 	b = bundle_create();
-
 	if (b == NULL) {
 		_E("out of memory");
 		return -1;
@@ -232,7 +234,8 @@ API void aul_app_group_lower(int *exit)
 	int ret;
 	unsigned char dummy[1] = { 0 };
 
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_LOWER, dummy, 0, AUL_SOCK_NONE);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_LOWER,
+			dummy, 0, AUL_SOCK_NONE);
 	*exit = ret;
 }
 
@@ -281,7 +284,6 @@ API int aul_app_group_activate_below(const char *below_appid)
 		return -1;
 
 	b = bundle_create();
-
 	if (b == NULL) {
 		_E("out of memory");
 		return -1;
@@ -293,5 +295,4 @@ API int aul_app_group_activate_below(const char *below_appid)
 
 	return ret;
 }
-
 

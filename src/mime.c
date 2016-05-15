@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2000 - 2016 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -30,53 +30,56 @@ static int __match_content_with_regex(const char *content, regex_t *regex_preg)
 {
 	if (regexec(regex_preg, content, 0, NULL, 0) == 0)
 		return 1;
-	else
-		return 0;
+
+	return 0;
 }
 
 API int aul_get_mime_from_content(const char *content, char *mimetype,
 				     int len)
 {
 	char *founded = NULL;
-	regex_tbl *miregex_tbl = NULL;
+	regex_tbl *miregex_tbl;
 
 	if (content == NULL)
 		return AUL_R_EINVAL;
 
-	if ((miregex_tbl = miregex_get_regex_table()) == NULL) {
+	miregex_tbl = miregex_get_regex_table();
+	if (miregex_tbl == NULL) {
 		_E("load miregex_table fail\n");
 		return AUL_R_ERROR;
 	}
 
 	while (miregex_tbl) {
 		if (__match_content_with_regex(content,
-			&(miregex_tbl->regex_preg))) {
+				&(miregex_tbl->regex_preg))) {
 			founded = miregex_tbl->mimetype;
-			SECURE_LOGD("content %s => mimetype %s\n", content, founded);
+			SECURE_LOGD("content %s => mimetype %s\n",
+					content, founded);
 			break;
 		}
 		miregex_tbl = miregex_tbl->next;
 	}
 
-	if (founded != NULL)
-		snprintf(mimetype, len, "%s", founded);
-	else {
+	if (founded == NULL) {
 		/* TODO : should to try to extract from share mime info's data*/
 		return AUL_R_ERROR;
 	}
+
+	snprintf(mimetype, len, "%s", founded);
 
 	return AUL_R_OK;
 }
 
 API int aul_get_mime_description(const char *mimetype, char *desc, int len)
 {
-	regex_tbl *miregex_tbl = NULL;
+	regex_tbl *miregex_tbl;
 	char *founded = NULL;
 
 	if (mimetype == NULL)
 		return AUL_R_EINVAL;
 
-	if ((miregex_tbl = miregex_get_regex_table()) == NULL) {
+	miregex_tbl = miregex_get_regex_table();
+	if (miregex_tbl == NULL) {
 		_E("load miregex_table fail\n");
 		return AUL_R_ERROR;
 	}
@@ -90,12 +93,13 @@ API int aul_get_mime_description(const char *mimetype, char *desc, int len)
 		miregex_tbl = miregex_tbl->next;
 	}
 
-	if (founded != NULL)
-		snprintf(desc, len, "%s", founded);
-	else {
-		/* TODO : should to try to extract from share mime info's comment */
+	if (founded == NULL) {
+		/* TODO : should to try to extract */
+		/* from share mime info's comment */
 		return AUL_R_ERROR;
 	}
+
+	snprintf(desc, len, "%s", founded);
 
 	return AUL_R_OK;
 }
@@ -125,13 +129,13 @@ API int aul_get_mime_extension(const char *mimetype, char *ext, int len)
 		if (*(extlist + 1) == NULL) {
 			snprintf(&ext[totlen], len - totlen, "%s", *extlist);
 			break;
-		} else {
-			snprintf(&ext[totlen], len - totlen, "%s,", *extlist);
-			if (strlen(*extlist) > len - totlen - 1)
-				break;
-			totlen += strlen(*extlist) + 1;
-			extlist++;
 		}
+
+		snprintf(&ext[totlen], len - totlen, "%s,", *extlist);
+		if (strlen(*extlist) > len - totlen - 1)
+			break;
+		totlen += strlen(*extlist) + 1;
+		extlist++;
 	}
 
 	return AUL_R_OK;
@@ -163,6 +167,7 @@ API int aul_get_mime_icon(const char *mimetype, char *iconname, int len)
 API int aul_get_mime_from_file(const char *filename, char *mimetype, int len)
 {
 	const char *mime;
+
 	if (filename == NULL)
 		return AUL_R_EINVAL;
 
@@ -195,8 +200,7 @@ API int aul_open_content(const char *content)
 	return 0;
 }
 
-API int aul_open_file_with_mimetype(const char *filename,
-				       const char *mimetype)
+API int aul_open_file_with_mimetype(const char *filename, const char *mimetype)
 {
 	/* removed */
 	return 0;

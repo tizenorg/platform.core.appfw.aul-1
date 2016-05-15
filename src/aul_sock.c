@@ -39,8 +39,8 @@ static uid_t default_uid;
 static int default_uid_initialized;
 #endif
 
-static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, socklen_t salen,
-		   int nsec);
+static int __connect_client_sock(int sockfd, const struct sockaddr *saptr,
+		socklen_t salen, int nsec);
 
 static inline void __set_sock_option(int fd, int cli)
 {
@@ -59,6 +59,7 @@ API int aul_sock_create_server(int pid, uid_t uid)
 	struct sockaddr_un saddr;
 	struct sockaddr_un p_saddr;
 	int fd;
+	int pgid;
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
@@ -77,11 +78,12 @@ API int aul_sock_create_server(int pid, uid_t uid)
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path), "/run/user/%d/%d", uid, pid);
+	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
+			"/run/user/%d/%d", uid, pid);
 	unlink(saddr.sun_path);
 
 	/* labeling to socket for SMACK */
-	if (getuid() == 0) {	/* this is meaningful iff current user is ROOT */
+	if (getuid() == 0) { /* this is meaningful iff current user is ROOT */
 		if (fsetxattr(fd, "security.SMACK64IPOUT", "@", 1, 0) < 0) {
 			/* in case of unsupported filesystem on 'socket' */
 			/* or permission error by using 'emulator', bypass*/
@@ -125,7 +127,6 @@ API int aul_sock_create_server(int pid, uid_t uid)
 
 	/* support app launched by shell script */
 	if (pid > 0) {
-		int pgid;
 		pgid = getpgid(pid);
 		if (pgid > 1) {
 			snprintf(p_saddr.sun_path, sizeof(p_saddr.sun_path),
@@ -181,9 +182,9 @@ static int __create_client_sock(int pid, uid_t uid)
 	else
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
 				"/run/user/%d/%d", uid, pid);
- retry_con:
-	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
-			100 * 1000);
+retry_con:
+	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr,
+			sizeof(saddr), 100 * 1000);
 	if (ret < -1) {
 		_E("maybe peer not launched or peer daed\n");
 		if (retry > 0) {
@@ -202,8 +203,8 @@ static int __create_client_sock(int pid, uid_t uid)
 	return fd;
 }
 
-static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t salen,
-		   int nsec)
+static int __connect_client_sock(int fd, const struct sockaddr *saptr,
+		socklen_t salen, int nsec)
 {
 	int flags;
 	int ret;
@@ -217,10 +218,11 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
 	error = 0;
-	if ((ret = connect(fd, (struct sockaddr *)saptr, salen)) < 0) {
+	ret = connect(fd, (struct sockaddr *)saptr, salen);
+	if (ret < 0) {
 		if (errno != EAGAIN && errno != EINPROGRESS) {
 			fcntl(fd, F_SETFL, flags);
-			return (-2);
+			return -2;
 		}
 	}
 
@@ -234,38 +236,41 @@ static int __connect_client_sock(int fd, const struct sockaddr *saptr, socklen_t
 	timeout.tv_sec = 0;
 	timeout.tv_usec = nsec;
 
-	if ((ret = select(fd + 1, &readfds, &writefds, NULL,
-			nsec ? &timeout : NULL)) == 0) {
+	ret = select(fd + 1, &readfds, &writefds, NULL, nsec ? &timeout : NULL);
+	if (ret == 0) {
 		close(fd);	/* timeout */
 		errno = ETIMEDOUT;
-		return (-1);
+		return -1;
 	}
 
 	if (FD_ISSET(fd, &readfds) || FD_ISSET(fd, &writefds)) {
 		len = sizeof(error);
 		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0)
-			return (-1);	/* Solaris pending error */
-	} else
-		return (-1);	/* select error: sockfd not set*/
+			return -1;	/* Solaris pending error */
+	}
 
- done:
-	(void) fcntl(fd, F_SETFL, flags);
+	return -1;	/* select error: sockfd not set*/
+
+done:
+	(void)fcntl(fd, F_SETFL, flags);
 	if (error) {
 		close(fd);
 		errno = error;
-		return (-1);
+		return -1;
 	}
-	return (0);
+
+	return 0;
 }
 
-static int __send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt)
+static int __send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data,
+		int datalen, int opt)
 {
 	int len;
 	int sent = 0;
 	app_pkt_t *pkt = NULL;
 
 	pkt = (app_pkt_t *)malloc(AUL_PKT_HEADER_SIZE + datalen);
-	if (NULL == pkt) {
+	if (pkt == NULL) {
 		_E("Malloc Failed!");
 		return -ENOMEM;
 	}
@@ -292,7 +297,8 @@ static int __send_raw_async_with_fd(int fd, int cmd, unsigned char *kb_data, int
 	return 0;
 }
 
-API int aul_sock_send_raw_with_fd(int fd, int cmd, unsigned char *kb_data, int datalen, int opt)
+API int aul_sock_send_raw_with_fd(int fd, int cmd, unsigned char *kb_data,
+		int datalen, int opt)
 {
 	int len;
 	int res;
@@ -320,7 +326,8 @@ retry_recv:
 			_D("recv : %s", strerror_r(errno, buf, sizeof(buf)));
 			goto retry_recv;
 		} else {
-			_E("recv error : %s", strerror_r(errno, buf, sizeof(buf)));
+			_E("recv error : %s",
+					strerror_r(errno, buf, sizeof(buf)));
 			res = -ECOMM;
 		}
 	}
@@ -343,7 +350,8 @@ API int aul_sock_send_bundle_with_fd(int fd, int cmd, bundle *kb, int opt)
 	if (res != BUNDLE_ERROR_NONE)
 		return -EINVAL;
 
-	res = aul_sock_send_raw_with_fd(fd, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+	res = aul_sock_send_raw_with_fd(fd, cmd, kb_data, datalen,
+			opt | AUL_SOCK_BUNDLE);
 
 	if (kb_data)
 		free(kb_data);
@@ -381,7 +389,8 @@ API int aul_sock_send_bundle(int pid, uid_t uid, int cmd, bundle *kb, int opt)
 	if (res != BUNDLE_ERROR_NONE)
 		return -EINVAL;
 
-	res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen, opt | AUL_SOCK_BUNDLE);
+	res = aul_sock_send_raw(pid, uid, cmd, kb_data, datalen,
+			opt | AUL_SOCK_BUNDLE);
 
 	if (kb_data)
 		free(kb_data);
@@ -404,8 +413,9 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 
 	sun_size = sizeof(struct sockaddr_un);
 
-	if ((*clifd = accept(fd, (struct sockaddr *)&aul_addr,
-			     (socklen_t *) &sun_size)) == -1) {
+	*clifd = accept(fd, (struct sockaddr *)&aul_addr,
+			(socklen_t *) &sun_size);
+	if (*clifd == -1) {
 		if (errno != EINTR)
 			_E("accept error");
 		return NULL;
@@ -423,9 +433,10 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
  retry_recv:
 	/* receive header(cmd, datalen) */
 	len = recv(*clifd, buf, AUL_PKT_HEADER_SIZE, 0);
-	if (len < 0)
+	if (len < 0) {
 		if (errno == EINTR)
 			goto retry_recv;
+	}
 
 	if (len < AUL_PKT_HEADER_SIZE) {
 		_E("recv error");
@@ -529,7 +540,8 @@ retry_recv:
 	return 0;
 }
 
-static int __get_descriptors(struct cmsghdr *cmsg, struct msghdr *msg, int *fds, int maxdesc)
+static int __get_descriptors(struct cmsghdr *cmsg, struct msghdr *msg,
+		int *fds, int maxdesc)
 {
 	int retnr = 0;
 	int nrdesc;
@@ -559,13 +571,16 @@ static int __get_descriptors(struct cmsghdr *cmsg, struct msghdr *msg, int *fds,
 	return retnr;
 }
 
-static int __recv_message(int sock, struct iovec *vec, int vec_max_size, int *vec_size,
-		int *fds, int *nr_fds)
+static int __recv_message(int sock, struct iovec *vec, int vec_max_size,
+		int *vec_size, int *fds, int *nr_fds)
 {
-	char buff[CMSG_SPACE(sizeof(int) * MAX_NR_OF_DESCRIPTORS) + CMSG_SPACE(50)] = {0};
+	char buff[CMSG_SPACE(sizeof(int) * MAX_NR_OF_DESCRIPTORS) +
+			CMSG_SPACE(50)] = {0, };
 	struct msghdr msg = {0};
 	struct cmsghdr *cmsg = NULL;
 	int ret;
+	int iter = 0;
+	int fdnum = 0;
 
 	if (vec == NULL || vec_max_size < 1 || vec_size == NULL)
 		return -EINVAL;
@@ -585,19 +600,18 @@ static int __recv_message(int sock, struct iovec *vec, int vec_max_size, int *ve
 	if (cmsg == NULL) {
 		if (nr_fds != NULL)
 			*nr_fds = 0;
-	} else {
-		int iter = 0;
-		int fdnum = 0;
 
-		for (; cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg), iter++) {
-			switch (cmsg->cmsg_type) {
-			case SCM_RIGHTS:
-				if (fds != NULL)
-					fdnum = __get_descriptors(cmsg, &msg, fds, MAX_NR_OF_DESCRIPTORS);
-				if (nr_fds != NULL)
-					*nr_fds = fdnum;
-				break;
+		return 0;
+	}
+
+	for (; cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg), iter++) {
+		if (cmsg->cmsg_type == SCM_RIGHTS) {
+			if (fds != NULL) {
+				fdnum = __get_descriptors(cmsg, &msg, fds,
+						MAX_NR_OF_DESCRIPTORS);
 			}
+			if (nr_fds != NULL)
+				*nr_fds = fdnum;
 		}
 	}
 
@@ -628,7 +642,8 @@ int aul_sock_recv_reply_sock_fd(int fd, int *ret_fd, int fd_size)
 	} else if ((fds_len == fd_size) && (fds_len == 1)) {
 		ret_fd[0] = fds[0];
 	} else {
-		_E("wrong number of FD recevied. Expected:%d Actual:%d\n", fd_size, fds_len);
+		_E("wrong number of FD recevied. Expected:%d Actual:%d",
+				fd_size, fds_len);
 		ret = -ECOMM;
 	}
 

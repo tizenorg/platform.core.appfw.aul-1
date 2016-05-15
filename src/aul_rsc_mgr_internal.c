@@ -229,9 +229,6 @@ static void __free_resource_group(gpointer data)
 
 int _resource_close(resource_data_t *data)
 {
-	/*
-	free(data->package);
-	*/
 	g_list_free_full(data->group_list, __free_resource_group);
 
 	free(data);

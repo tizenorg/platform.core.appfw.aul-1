@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2015 - 2016 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <assert.h>
+
 #include <glib/gstdio.h>
 #include <bundle_internal.h>
-#include <assert.h>
 #include <dlog.h>
 #include <vconf.h>
 #include <system_info.h>
@@ -43,7 +44,7 @@
 
 #define THRESHOLD_TO_CLEAN 50	/* app_resource_manager_trim_cache */
 
-#define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+#define ARRAY_SIZE(arr) ((sizeof(arr))/(sizeof(arr[0])))
 #define MAX_PATH  1024
 
 typedef struct {
@@ -79,42 +80,43 @@ enum {
 	NODE_ATTR_MAX
 };
 
-static resource_manager_t *resource_handle = NULL;
+static resource_manager_t *resource_handle;
 
 static resource_node_attr_t map[] = {
-		{ RSC_NODE_ATTR_SCREEN_DPI, NODE_ATTR_SCREEN_DPI },
-		{ RSC_NODE_ATTR_SCREEN_DPI_RANGE, NODE_ATTR_SCREEN_DPI_RANGE },
-		{ RSC_NODE_ATTR_SCREEN_WIDTH_RANGE, NODE_ATTR_SCREEN_WIDTH_RANGE },
-		{ RSC_NODE_ATTR_SCREEN_LARGE, NODE_ATTR_SCREEN_LARGE },
-		{ RSC_NODE_ATTR_SCREEN_BPP, NODE_ATTR_SCREEN_BPP },
-		{ RSC_NODE_ATTR_PLATFORM_VER, NODE_ATTR_PLATFORM_VER },
-		{ RSC_NODE_ATTR_LANGUAGE, NODE_ATTR_LANGUAGE },
+	{ RSC_NODE_ATTR_SCREEN_DPI, NODE_ATTR_SCREEN_DPI },
+	{ RSC_NODE_ATTR_SCREEN_DPI_RANGE, NODE_ATTR_SCREEN_DPI_RANGE },
+	{ RSC_NODE_ATTR_SCREEN_WIDTH_RANGE, NODE_ATTR_SCREEN_WIDTH_RANGE },
+	{ RSC_NODE_ATTR_SCREEN_LARGE, NODE_ATTR_SCREEN_LARGE },
+	{ RSC_NODE_ATTR_SCREEN_BPP, NODE_ATTR_SCREEN_BPP },
+	{ RSC_NODE_ATTR_PLATFORM_VER, NODE_ATTR_PLATFORM_VER },
+	{ RSC_NODE_ATTR_LANGUAGE, NODE_ATTR_LANGUAGE },
 };
 
-static GHashTable *attr_key = NULL;
-static const char *res_path = NULL;
-static char *cur_language = NULL;
-static bool is_slice = FALSE;
+static GHashTable *attr_key;
+static const char *res_path;
+static char *cur_language;
+static bool is_slice;
 
-static GHashTable *valid_path_list = NULL;
-static GHashTable *supported_lang_list = NULL;
-static GHashTable *id_list = NULL;
-static GList *all_node_list = NULL;
-static bundle *given_attr_list = NULL;
+static GHashTable *valid_path_list;
+static GHashTable *supported_lang_list;
+static GHashTable *id_list;
+static GList *all_node_list;
+static bundle *given_attr_list;
 
 static gint __resource_manager_comp(gconstpointer a, gconstpointer b)
 {
-	resource_group_t *rsc_group = (resource_group_t *) a;
+	resource_group_t *rsc_group = (resource_group_t *)a;
 
 	return strcmp(rsc_group->type, b);
 }
 
 static gint __compare_path(gconstpointer a, gconstpointer b)
 {
-	char tmp_path[MAX_PATH] = {0, };
+	char tmp_path[MAX_PATH];
 	resource_node_list_t *tmp_node_info = (resource_node_list_t *)a;
 
-	snprintf(tmp_path, MAX_PATH - 1, "%s%s", res_path, tmp_node_info->folder);
+	snprintf(tmp_path, sizeof(tmp_path), "%s%s",
+			res_path, tmp_node_info->folder);
 	return strncmp(tmp_path, (char *)b, strlen(tmp_path));
 }
 
@@ -132,7 +134,9 @@ static int __get_dpi(void)
 			dpi = atoi(tmp);
 		}
 	} else {
-		system_info_get_platform_int("http://tizen.org/feature/screen.dpi", &dpi);
+		system_info_get_platform_int(
+				"http://tizen.org/feature/screen.dpi",
+				&dpi);
 	}
 
 	return dpi;
@@ -144,14 +148,19 @@ static int __get_screen_width(void)
 	char *tmp = NULL;
 
 	if (is_slice) {
-		bundle_get_str(given_attr_list, RSC_NODE_ATTR_SCREEN_WIDTH_RANGE, &tmp);
+		bundle_get_str(given_attr_list,
+				RSC_NODE_ATTR_SCREEN_WIDTH_RANGE, &tmp);
 		if (tmp == NULL) {
 			LOGE("Failed to retrieve screen width");
 			screen_width = 0;
-		} else
+		} else {
 			screen_width = atoi(tmp);
-	} else
-		system_info_get_platform_int("http://tizen.org/feature/screen.width", &screen_width);
+		}
+	} else {
+		system_info_get_platform_int(
+				"http://tizen.org/feature/screen.width",
+				&screen_width);
+	}
 
 	return screen_width;
 }
@@ -160,16 +169,21 @@ static bool __get_screen_large(void)
 {
 	bool screen_large = true;
 	char *tmp = NULL;
+	int ret;
 
 	if (is_slice) {
-		bundle_get_str(given_attr_list, RSC_NODE_ATTR_SCREEN_LARGE, &tmp);
+		bundle_get_str(given_attr_list, RSC_NODE_ATTR_SCREEN_LARGE,
+				&tmp);
 		if (tmp == NULL) {
 			LOGE("Failed to retrieve screen large");
 			screen_large = false;
 		} else
 			screen_large = atoi(tmp);
 	} else {
-		if (system_info_get_platform_bool("http://tizen.org/feature/screen.size.large", &screen_large) != SYSTEM_INFO_ERROR_NONE) {
+		ret = system_info_get_platform_bool(
+				"http://tizen.org/feature/screen.size.large",
+				&screen_large);
+		if (ret != SYSTEM_INFO_ERROR_NONE) {
 			LOGE("Failed to get info of screen.size.large");
 			screen_large = false;
 		}
@@ -188,10 +202,14 @@ static int __get_screen_bpp(void)
 		if (tmp == NULL) {
 			LOGE("Failed to retrieve screen bpp");
 			screen_bpp = 0;
-		} else
+		} else {
 			screen_bpp = atoi(tmp);
-	} else
-		system_info_get_platform_int("http://tizen.org/feature/screen.bpp", &screen_bpp);
+		}
+	} else {
+		system_info_get_platform_int(
+				"http://tizen.org/feature/screen.bpp",
+				&screen_bpp);
+	}
 
 	return screen_bpp;
 }
@@ -199,10 +217,15 @@ static int __get_screen_bpp(void)
 static char *__get_platform_version(void)
 {
 	char *version = NULL;
-	if (is_slice)
-		bundle_get_str(given_attr_list, RSC_NODE_ATTR_PLATFORM_VER, &version);
-	else
-		system_info_get_platform_string("http://tizen.org/feature/platform.version", &version);
+
+	if (is_slice) {
+		bundle_get_str(given_attr_list, RSC_NODE_ATTR_PLATFORM_VER,
+				&version);
+	} else {
+		system_info_get_platform_string(
+				"http://tizen.org/feature/platform.version",
+				&version);
+	}
 
 	return version;
 }
@@ -211,7 +234,7 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 		const bundle_keyval_t *kv, void *data)
 {
 	unsigned int node_attr;
-	bool *invalid = (bool *) data;
+	bool *invalid = (bool *)data;
 	bool ret_bool = true;
 	int min, max;
 	char from[5] = { 0, };
@@ -222,18 +245,21 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 	static int screen_dpi = -1;
 	static int screen_width = -1;
 	static int screen_size_large = -1;
-	static char *version = NULL;
+	static char *version;
 	static int screen_bpp = -1;
+	int ret;
 
 	if (*invalid)
 		return;
 
-	bundle_keyval_get_basic_val((bundle_keyval_t *) kv, (void**) &val, &size);
+	bundle_keyval_get_basic_val((bundle_keyval_t *)kv,
+			(void **)&val, &size);
 
 	node_attr = (uintptr_t)g_hash_table_lookup(attr_key, key);
 	if (node_attr <= NODE_ATTR_MIN || node_attr >= NODE_ATTR_MAX) {
 		LOGE("INVALID_PARAMETER(0x%08x), node_attr(%d)",
-				AUL_RESOURCE_ERROR_INVALID_PARAMETER, node_attr);
+				AUL_RESOURCE_ERROR_INVALID_PARAMETER,
+				node_attr);
 		*invalid = true;
 		return;
 	}
@@ -246,14 +272,18 @@ static void __bundle_iterator_get_valid_nodes(const char *key, const int type,
 			*invalid = true;
 		break;
 	case NODE_ATTR_SCREEN_DPI_RANGE:
-		sscanf(val, "%s %d %s %d", from, &min, to, &max);
+		ret = sscanf(val, "%s %d %s %d", from, &min, to, &max);
+		if (ret != 4)
+			_E("Failed to convert format");
 		if (screen_dpi == -1)
 			screen_dpi = __get_dpi();
 		if (!(min <= screen_dpi && screen_dpi <= max))
 			*invalid = true;
 		break;
 	case NODE_ATTR_SCREEN_WIDTH_RANGE:
-		sscanf(val, "%s %d %s %d", from, &min, to, &max);
+		ret = sscanf(val, "%s %d %s %d", from, &min, to, &max);
+		if (ret != 4)
+			_E("Failed to convert format");
 		if (screen_width == -1)
 			screen_width = __get_screen_width();
 		if (!(min <= screen_width && screen_width <= max))
@@ -307,7 +337,8 @@ static void __bundle_iterator_get_best_node(const char *key, const char *val,
 	node_attr = (uintptr_t)g_hash_table_lookup(attr_key, key);
 	if (node_attr <= NODE_ATTR_MIN || node_attr >= NODE_ATTR_MAX) {
 		LOGE("INVALID_PARAMETER(0x%08x), node_attr(%d)",
-				AUL_RESOURCE_ERROR_INVALID_PARAMETER, node_attr);
+				AUL_RESOURCE_ERROR_INVALID_PARAMETER,
+				node_attr);
 		return;
 	}
 
@@ -357,65 +388,68 @@ static const char *__get_cache(aul_resource_e type,
 		LOGE("INVALID_PARAMETER(0x%08x), type(%d)",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER, type);
 		return NULL;
-	} else {
-		switch (type) {
-		case AUL_RESOURCE_TYPE_IMAGE:
-			rsc_type = RSC_GROUP_TYPE_IMAGE;
-			break;
-		case AUL_RESOURCE_TYPE_LAYOUT:
-			rsc_type = RSC_GROUP_TYPE_LAYOUT;
-			break;
-		case AUL_RESOURCE_TYPE_SOUND:
-			rsc_type = RSC_GROUP_TYPE_SOUND;
-			break;
-		case AUL_RESOURCE_TYPE_BIN:
-			rsc_type = RSC_GROUP_TYPE_BIN;
-			break;
-		}
+	}
+
+	switch (type) {
+	case AUL_RESOURCE_TYPE_IMAGE:
+		rsc_type = RSC_GROUP_TYPE_IMAGE;
+		break;
+	case AUL_RESOURCE_TYPE_LAYOUT:
+		rsc_type = RSC_GROUP_TYPE_LAYOUT;
+		break;
+	case AUL_RESOURCE_TYPE_SOUND:
+		rsc_type = RSC_GROUP_TYPE_SOUND;
+		break;
+	case AUL_RESOURCE_TYPE_BIN:
+		rsc_type = RSC_GROUP_TYPE_BIN;
+		break;
 	}
 
 	if (resource_handle->cache == NULL) {
 		LOGE("INVALID_PARAMETER(0x%08x), hashtable",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER);
 		return NULL;
-	} else {
-		total_len = strlen(rsc_type) + strlen(id) + 2;
-		key = (char *)calloc(1, total_len);
-		if (key == NULL) {
-			LOGE("failed to create a resource_cache(0x%08x)",
-					AUL_RESOURCE_ERROR_OUT_OF_MEMORY);
-			free(resource_cache);
-			return NULL;
-		}
-
-		snprintf(key, total_len, "%s:%s", rsc_type, id);
-		LOGD("key : %s", key);
-
-		resource_cache = g_hash_table_lookup(resource_handle->cache, key);
-		free(key);
-		if (resource_cache == NULL) {
-			LOGE("IO_ERROR(0x%08x), find list resource_cache",
-					AUL_RESOURCE_ERROR_IO_ERROR);
-			return NULL;
-		}
-
-		resource_cache->hit_cnt++;
 	}
+
+	total_len = strlen(rsc_type) + strlen(id) + 2;
+	key = (char *)calloc(1, total_len);
+	if (key == NULL) {
+		LOGE("failed to create a resource_cache(0x%08x)",
+				AUL_RESOURCE_ERROR_OUT_OF_MEMORY);
+		free(resource_cache);
+		return NULL;
+	}
+
+	snprintf(key, total_len, "%s:%s", rsc_type, id);
+	LOGD("key : %s", key);
+
+	resource_cache = g_hash_table_lookup(resource_handle->cache, key);
+	free(key);
+	if (resource_cache == NULL) {
+		LOGE("IO_ERROR(0x%08x), find list resource_cache",
+				AUL_RESOURCE_ERROR_IO_ERROR);
+		return NULL;
+	}
+
+	resource_cache->hit_cnt++;
 
 	return resource_cache->output;
 }
 
 static gint __cache_hit_compare(gconstpointer a, gconstpointer b)
 {
-	const resource_cache_context_t *lhs = (const resource_cache_context_t *) a;
-	const resource_cache_context_t *rhs = (const resource_cache_context_t *) b;
+	const resource_cache_context_t *lhs;
+	const resource_cache_context_t *rhs;
+
+	lhs = (const resource_cache_context_t *)a;
+	rhs = (const resource_cache_context_t *)b;
 
 	return lhs->hit_cnt - rhs->hit_cnt;
 }
 
 static gboolean __cache_remove(gpointer key, gpointer value, gpointer user_data)
 {
-	resource_cache_context_t *c = (resource_cache_context_t *) (value);
+	resource_cache_context_t *c = (resource_cache_context_t *)value;
 
 	if (c->remove) {
 		free(key);
@@ -429,25 +463,26 @@ static gboolean __cache_remove(gpointer key, gpointer value, gpointer user_data)
 
 static void __trim_cache(void)
 {
-	GList *values = g_hash_table_get_values(resource_handle->cache);
-	values = g_list_sort(values, __cache_hit_compare);
-
 	int i = 0;
-	GList *iter_list = values;
+	GList *iter_list;
+	resource_cache_context_t *c;
+	GList *values = g_hash_table_get_values(resource_handle->cache);
+
+	values = g_list_sort(values, __cache_hit_compare);
+	iter_list = values;
 	while (iter_list != NULL) {
 		if (i >= (THRESHOLD_TO_CLEAN / 2))
 			break;
 
-		resource_cache_context_t *c =
-				(resource_cache_context_t *) (iter_list->data);
+		c = (resource_cache_context_t *)iter_list->data;
 		c->remove = true;
 		iter_list = g_list_next(iter_list);
 		i++;
 	}
 
 	g_list_free(values);
-	g_hash_table_foreach_remove(resource_handle->cache, __cache_remove, NULL);
-
+	g_hash_table_foreach_remove(resource_handle->cache, __cache_remove,
+			NULL);
 }
 
 static void __put_cache(aul_resource_e type, const char *id,
@@ -478,21 +513,21 @@ static void __put_cache(aul_resource_e type, const char *id,
 		LOGE("INVALID_PARAMETER(0x%08x), type(%d)",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER, type);
 		return;
-	} else {
-		switch (type) {
-		case AUL_RESOURCE_TYPE_IMAGE:
-			rsc_type = RSC_GROUP_TYPE_IMAGE;
-			break;
-		case AUL_RESOURCE_TYPE_LAYOUT:
-			rsc_type = RSC_GROUP_TYPE_LAYOUT;
-			break;
-		case AUL_RESOURCE_TYPE_SOUND:
-			rsc_type = RSC_GROUP_TYPE_SOUND;
-			break;
-		case AUL_RESOURCE_TYPE_BIN:
-			rsc_type = RSC_GROUP_TYPE_BIN;
-			break;
-		}
+	}
+
+	switch (type) {
+	case AUL_RESOURCE_TYPE_IMAGE:
+		rsc_type = RSC_GROUP_TYPE_IMAGE;
+		break;
+	case AUL_RESOURCE_TYPE_LAYOUT:
+		rsc_type = RSC_GROUP_TYPE_LAYOUT;
+		break;
+	case AUL_RESOURCE_TYPE_SOUND:
+		rsc_type = RSC_GROUP_TYPE_SOUND;
+		break;
+	case AUL_RESOURCE_TYPE_BIN:
+		rsc_type = RSC_GROUP_TYPE_BIN;
+		break;
 	}
 
 	if (g_hash_table_size(resource_handle->cache) > THRESHOLD_TO_CLEAN)
@@ -530,6 +565,7 @@ static resource_group_t *__find_group(resource_data_t *data,
 {
 	resource_group_t *rsc_group = NULL;
 	char *rsc_type;
+	GList *found;
 
 	if (data == NULL) {
 		LOGE("INVALID_PARAMETER(0x%08x), resource_data_t",
@@ -541,24 +577,24 @@ static resource_group_t *__find_group(resource_data_t *data,
 		LOGE("INVALID_PARAMETER(0x%08x), type(%d)",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER, type);
 		return NULL;
-	} else {
-		switch (type) {
-		case AUL_RESOURCE_TYPE_IMAGE:
-			rsc_type = RSC_GROUP_TYPE_IMAGE;
-			break;
-		case AUL_RESOURCE_TYPE_LAYOUT:
-			rsc_type = RSC_GROUP_TYPE_LAYOUT;
-			break;
-		case AUL_RESOURCE_TYPE_SOUND:
-			rsc_type = RSC_GROUP_TYPE_SOUND;
-			break;
-		case AUL_RESOURCE_TYPE_BIN:
-			rsc_type = RSC_GROUP_TYPE_BIN;
-			break;
-		}
 	}
 
-	GList* found = g_list_find_custom(data->group_list, rsc_type,
+	switch (type) {
+	case AUL_RESOURCE_TYPE_IMAGE:
+		rsc_type = RSC_GROUP_TYPE_IMAGE;
+		break;
+	case AUL_RESOURCE_TYPE_LAYOUT:
+		rsc_type = RSC_GROUP_TYPE_LAYOUT;
+		break;
+	case AUL_RESOURCE_TYPE_SOUND:
+		rsc_type = RSC_GROUP_TYPE_SOUND;
+		break;
+	case AUL_RESOURCE_TYPE_BIN:
+		rsc_type = RSC_GROUP_TYPE_BIN;
+		break;
+	}
+
+	found = g_list_find_custom(data->group_list, rsc_type,
 			__resource_manager_comp);
 	if (found == NULL) {
 		LOGE("IO_ERROR(0x%08x), find list resource_group %s",
@@ -566,7 +602,7 @@ static resource_group_t *__find_group(resource_data_t *data,
 		return NULL;
 	}
 
-	rsc_group = (resource_group_t *) (found->data);
+	rsc_group = (resource_group_t *)found->data;
 
 	return rsc_group;
 }
@@ -574,6 +610,8 @@ static resource_group_t *__find_group(resource_data_t *data,
 static GList *__get_valid_nodes(resource_group_t *group,
 		const char *id)
 {
+	char path_buf[MAX_PATH];
+	bool invalid = false;
 	GList *list = NULL;
 	GList *valid_list = NULL;
 	resource_node_t *valid_node = NULL;
@@ -587,20 +625,19 @@ static GList *__get_valid_nodes(resource_group_t *group,
 
 	list = g_list_first(group->node_list);
 
-	char path_buf[MAX_PATH] = { 0, };
 	while (list) {
-		bool invalid = false;
 		rsc_node = (resource_node_t *) list->data;
 
-		snprintf(path_buf, MAX_PATH - 1, "%s%s/%s", res_path,
-				rsc_node->folder, id);
+		snprintf(path_buf, sizeof(path_buf), "%s%s/%s",
+				res_path, rsc_node->folder, id);
 		if (access(path_buf, R_OK) == 0) {
-			bundle_foreach(rsc_node->attr, __bundle_iterator_get_valid_nodes,
+			bundle_foreach(rsc_node->attr,
+					__bundle_iterator_get_valid_nodes,
 					&invalid);
-
 			if (!invalid) {
 				valid_node = (resource_node_t *) list->data;
-				valid_list = g_list_append(valid_list, valid_node);
+				valid_list = g_list_append(valid_list,
+						valid_node);
 			}
 		}
 
@@ -612,7 +649,9 @@ static GList *__get_valid_nodes(resource_group_t *group,
 
 static resource_node_t *__get_best_node(GList *nodes)
 {
+	unsigned int weight = 0;
 	unsigned int weight_tmp = 0;
+	resource_node_t *res_node;
 	resource_node_t *best_node = NULL;
 	GList *list = NULL;
 
@@ -623,12 +662,10 @@ static resource_node_t *__get_best_node(GList *nodes)
 	}
 
 	list = g_list_first(nodes);
-
 	while (list != NULL) {
-		unsigned int weight = 0;
-		resource_node_t *res_node = (resource_node_t *) (list->data);
-
-		bundle_iterate(res_node->attr, __bundle_iterator_get_best_node, &weight);
+		res_node = (resource_node_t *) (list->data);
+		bundle_iterate(res_node->attr, __bundle_iterator_get_best_node,
+				&weight);
 		if (weight > weight_tmp) {
 			best_node = res_node;
 			weight_tmp = weight;
@@ -642,10 +679,11 @@ static resource_node_t *__get_best_node(GList *nodes)
 static int __open(resource_manager_t **handle)
 {
 	int retval = AUL_RESOURCE_ERROR_NONE;
-	resource_manager_t *rsc_manager = NULL;
+	resource_manager_t *rsc_manager;
 	char buf[MAX_PATH] = { 0, };
 
-	rsc_manager = (resource_manager_t *) calloc(1, sizeof(resource_manager_t));
+	rsc_manager = (resource_manager_t *)calloc(1,
+			sizeof(resource_manager_t));
 	if (!rsc_manager) {
 		LOGE("failed to create a resource_manager(0x%08x)",
 				AUL_RESOURCE_ERROR_OUT_OF_MEMORY);
@@ -667,17 +705,19 @@ static int __open(resource_manager_t **handle)
 	return AUL_RESOURCE_ERROR_NONE;
 }
 
-static void __invalidate_cache()
+static void __invalidate_cache(void)
 {
+	resource_cache_context_t *c;
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+
 	if (resource_handle != NULL) {
 		if (resource_handle->cache != NULL) {
-			GHashTableIter iter;
-			gpointer key, value;
-
 			g_hash_table_iter_init(&iter, resource_handle->cache);
 			while (g_hash_table_iter_next(&iter, &key, &value)) {
 				free(key);
-				resource_cache_context_t *c = (resource_cache_context_t *) value;
+				c = (resource_cache_context_t *)value;
 				free(c->output);
 				free(value);
 			}
@@ -731,12 +771,13 @@ static void path_callback(char *path)
 	char orig_path[MAX_PATH] = {0, };
 	char *path_ptr = NULL;
 	int path_len = 0;
-	GList *tmp_list = g_list_find_custom(all_node_list, path, __compare_path);
+	GList *tmp_list;
+	resource_node_list_t *tmp_node_info;
 
-	resource_node_list_t *tmp_node_info = NULL;
-	if (tmp_list == NULL)
+	tmp_list = g_list_find_custom(all_node_list, path, __compare_path);
+	if (tmp_list == NULL) {
 		g_hash_table_add(valid_path_list, strdup(path));
-	else {
+	} else {
 		tmp_node_info = (resource_node_list_t *)tmp_list->data;
 		path_len = strlen(path);
 		if (path_len >= MAX_PATH) {
@@ -744,8 +785,10 @@ static void path_callback(char *path)
 			return;
 		}
 		strncpy(orig_path, path, path_len);
-		path_ptr = &orig_path[strlen(res_path) + strlen(tmp_node_info->folder)];
-		g_hash_table_insert(id_list, strdup(path_ptr), strdup(tmp_node_info->type));
+		path_ptr = &orig_path[strlen(res_path)
+				+ strlen(tmp_node_info->folder)];
+		g_hash_table_insert(id_list, strdup(path_ptr),
+				strdup(tmp_node_info->type));
 	}
 }
 
@@ -774,7 +817,8 @@ static void __scan_dir(const char *path, void (*func)(char *))
 		if (items[i]->d_name[0] == '.')
 			continue;
 
-		snprintf(abs_path, MAX_PATH - 1, "%s/%s", cwd, items[i]->d_name);
+		snprintf(abs_path, MAX_PATH - 1, "%s/%s",
+				cwd, items[i]->d_name);
 
 		if (g_lstat(abs_path, &fstat) != 0) {
 			LOGE("failed to retrieve info[%s]", abs_path);
@@ -785,7 +829,6 @@ static void __scan_dir(const char *path, void (*func)(char *))
 		else
 			func(abs_path);
 	}
-
 }
 
 static aul_resource_e __get_resource_type(char *type)
@@ -801,24 +844,26 @@ static aul_resource_e __get_resource_type(char *type)
 		return AUL_RESOURCE_TYPE_SOUND;
 	else if (strcmp(type, RSC_GROUP_TYPE_BIN) == 0)
 		return AUL_RESOURCE_TYPE_BIN;
-	else
-		return -1;
+
+	return -1;
 }
 
 static int __set_valid_filelist(bundle *b)
 {
+	int retval = AUL_RESOURCE_ERROR_NONE;
+	char *path = NULL;
+	GHashTableIter id_list_iter;
+	GHashTableIter lang_list_iter;
+	gpointer id_key;
+	gpointer lang_key;
+	gpointer id_type;
+	aul_resource_e rsc_type = AUL_RESOURCE_TYPE_MIN;
+
 	if (b == NULL || supported_lang_list == NULL) {
 		LOGE("INVALID_PARAMETER(0x%08x), bundle",
 				AUL_RESOURCE_ERROR_INVALID_PARAMETER);
 		return AUL_RESOURCE_ERROR_INVALID_PARAMETER;
 	}
-
-	int retval = AUL_RESOURCE_ERROR_NONE;
-	char *path = NULL;
-	GHashTableIter id_list_iter;
-	GHashTableIter lang_list_iter;
-	gpointer id_key, lang_key, id_type;
-	aul_resource_e rsc_type = AUL_RESOURCE_TYPE_MIN;
 
 	given_attr_list = b;
 	g_hash_table_iter_init(&id_list_iter, id_list);
@@ -826,23 +871,28 @@ static int __set_valid_filelist(bundle *b)
 	while (g_hash_table_iter_next(&id_list_iter, &id_key, &id_type)) {
 		rsc_type = __get_resource_type((char *)id_type);
 		if (rsc_type == -1) {
-			LOGE("failed to get resource type[%s]", (char *)id_type);
+			LOGE("failed to get resource type[%s]",
+					(char *)id_type);
 			return AUL_RESOURCE_ERROR_IO_ERROR;
 		}
 
 		g_hash_table_iter_init(&lang_list_iter, supported_lang_list);
-		while (g_hash_table_iter_next(&lang_list_iter, &lang_key, NULL)) {
+		while (g_hash_table_iter_next(&lang_list_iter,
+				&lang_key, NULL)) {
 			cur_language = strdup(lang_key);
 			if (cur_language == NULL) {
 				LOGE("failed to strdup");
 				return AUL_RESOURCE_ERROR_OUT_OF_MEMORY;
 			}
 
-			retval = aul_resource_manager_get(rsc_type, id_key, &path);
-			if (retval == AUL_RESOURCE_ERROR_NONE)
+			retval = aul_resource_manager_get(rsc_type, id_key,
+					&path);
+			if (retval == AUL_RESOURCE_ERROR_NONE) {
 				g_hash_table_add(valid_path_list, path);
-			else
-				LOGE("failed to get value with given type[%d], key[%s]", rsc_type, id_key);
+			} else {
+				LOGE("failed to get value with given type[%d],",
+				     " key[%s]", rsc_type, id_key);
+			}
 
 			if (cur_language) {
 				free(cur_language);
@@ -856,15 +906,14 @@ static int __set_valid_filelist(bundle *b)
 static int __make_list(void)
 {
 	resource_group_t *tmp_group = NULL;
-	resource_node_t  *tmp_node = NULL;
+	resource_node_t *tmp_node = NULL;
 	resource_node_list_t *tmp_node_struct = NULL;
 	char *group_type = NULL;
-	char folder[MAX_PATH] = {0 ,};
+	char folder[MAX_PATH];
 	char *node_lang = NULL;
 	GList *group_list = NULL;
 	GList *node_list = NULL;
 	bundle *b = NULL;
-
 
 	/* make node folder list */
 	group_list = resource_handle->data->group_list;
@@ -882,7 +931,8 @@ static int __make_list(void)
 		snprintf(folder, MAX_PATH - 1, "%s/", tmp_group->folder);
 
 		/* make struct and put it into all node list */
-		tmp_node_struct = (resource_node_list_t *)calloc(1, sizeof(resource_node_list_t));
+		tmp_node_struct = (resource_node_list_t *)calloc(1,
+				sizeof(resource_node_list_t));
 		if (tmp_node_struct == NULL) {
 			LOGE("calloc failed");
 			return AUL_RESOURCE_ERROR_OUT_OF_MEMORY;
@@ -902,14 +952,17 @@ static int __make_list(void)
 			if (b == NULL)
 				return AUL_RESOURCE_ERROR_IO_ERROR;
 			bundle_get_str(b, RSC_NODE_ATTR_LANGUAGE, &node_lang);
-			if (node_lang != NULL)
-				g_hash_table_add(supported_lang_list, strdup(node_lang));
+			if (node_lang != NULL) {
+				g_hash_table_add(supported_lang_list,
+						strdup(node_lang));
+			}
 
 			memset(folder, '\0', MAX_PATH);
 			snprintf(folder, MAX_PATH - 1, "%s/", tmp_node->folder);
 
 			/* make struct and put it into all node list */
-			tmp_node_struct = (resource_node_list_t *)calloc(1, sizeof(resource_node_list_t));
+			tmp_node_struct = (resource_node_list_t *)calloc(1,
+					sizeof(resource_node_list_t));
 			if (tmp_node_struct == NULL) {
 				LOGE("calloc failed");
 				return AUL_RESOURCE_ERROR_OUT_OF_MEMORY;
@@ -917,7 +970,8 @@ static int __make_list(void)
 
 			tmp_node_struct->folder = strdup(folder);
 			tmp_node_struct->type = strdup(group_type);
-			all_node_list = g_list_prepend(all_node_list, tmp_node_struct);
+			all_node_list = g_list_prepend(all_node_list,
+					tmp_node_struct);
 
 			node_list = g_list_next(node_list);
 		}
@@ -933,16 +987,22 @@ static int __make_list(void)
 
 static void __free_str(gpointer data)
 {
+	char *char_data;
+
 	if (data == NULL)
 		return;
 
-	char *char_data = (char *)data;
+	char_data = (char *)data;
 	free(char_data);
 	data = NULL;
 }
 
 static int __init(const char *rsc_folder_path, bundle *b)
 {
+	int retval = AUL_RESOURCE_ERROR_NONE;
+	unsigned int i;
+	int r;
+
 	if (rsc_folder_path != NULL && b != NULL)
 		is_slice = TRUE;
 	else
@@ -950,8 +1010,6 @@ static int __init(const char *rsc_folder_path, bundle *b)
 
 	if (resource_handle != NULL)
 		return AUL_RESOURCE_ERROR_NONE;
-
-	int retval = AUL_RESOURCE_ERROR_NONE;
 
 	res_path = _get_app_resource_path(rsc_folder_path);
 	if (res_path == NULL) {
@@ -969,20 +1027,19 @@ static int __init(const char *rsc_folder_path, bundle *b)
 
 	if (attr_key == NULL) {
 		attr_key = g_hash_table_new(g_str_hash, g_str_equal);
-
 		if (attr_key == NULL)
 			return AUL_RESOURCE_ERROR_OUT_OF_MEMORY;
 
-		unsigned int i;
 		for (i = 0; i < ARRAY_SIZE(map); i++) {
-			g_hash_table_insert(attr_key, (char *)map[i].bundle_attr_key,
-					(gpointer)((uintptr_t)(map[i].bundle_attr_value)));
+			g_hash_table_insert(attr_key,
+					(char *)map[i].bundle_attr_key,
+					(uintptr_t)(map[i].bundle_attr_value));
 		}
 	}
 
 	if (is_slice == FALSE) {
-		int r = vconf_notify_key_changed(VCONFKEY_LANGSET, __vconf_cb, NULL);
-
+		r = vconf_notify_key_changed(VCONFKEY_LANGSET,
+				__vconf_cb, NULL);
 		if (r < 0) {
 			LOGE("IO_ERROR(0x%08x), failed to register vconf(%d)",
 					AUL_RESOURCE_ERROR_IO_ERROR, r);
@@ -990,14 +1047,20 @@ static int __init(const char *rsc_folder_path, bundle *b)
 		}
 	} else {
 		/* make ID list */
-		if (id_list == NULL)
-			id_list = g_hash_table_new_full(g_str_hash, g_str_equal, __free_str, __free_str);
+		if (id_list == NULL) {
+			id_list = g_hash_table_new_full(g_str_hash,
+					g_str_equal, __free_str, __free_str);
+		}
 
-		if (supported_lang_list == NULL)
-			supported_lang_list = g_hash_table_new_full(g_str_hash, g_str_equal, __free_str, NULL);
+		if (supported_lang_list == NULL) {
+			supported_lang_list = g_hash_table_new_full(g_str_hash,
+					g_str_equal, __free_str, NULL);
+		}
 
-		if (valid_path_list == NULL)
-			valid_path_list = g_hash_table_new_full(g_str_hash, g_str_equal, __free_str, NULL);
+		if (valid_path_list == NULL) {
+			valid_path_list = g_hash_table_new_full(g_str_hash,
+					g_str_equal, __free_str, NULL);
+		}
 
 		retval = __make_list();
 		if (retval < 0) {
@@ -1010,7 +1073,6 @@ static int __init(const char *rsc_folder_path, bundle *b)
 			LOGE("Failed to get valid filelist");
 			return AUL_RESOURCE_ERROR_IO_ERROR;
 		}
-
 	}
 
 	return AUL_RESOURCE_ERROR_NONE;
@@ -1029,7 +1091,6 @@ API int aul_resource_manager_init_slice(const char *rsc_folder_path, bundle *b)
 	return __init(rsc_folder_path, b);
 }
 
-
 API int aul_resource_manager_get_path_list(GHashTable **list)
 {
 	if (is_slice == FALSE)
@@ -1043,14 +1104,18 @@ API int aul_resource_manager_get_path_list(GHashTable **list)
 	return AUL_RESOURCE_ERROR_NONE;
 }
 
-API int aul_resource_manager_get(aul_resource_e type, const char *id, char **path)
+API int aul_resource_manager_get(aul_resource_e type, const char *id,
+		char **path)
 {
 	int retval = AUL_RESOURCE_ERROR_NONE;
 	char *put_fname = NULL;
-	const char *cached_path = NULL;
+	const char *cached_path;
 	GList *list = NULL;
-	resource_group_t *resource_group = NULL;
-	resource_node_t *resource_node = NULL;
+	resource_group_t *resource_group;
+	resource_node_t *resource_node;
+	unsigned int total_len;
+	char path_buf[MAX_PATH] = { 0, };
+	char group_path_buf[MAX_PATH] = { 0, };
 
 	*path = NULL;
 
@@ -1089,23 +1154,23 @@ API int aul_resource_manager_get(aul_resource_e type, const char *id, char **pat
 		LOGE("IO_ERROR(0x%08x), failed to get resource_group",
 				AUL_RESOURCE_ERROR_IO_ERROR);
 		retval = AUL_RESOURCE_ERROR_IO_ERROR;
-		goto Exception;
+		goto exception;
 	}
 
 	list = __get_valid_nodes(resource_group, id);
 	if (list == NULL) {
 		retval = AUL_RESOURCE_ERROR_IO_ERROR;
-		goto Exception;
+		goto exception;
 	}
 
 	resource_node = __get_best_node(list);
 	if (resource_node == NULL) {
 		retval = AUL_RESOURCE_ERROR_IO_ERROR;
-		goto Exception;
+		goto exception;
 	} else {
-		unsigned int total_len = strlen(res_path)
-				+ strlen(resource_node->folder) + strlen(id) + 3;
-		put_fname = (char *) calloc(1, total_len);
+		total_len = strlen(res_path) + strlen(resource_node->folder)
+				+ strlen(id) + 3;
+		put_fname = (char *)calloc(1, total_len);
 		if (!put_fname) {
 			if (list != NULL)
 				g_list_free(list);
@@ -1118,23 +1183,21 @@ API int aul_resource_manager_get(aul_resource_e type, const char *id, char **pat
 
 	__put_cache(type, id, put_fname);
 
-
-Exception:
+exception:
 	if (list != NULL)
 		g_list_free(list);
 
 	if (put_fname == NULL && resource_group != NULL) {
-		char path_buf[MAX_PATH] = { 0, };
-		char group_path_buf[MAX_PATH] = { 0, };
-
 		snprintf(path_buf, MAX_PATH - 1, "%s%s/%s", res_path,
 				resource_group->folder, id);
-		snprintf(group_path_buf, MAX_PATH - 1, "%s/%s", resource_group->folder, id);
+		snprintf(group_path_buf, MAX_PATH - 1, "%s/%s",
+				resource_group->folder, id);
 
 		list = g_list_first(resource_group->node_list);
 		while (list) {
-			resource_node = (resource_node_t *) list->data;
-			if (strncmp(group_path_buf, resource_node->folder, strlen(resource_node->folder)) == 0) {
+			resource_node = (resource_node_t *)list->data;
+			if (strncmp(group_path_buf, resource_node->folder,
+					strlen(resource_node->folder)) == 0) {
 				*path = NULL;
 				return AUL_RESOURCE_ERROR_IO_ERROR;
 			}
@@ -1157,6 +1220,7 @@ Exception:
 static void __free_node_folder_list(gpointer data)
 {
 	resource_node_list_t *node_data = (resource_node_list_t *)data;
+
 	if (node_data == NULL)
 		return;
 
@@ -1190,9 +1254,9 @@ API int aul_resource_manager_release(void)
 		cur_language = NULL;
 	}
 
-	if (is_slice == FALSE)
+	if (is_slice == FALSE) {
 		vconf_ignore_key_changed(VCONFKEY_LANGSET, __vconf_cb);
-	else {
+	} else {
 		if (valid_path_list != NULL) {
 			g_hash_table_destroy(valid_path_list);
 			valid_path_list = NULL;
@@ -1209,9 +1273,11 @@ API int aul_resource_manager_release(void)
 		}
 
 		if (all_node_list != NULL) {
-			g_list_free_full(all_node_list, __free_node_folder_list);
+			g_list_free_full(all_node_list,
+					__free_node_folder_list);
 			all_node_list = NULL;
 		}
 	}
 	return AUL_RESOURCE_ERROR_NONE;
 }
+

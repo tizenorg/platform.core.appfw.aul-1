@@ -15,8 +15,9 @@
  */
 
 #define _GNU_SOURCE
-#include <glib.h>
 #include <poll.h>
+
+#include <glib.h>
 #include <bundle.h>
 #include <bundle_internal.h>
 
@@ -45,8 +46,6 @@ static void __aul_glib_finalize(GSource *src)
 
 		fd_list = fd_list->next;
 	} while (fd_list);
-
-	return;
 }
 
 static gboolean __aul_glib_check(GSource *src)
@@ -86,7 +85,8 @@ GSourceFuncs funcs = {
 
 gboolean __aul_glib_handler(gpointer data)
 {
-	GPollFD *gpollfd = (GPollFD *) data;
+	GPollFD *gpollfd = (GPollFD *)data;
+
 	aul_sock_handler(gpollfd->fd);
 	return TRUE;
 }
@@ -102,8 +102,8 @@ static gboolean __app_start_internal(gpointer data)
 	return 0;
 }
 
-API int aul_launch_init(
-	int (*aul_handler) (aul_type type, bundle *, void *), void *data)
+API int aul_launch_init(int (*aul_handler)(aul_type type, bundle *, void *),
+		void *data)
 {
 	int fd;
 	GPollFD *gpollfd;
@@ -136,7 +136,7 @@ API int aul_launch_init(
 	return AUL_R_OK;
 }
 
-API int aul_launch_fini()
+API int aul_launch_fini(void)
 {
 	g_source_destroy(src);
 	return AUL_R_OK;

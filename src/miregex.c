@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2000 - 2016 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -34,16 +34,14 @@ typedef struct miregex_file_info_t {
 	char *desc;
 } miregex_file_info;
 
-regex_tbl *miregex_tbl = NULL;
-static time_t miregex_mtime = 0;
+regex_tbl *miregex_tbl;
+static time_t miregex_mtime;
 
 static void __free_miregex_file_info(miregex_file_info *info);
 static miregex_file_info *__get_miregex_file_info(const char *path);
 static int __add_miregex(const char *name, const char *regex, const char *desc);
-static int __need_update_miregex_tbl();
-static void __miregex_free_regex_table();
-
-
+static int __need_update_miregex_tbl(void);
+static void __miregex_free_regex_table(void);
 
 static void __free_miregex_file_info(miregex_file_info *info)
 {
@@ -100,25 +98,25 @@ static miregex_file_info *__get_miregex_file_info(const char *path)
 
 static int __add_miregex(const char *name, const char *regex, const char *desc)
 {
-	regex_tbl *tbl = NULL;
+	regex_tbl *tbl;
 	int error;
 	int ret;
-	char *msg = NULL;
+	char *msg;
 
 	if (regex == NULL)
 		return -1;
 
 	tbl = (regex_tbl *)malloc(sizeof(regex_tbl));
-	if (NULL == tbl) {
+	if (tbl == NULL) {
 		_E("Malloc failed!");
 		return -1;
 	}
 
-	if ((error = regcomp(&(tbl->regex_preg), regex,
-			     REG_EXTENDED | REG_NOSUB)) != 0) {
+	error = regcomp(&(tbl->regex_preg), regex, REG_EXTENDED | REG_NOSUB);
+	if (error != 0) {
 		ret = regerror(error, &(tbl->regex_preg), NULL, 0);
 		msg = (char *)malloc(sizeof(char) * ret);
-		if (NULL == msg) {
+		if (msg == NULL) {
 			_E("Malloc failed!");
 			if (tbl) {
 				free(tbl);
@@ -152,7 +150,7 @@ static int __add_miregex(const char *name, const char *regex, const char *desc)
 	return 0;
 }
 
-static int __need_update_miregex_tbl()
+static int __need_update_miregex_tbl(void)
 {
 	struct stat st;
 
@@ -174,7 +172,7 @@ static int __need_update_miregex_tbl()
 	return 0;
 }
 
-static void __miregex_free_regex_table()
+static void __miregex_free_regex_table(void)
 {
 	regex_tbl *tbl;
 
@@ -195,7 +193,7 @@ static void __miregex_free_regex_table()
 	miregex_tbl = NULL;
 }
 
-regex_tbl *miregex_get_regex_table()
+regex_tbl *miregex_get_regex_table(void)
 {
 	DIR *dp;
 	struct dirent dentry;
@@ -237,3 +235,4 @@ regex_tbl *miregex_get_regex_table()
 
 	return miregex_tbl;
 }
+

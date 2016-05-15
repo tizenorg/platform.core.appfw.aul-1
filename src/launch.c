@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2000 - 2016 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+
 #include <glib.h>
 #include <gio/gio.h>
 #include <ttrace.h>
-
 #include <bundle_internal.h>
 
 #include "app_signal.h"
@@ -41,27 +41,27 @@
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20
 
-static int aul_initialized = 0;
+static int aul_initialized;
 static int aul_fd;
-static void *__window_object = NULL;
-static void *__bg_object = NULL;
-static void *__conformant_object = NULL;
+static void *__window_object;
+static void *__bg_object;
+static void *__conformant_object;
 
-static int (*_aul_handler) (aul_type type, bundle *kb, void *data) = NULL;
+static int (*_aul_handler)(aul_type type, bundle *kb, void *data);
 static void *_aul_data;
 
-static int app_resume();
-static int app_terminate();
+static int app_resume(void);
+static int app_terminate(void);
 static void __clear_internal_key(bundle *kb);
 static inline void __set_stime(bundle *kb);
 static int __app_start_internal(gpointer data);
 static int __app_launch_local(bundle *b);
 static int __send_result_to_launchpad(int fd, int res);
 
-static data_control_provider_handler_fn __dc_handler = NULL;
-extern  int aul_launch_fini();
+static data_control_provider_handler_fn __dc_handler;
+extern int aul_launch_fini(void);
 
-int aul_is_initialized()
+int aul_is_initialized(void)
 {
 	return aul_initialized;
 }
@@ -82,20 +82,21 @@ int app_start(bundle *kb)
 	/* Handle the DataControl callback */
 	str = bundle_get_val(kb, AUL_K_DATA_CONTROL_TYPE);
 	if (str != NULL && strcmp(str, "CORE") == 0) {
+		/* bundle, request_id, data */
 		if (__dc_handler != NULL)
-			__dc_handler(kb, 0, NULL); /* bundle, request_id, data */
+			__dc_handler(kb, 0, NULL);
 	}
 
 	return 0;
 }
 
-static int app_resume()
+static int app_resume(void)
 {
 	__call_aul_handler(AUL_RESUME, NULL);
 	return 0;
 }
 
-static int app_terminate()
+static int app_terminate(void)
 {
 	__call_aul_handler(AUL_TERMINATE, NULL);
 	return 0;
@@ -113,14 +114,14 @@ static int app_pause(void)
 	return 0;
 }
 
-static int app_prepare_to_suspend()
+static int app_prepare_to_suspend(void)
 {
 	_D("[__SUSPEND__]");
 	__call_aul_handler(AUL_SUSPEND, NULL);
 	return 0;
 }
 
-static int app_prepare_to_wake()
+static int app_prepare_to_wake(void)
 {
 	_D("[__WAKE__]");
 	__call_aul_handler(AUL_WAKE, NULL);
@@ -166,18 +167,20 @@ static int __get_aul_error(int res)
 	return ret;
 }
 
-static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int opt)
+static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb,
+		int opt)
 {
 	int res;
 
-	if ((res = aul_sock_send_bundle(pid, uid, cmd, kb, opt)) < 0)
+	res = aul_sock_send_bundle(pid, uid, cmd, kb, opt);
+	if (res < 0)
 		res = __get_aul_error(res);
 
 	return res;
 }
 
 static int __send_cmd_async_for_uid_opt(int pid, uid_t uid,
-					int cmd, bundle *kb, int opt)
+		int cmd, bundle *kb, int opt)
 {
 	int res;
 
@@ -222,7 +225,8 @@ API int app_send_cmd_with_noreply(int pid, int cmd, bundle *kb)
 	return __send_cmd_for_uid_opt(pid, getuid(), cmd, kb, AUL_SOCK_NOREPLY);
 }
 
-API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd, bundle *kb)
+API int app_send_cmd_to_launchpad(const char *pad_type, uid_t uid, int cmd,
+		bundle *kb)
 {
 	int fd;
 	int len;
@@ -303,7 +307,7 @@ static int __app_launch_local(bundle *b)
 		return AUL_R_ERROR;
 }
 
-static int __app_resume_local()
+static int __app_resume_local(void)
 {
 	if (!aul_is_initialized())
 		return AUL_R_ENOINIT;
@@ -322,7 +326,8 @@ int app_request_to_launchpad(int cmd, const char *appid, bundle *kb)
 	return app_request_to_launchpad_for_uid(cmd, appid, kb, getuid());
 }
 
-int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid_t uid)
+int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb,
+		uid_t uid)
 {
 	int must_free = 0;
 	int ret = 0;
@@ -340,10 +345,13 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
 
-	if (cmd == APP_START_ASYNC)
-		ret = app_send_cmd_with_queue_noreply_for_uid(AUL_UTIL_PID, uid, cmd, kb);
-	else
-		ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd, kb);
+	if (cmd == APP_START_ASYNC) {
+		ret = app_send_cmd_with_queue_noreply_for_uid(AUL_UTIL_PID,
+				uid, cmd, kb);
+	} else {
+		ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd,
+				kb);
+	}
 
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
@@ -404,7 +412,8 @@ int aul_sock_handler(int fd)
 	int pid;
 	int ret;
 
-	if ((pkt = aul_sock_recv_pkt(fd, &clifd, &cr)) == NULL) {
+	pkt = aul_sock_recv_pkt(fd, &clifd, &cr);
+	if (pkt == NULL) {
 		_E("recv error");
 		return -1;
 	}
@@ -494,7 +503,6 @@ err:
 int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb)
 {
 	int ac = 1;
-
 	char *buf = NULL;
 
 	*kb = bundle_create();
@@ -506,7 +514,7 @@ int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb)
 
 	if ((argv != NULL) && (argv[0] != NULL)) {
 		buf = strdup(argv[0]);
-		if (NULL == buf) {
+		if (buf == NULL) {
 			_E("Malloc failed");
 			return AUL_R_ERROR;
 		}
@@ -537,7 +545,7 @@ int aul_make_bundle_from_argv(int argc, char **argv, bundle **kb)
 }
 
 int aul_register_init_callback(
-	int (*aul_handler) (aul_type type, bundle *, void *), void *data)
+	int (*aul_handler)(aul_type type, bundle *, void *), void *data)
 {
 	/* Save start handler function in static var */
 	_aul_handler = aul_handler;
@@ -545,7 +553,7 @@ int aul_register_init_callback(
 	return 0;
 }
 
-int aul_initialize()
+int aul_initialize(void)
 {
 	if (aul_initialized)
 		return AUL_R_ECANCELED;
@@ -560,14 +568,12 @@ int aul_initialize()
 	return aul_fd;
 }
 
-API void aul_finalize()
+API void aul_finalize(void)
 {
 	aul_launch_fini();
 
 	if (aul_initialized)
 		close(aul_fd);
-
-	return;
 }
 
 API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
@@ -587,7 +593,8 @@ API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
 			return AUL_R_ERROR;
 	}
 
-	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), APP_GET_DC_SOCKET_PAIR, b, AUL_SOCK_ASYNC);
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(),
+			APP_GET_DC_SOCKET_PAIR, b, AUL_SOCK_ASYNC);
 	if (ret) {
 		ret = aul_sock_recv_reply_sock_fd(ret, fds, 1);
 		if (ret == 0)
@@ -766,7 +773,8 @@ API int aul_kill_pid(int pid)
 	return ret;
 }
 
-API int aul_set_data_control_provider_cb(data_control_provider_handler_fn handler)
+API int aul_set_data_control_provider_cb(
+		data_control_provider_handler_fn handler)
 {
 	__dc_handler = handler;
 	return 0;
@@ -783,7 +791,7 @@ API void aul_set_preinit_window(void *evas_object)
 	__window_object = evas_object;
 }
 
-API void* aul_get_preinit_window(const char *win_name)
+API void *aul_get_preinit_window(const char *win_name)
 {
 	return __window_object;
 }
@@ -793,7 +801,7 @@ API void aul_set_preinit_background(void *evas_object)
 	__bg_object = evas_object;
 }
 
-API void* aul_get_preinit_background(void)
+API void *aul_get_preinit_background(void)
 {
 	return __bg_object;
 }
@@ -803,7 +811,7 @@ API void aul_set_preinit_conformant(void *evas_object)
 	__conformant_object = evas_object;
 }
 
-API void* aul_get_preinit_conformant(void)
+API void *aul_get_preinit_conformant(void)
 {
 	return __conformant_object;
 }
@@ -887,8 +895,8 @@ API int aul_is_tep_mount_dbus_done(const char *tep_string)
 					NULL,
 					&err);
 	if (reply == NULL) {
-		_E("g_dbus_connection_send_message_with_reply_sync() "
-					"is failed. %s", err->message);
+		_E("g_dbus_connection_send_message_with_reply_sync() ",
+				"is failed. %s", err->message);
 		goto end;
 	}
 
@@ -915,9 +923,10 @@ end:
 
 API int aul_check_tep_mount(const char *tep_path)
 {
+	int rv = -1;
+	int cnt = 0;
+
 	if (tep_path) {
-		int rv = -1;
-		int cnt = 0;
 		while (cnt < TEP_ISMOUNT_MAX_RETRY_CNT) {
 			rv = aul_is_tep_mount_dbus_done(tep_path);
 			if (rv == 1)

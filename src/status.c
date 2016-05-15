@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2000 - 2016 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,12 @@
 #include "launch.h"
 
 typedef struct _app_status_cb_info_t {
-	int (*handler) (int status, void *data);
+	int (*handler)(int status, void *data);
 	void *data;
 	struct _app_status_cb_info_t *next;
 } app_status_cb_info_t;
 
-app_status_cb_info_t *app_status_cb = NULL;
+static app_status_cb_info_t *app_status_cb;
 
 static int app_status = STATUS_LAUNCHING;
 
@@ -50,8 +50,10 @@ API int aul_status_update(int status)
 	if (!ret) {
 		while (cb) {
 			if (cb->handler) {
-				if (cb->handler(app_status, cb->data) < 0)
-					aul_remove_status_local_cb(cb->handler, cb->data);
+				if (cb->handler(app_status, cb->data) < 0) {
+					aul_remove_status_local_cb(cb->handler,
+							cb->data);
+				}
 			}
 
 			cb = cb->next;
@@ -108,7 +110,8 @@ API int aul_add_status_local_cb(int (*func)(int status, void *data), void *data)
 	return 0;
 }
 
-API int aul_remove_status_local_cb(int (*func)(int status, void *data), void *data)
+API int aul_remove_status_local_cb(int (*func)(int status, void *data),
+		void *data)
 {
 	app_status_cb_info_t *cb = app_status_cb;
 	app_status_cb_info_t *tmp = NULL;
@@ -144,8 +147,10 @@ API int aul_invoke_status_local_cb(int status)
 
 	while (cb) {
 		if (cb->handler) {
-			if (cb->handler(status, cb->data) < 0)
-				aul_remove_status_local_cb(cb->handler, cb->data);
+			if (cb->handler(status, cb->data) < 0) {
+				aul_remove_status_local_cb(cb->handler,
+						cb->data);
+			}
 		}
 
 		cb = cb->next;
@@ -168,7 +173,7 @@ API int aul_running_list_update(char *appid, char *app_path, char *pid)
 	ret = app_send_cmd(AUL_UTIL_PID, APP_RUNNING_LIST_UPDATE, kb);
 
 	if (kb != NULL)
-			bundle_free(kb);
+		bundle_free(kb);
 
 	return ret;
 }

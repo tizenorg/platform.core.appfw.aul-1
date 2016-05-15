@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2000 - 2016 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -27,33 +27,31 @@
 #include "aul_util.h"
 #include "launch.h"
 
-/*#define ACTIVATE_PREEMPT_FEATURE*/
-
 typedef struct _app_resultcb_info_t {
 	int launched_pid;
 	int seq_num;
-	void (*cb_func) (bundle *kb, int is_cancel, void *data);
+	void (*cb_func)(bundle *kb, int is_cancel, void *data);
 	void *priv_data;
-	void (*caller_cb) (int launched_pid, void *data);
+	void (*caller_cb)(int launched_pid, void *data);
 	void *caller_data;
 	struct _app_resultcb_info_t *next;
 } app_resultcb_info_t;
 
 static int latest_caller_pid = -1;
-static app_resultcb_info_t *rescb_head = NULL;
-static int is_subapp = 0;
-static subapp_fn subapp_cb = NULL;
-static void *subapp_data = NULL;
+static app_resultcb_info_t *rescb_head;
+static int is_subapp;
+static subapp_fn subapp_cb;
+static void *subapp_data;
 
 static int __gen_seq_num(void)
 {
-	static int num = 0;
+	static int num;
 
 	return num++;
 }
 
-static void __add_resultcb(int pid, void (*cbfunc) (bundle *, int, void *),
-			 void *data, int seq_num)
+static void __add_resultcb(int pid, void (*cbfunc)(bundle *, int, void *),
+		void *data, int seq_num)
 {
 	app_resultcb_info_t *info;
 
@@ -107,12 +105,14 @@ static app_resultcb_info_t *__get_first_resultcb(int pid)
 	return NULL;
 }
 
-static app_resultcb_info_t *__get_next_resultcb(app_resultcb_info_t *info, int pid)
+static app_resultcb_info_t *__get_next_resultcb(app_resultcb_info_t *info,
+		int pid)
 {
 	app_resultcb_info_t *tmp;
 
 	if (info == NULL)
 		return NULL;
+
 	tmp = info->next;
 	while (tmp) {
 		if (tmp->launched_pid == pid)
@@ -152,24 +152,25 @@ static void __remove_resultcb(app_resultcb_info_t *info)
  * run in caller
  */
 static int __call_app_result_callback(bundle *kb, int is_cancel,
-				    int launched_pid)
+		int launched_pid)
 {
+	app_resultcb_info_t newinfo;
 	app_resultcb_info_t *info;
 	int pgid;
 	const char *fwdpid_str;
 	const char *num_str;
 
-
-	if (((info = __find_resultcb(launched_pid, kb)) == NULL)
-	    || (launched_pid < 0)) {
-		_E("reject by pid - wait pid = %d, recvd pid = %d\n", getpid(),
-		   launched_pid);
+	info = __find_resultcb(launched_pid, kb);
+	if (info == NULL || launched_pid < 0) {
+		_E("reject by pid - wait pid = %d, recvd pid = %d\n",
+				getpid(), launched_pid);
 
 		/* second chance - support app launched by shell script*/
 		pgid = getpgid(launched_pid);
 		if (pgid <= 1)
 			return -1;
-		if ((info = __find_resultcb(pgid, kb)) == NULL) {
+		info = __find_resultcb(pgid, kb);
+		if (info == NULL) {
 			_E("second chance : also reject pgid - %d\n", pgid);
 			return -1;
 		}
@@ -179,15 +180,15 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		return -1;
 
 	/* In case of aul_forward_app, update the callback data */
-	if (is_cancel == 1 &&
-			(fwdpid_str = bundle_get_val(kb, AUL_K_FWD_CALLEE_PID))) {
+
+	fwdpid_str = bundle_get_val(kb, AUL_K_FWD_CALLEE_PID);
+	if (fwdpid_str && is_cancel == 1) {
 		num_str = bundle_get_val(kb, AUL_K_SEQ_NUM);
 		if (num_str == NULL) {
 			_E("seq num is null");
 			return -1;
 		}
 
-		app_resultcb_info_t newinfo;
 		newinfo.launched_pid = atoi(fwdpid_str);
 		newinfo.seq_num = atoi(num_str);
 		newinfo.cb_func = info->cb_func;
@@ -195,11 +196,14 @@ static int __call_app_result_callback(bundle *kb, int is_cancel,
 		newinfo.caller_cb = NULL;
 		newinfo.caller_data = NULL;
 
-		if (info->caller_cb)
-			info->caller_cb(newinfo.launched_pid, info->caller_data);
+		if (info->caller_cb) {
+			info->caller_cb(newinfo.launched_pid,
+					info->caller_data);
+		}
 
 		__remove_resultcb(info);
-		__add_resultcb(newinfo.launched_pid, newinfo.cb_func, newinfo.priv_data, newinfo.seq_num);
+		__add_resultcb(newinfo.launched_pid, newinfo.cb_func,
+				newinfo.priv_data, newinfo.seq_num);
 
 		_D("change callback, fwd pid: %d", newinfo.launched_pid);
 
@@ -237,10 +241,11 @@ end:
 #ifdef ACTIVATE_PREEMPT_FEATURE
 static int __send_to_cancel(int pid)
 {
-	/* Say "Your result request is cancel!" to caller */
 	bundle *kb;
 	int ret;
 	char tmp_pid[MAX_PID_STR_BUFSZ];
+
+	/* Say "Your result request is cancel!" to caller */
 
 	kb = bundle_create();
 	if (kb == NULL)
@@ -265,7 +270,7 @@ static int __send_to_cancel(int pid)
 int _app_start_res_prepare(bundle *kb)
 {
 	int pid;
-	const char* str = NULL;
+	const char *str;
 
 	if (bundle_get_val(kb, AUL_K_WAIT_RESULT) == NULL)
 		return 0;
@@ -276,12 +281,13 @@ int _app_start_res_prepare(bundle *kb)
 		return 0;
 	}
 
-	if ((pid = __get_caller_pid(kb)) < 0) {
+	pid = __get_caller_pid(kb);
+	if (pid < 0) {
 		_E("caller pid is not valid");
 		return -1;
 	}
-	/* If previous caller is still waiting result,
-	   send cancel packet to the caller. */
+	/* If previous caller is still waiting result, */
+	/* send cancel packet to the caller. */
 	if (latest_caller_pid != -1)
 		__send_to_cancel(latest_caller_pid);
 
@@ -306,8 +312,7 @@ int app_result(int cmd, bundle *kb, int launched_pid)
 }
 
 API int aul_launch_app_with_result(const char *pkgname, bundle *kb,
-			       void (*cbfunc) (bundle *, int, void *),
-			       void *data)
+		void (*cbfunc)(bundle *, int, void *), void *data)
 {
 	int ret;
 	char num_str[MAX_LOCAL_BUFSZ] = { 0, };
@@ -327,7 +332,6 @@ API int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 	bundle_add(kb, AUL_K_SEQ_NUM, num_str);
 
 	ret = app_request_to_launchpad(APP_START_RES, pkgname, kb);
-
 	if (ret > 0)
 		__add_resultcb(ret, cbfunc, data, num);
 
@@ -336,13 +340,14 @@ API int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 
 void __iterate(const char *key, const char *val, void *data)
 {
-	static int i = 0;
+	static int i;
+
 	_D("%d %s %s", i++, key, val);
 }
 
-API int aul_forward_app(const char* pkgname, bundle *kb)
+API int aul_forward_app(const char *pkgname, bundle *kb)
 {
-	char *caller;
+	const char *caller;
 	int ret;
 	bundle *dupb;
 	bundle *outb;
@@ -351,7 +356,7 @@ API int aul_forward_app(const char* pkgname, bundle *kb)
 	if (pkgname == NULL || kb == NULL)
 		return AUL_R_EINVAL;
 
-	caller = (char *)bundle_get_val(kb, AUL_K_CALLER_PID);
+	caller = bundle_get_val(kb, AUL_K_CALLER_PID);
 	if (caller == NULL) {
 		_E("original msg doest not have caller pid");
 		return AUL_R_EINVAL;
@@ -461,7 +466,8 @@ int aul_send_result(bundle *kb, int is_cancel)
 	char callee_appid[256];
 	char tmp_pid[MAX_PID_STR_BUFSZ];
 
-	if ((pid = __get_caller_pid(kb)) < 0)
+	pid = __get_caller_pid(kb);
+	if (pid < 0)
 		return AUL_R_EINVAL;
 
 	_D("caller pid : %d", pid);
@@ -476,7 +482,8 @@ int aul_send_result(bundle *kb, int is_cancel)
 	snprintf(tmp_pid, MAX_PID_STR_BUFSZ, "%d", callee_pgid);
 	bundle_add(kb, AUL_K_CALLEE_PID, tmp_pid);
 
-	ret = aul_app_get_appid_bypid(callee_pid, callee_appid, sizeof(callee_appid));
+	ret = aul_app_get_appid_bypid(callee_pid, callee_appid,
+			sizeof(callee_appid));
 	if (ret == 0)
 		bundle_add(kb, AUL_K_CALLEE_APPID, callee_appid);
 	else
@@ -492,7 +499,7 @@ int aul_send_result(bundle *kb, int is_cancel)
 	return ret;
 }
 
-int app_subapp_terminate_request()
+int app_subapp_terminate_request(void)
 {
 	if (is_subapp)
 		subapp_cb(subapp_data);
@@ -531,7 +538,7 @@ API int aul_subapp_terminate_request_pid(int pid)
 	return ret;
 }
 
-API int aul_is_subapp()
+API int aul_is_subapp(void)
 {
 	return is_subapp;
 }
@@ -600,8 +607,13 @@ static gboolean __invoke_caller_cb(gpointer data)
 
 API int aul_invoke_caller_cb(void *data)
 {
-	if (g_idle_add_full(G_PRIORITY_DEFAULT, __invoke_caller_cb, data, NULL) > 0)
+	guint id;
+
+	id = g_idle_add_full(G_PRIORITY_DEFAULT, __invoke_caller_cb, data,
+		NULL);
+	if (id > 0)
 		return -1;
 
 	return 0;
 }
+
