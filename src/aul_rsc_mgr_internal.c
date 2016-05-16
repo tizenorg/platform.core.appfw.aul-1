@@ -137,6 +137,10 @@ static int __parse_resource(xmlNode *xml_node, resource_data_t **data)
 	xmlNode *tmp;
 
 	*data = calloc(1, sizeof(resource_data_t));
+	if (*data == NULL) {
+		LOGE("out of memory");
+		return -1;
+	}
 
 	for (tmp = xml_node->children; tmp; tmp = tmp->next) {
 		if (tmp->type != XML_ELEMENT_NODE)
