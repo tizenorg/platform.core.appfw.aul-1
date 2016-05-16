@@ -61,12 +61,12 @@ API int aul_status_update(int status)
 	return ret;
 }
 
-API  int aul_app_get_status_bypid(int pid)
+API int aul_app_get_status_bypid(int pid)
 {
 	return aul_app_get_status_bypid_for_uid(pid, getuid());
 }
 
-API  int aul_app_get_status_bypid_for_uid(int pid, uid_t uid)
+API int aul_app_get_status_bypid_for_uid(int pid, uid_t uid)
 {
 	int ret;
 
@@ -75,6 +75,33 @@ API  int aul_app_get_status_bypid_for_uid(int pid, uid_t uid)
 
 	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_STATUS,
 			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_NONE);
+
+	return ret;
+}
+
+API int aul_app_get_status(const char *appid)
+{
+	return aul_app_get_status_for_uid(appid, getuid());
+}
+
+API int aul_app_get_status_for_uid(const char *appid, uid_t uid)
+{
+	int ret;
+	bundle *kb;
+
+	if (appid == NULL)
+		return AUL_R_EINVAL;
+
+	kb = bundle_create();
+	if (kb == NULL) {
+		_E("out of memory");
+		return AUL_R_ERROR;
+	}
+
+	bundle_add(kb, AUL_K_APPID, appid);
+	ret = app_send_cmd_for_uid(AUL_UTIL_PID, uid,
+			APP_GET_STATUS_BY_APPID, kb);
+	bundle_free(kb);
 
 	return ret;
 }
