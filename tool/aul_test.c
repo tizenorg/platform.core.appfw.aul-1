@@ -618,65 +618,37 @@ static int term_pid_sync_test_for_uid()
 	return aul_terminate_pid_sync_for_uid(apn_pid, atoi(gargv[3]));
 }
 
-/*
-static int set_pkg_func()
+static int get_status_test(void)
 {
-	char* pkgname;
-	char* apppath;
-	char* appname;
-	char query[QUERY_LEN];
+	static int num;
+	int ret;
 
-	pkgname = gargv[2];
-	apppath = gargv[3];
+	printf("[aul_app_get_status %d test] %s \n", num++, gargv[2]);
 
-	appname = strrchr(apppath,'/')+1;
-	snprintf(ai.app_icon_path, PATH_LEN, "aul_test_icon_path/%d",getpid());
-	snprintf(ai.desktop_path, PATH_LEN,
-		"aul_test_desktop_path/%d",getpid());
+	ret = aul_app_get_status(gargv[2]);
+	printf("appid: %s, status: %d", gargv[2], ret);
+	if (ret >= STATUS_LAUNCHING && ret <= STATUS_NORESTART)
+		printf("(%s)", status_text[ret]);
+	printf("\n");
 
-	snprintf (query, sizeof(query), "insert into "TABLE_MENU"(\
-	pkg_name,\
-	app_path,\
-	app_name,\
-	app_icon_path,\
-	desktop_path)\
-	values ('%s', '%s', '%s', '%s', '%s')",
-	pkgname,
-	apppath,
-	appname,
-	record->app_icon_path,
-	record->desktop_path,
-	);
-
-	// TODO: record_add is not supported anymore; use AIL
-	if (record_add(ADD_ICON, &ai)){
-		printf("set pkg success\n");
-		return 0;
-	}
-	else{
-		printf("set pkg fail\n");
-		return -1;
-	}
+	return 0;
 }
 
-static int del_pkg_func()
+static int get_status_test_for_uid(void)
 {
-	app_info ai;
+	static int num;
+	int ret;
 
-	memset(&ai, 0, sizeof(app_info));
-	snprintf(ai.pkg_name, NAME_LEN, "%s", gargv[2]);
+	printf("[aul_app_get_status %d test] %s \n", num++, gargv[2]);
 
-	// TODO: record_add is not supported anymore; use AIL
-	if(record_delete(DELETE_MENU, &ai)){
-		printf("del pkg success\n");
-		return 0;
-	}
-	else {
-		printf("del pkg fail\n");
-		return -1;
-	}
+	ret = aul_app_get_status_for_uid(gargv[2], atoi(gargv[3]));
+	printf("appid: %s, uid: %d, status: %d", gargv[2], atoi(gargv[3]), ret);
+	if (ret >= STATUS_LAUNCHING && ret <= STATUS_NORESTART)
+		printf("(%s)", status_text[ret]);
+	printf("\n");
+
+	return 0;
 }
-*/
 
 static int test_regex()
 {
@@ -805,6 +777,10 @@ static test_func_t test_func[] = {
 		"[usage] term_pid_sync <pid>"},
 	{"term_pid_sync_for_uid", term_pid_sync_test_for_uid, "aul_terminate_pid_sync_for_uid test",
 		"[usage] term_pid_sync_for_uid <pid> <uid>"},
+	{"get_status", get_status_test, "aul_app_get_status test",
+		"[usage] get_status <appid>"},
+	{"get_status_for_uid", get_status_test_for_uid, "aul_app_get_status_for_uid test",
+		"[usage] get_status_for_uid <appid> <uid>"},
 };
 
 int callfunc(char *testname)

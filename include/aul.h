@@ -1813,6 +1813,67 @@ int aul_app_get_status_bypid(int pid);
 int aul_app_get_status_bypid_for_uid(int pid, uid_t uid);
 
 /**
+ * @par Description:
+ *	This API gets status of specified application id.
+ * @par Purpose:
+ *	This API's purpose is to get the status the application.
+ *
+ * @param[in]	appid	application ID
+ * @return	0 or greater if success, nagative value if fail
+ * @retval	STATUS_LAUNCHING
+ * @retval	STATUS_CREATED
+ * @retval	STATUS_FOCUS
+ * @retval	STATUS_VISIBLE
+ * @retval	STATUS_BG
+ * @retval	STATUS_DYING
+ * @retval	STATUS_HOME
+ * @retval	STATUS_NORESTART
+ * @see
+ *	aul_status_update
+ * @code
+ * #include <aul.h>
+ *
+ * int func(void)
+ * {
+ *	int status;
+ *
+ *	status = aul_app_get_status("org.tizen.helloworld");
+ *	if (status == STATUS_FOCUS)
+ *		printf("org.tizen.helloworld has focus");
+ *
+ *	return 0;
+ * }
+ *
+ * @endcode
+ * @remark
+ *	This API is only available in User Session.
+ */
+int aul_app_get_status(const char *appid);
+
+/**
+ * @par Description:
+ *	This API gets status of specified application id.
+ * @par Purpose:
+ *	This API's purpose is to get the status of the application
+ *
+ * @param[in]	appid	application ID
+ * @param[in]	uid	User ID
+ * @return	0 or greater if success, nagative value if fail
+ * @retval	STATUS_LAUNCHING
+ * @retval	STATUS_CREATED
+ * @retval	STATUS_FOCUS
+ * @retval	STATUS_VISIBLE
+ * @retval	STATUS_BG
+ * @retval	STATUS_DYING
+ * @retval	STATUS_HOME
+ * @retval	STATUS_NORESTART
+ *
+ * @remark
+ *	This API is only available to System user.
+ */
+int aul_app_get_status_for_uid(const char *appid, uid_t uid);
+
+/**
  * @par Description
  * 	This API sets callback function that on application status changed.
  * @par Purpose:
