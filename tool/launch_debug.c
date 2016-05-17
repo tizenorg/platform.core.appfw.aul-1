@@ -130,7 +130,7 @@ static int __set_appinfo_for_debug_launchpad(bundle *kb, const char *appid)
 	char *apptype;
 	char *pkgtype;
 	char *component_type;
-	pkgmgrinfo_app_hwacceleration hwacc = PMINFO_HWACCELERATION_NOT_USE_GL;
+	pkgmgrinfo_app_hwacceleration hwacc = PMINFO_HWACCELERATION_OFF;
 	const char *hwacc_str = "NOT_USE";
 	bool process_pool = false;
 
@@ -170,9 +170,9 @@ static int __set_appinfo_for_debug_launchpad(bundle *kb, const char *appid)
 		goto end;
 
 	if (__get_gles()) {
-		if (hwacc == PMINFO_HWACCELERATION_NOT_USE_GL)
+		if (hwacc == PMINFO_HWACCELERATION_OFF)
 			hwacc_str = "NOT_USE";
-		else if (hwacc == PMINFO_HWACCELERATION_USE_GL)
+		else if (hwacc == PMINFO_HWACCELERATION_ON)
 			hwacc_str = "USE";
 		else
 			hwacc_str = "SYS";
