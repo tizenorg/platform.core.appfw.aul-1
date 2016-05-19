@@ -170,7 +170,8 @@ static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int o
 {
 	int res;
 
-	if ((res = aul_sock_send_bundle(pid, uid, cmd, kb, opt)) < 0)
+	res = aul_sock_send_bundle(pid, uid, cmd, kb, opt);
+	if (res < 0)
 		res = __get_aul_error(res);
 
 	return res;
@@ -182,9 +183,7 @@ static int __send_cmd_async_for_uid_opt(int pid, uid_t uid,
 	int res;
 
 	res = aul_sock_send_bundle(pid, uid, cmd, kb, AUL_SOCK_NOREPLY);
-	if (res > 0)
-		res = 0;
-	else
+	if (res < 0)
 		res = __get_aul_error(res);
 
 	return res;
