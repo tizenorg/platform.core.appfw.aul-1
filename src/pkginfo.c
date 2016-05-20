@@ -150,14 +150,14 @@ API int aul_app_get_all_running_app_info_for_uid(aul_app_info_iter_fn enum_fn,
 		return AUL_R_EINVAL;
 
 	fd = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_ALL_RUNNING_INFO, NULL, 0, AUL_SOCK_ASYNC);
-
-	if (fd > 0)
-		ret = aul_sock_recv_reply_pkt(fd, &pkt);
-	else
+	if (fd < 0)
 		return fd;
 
-	if (pkt == NULL || ret < 0)
-		return AUL_R_ERROR;
+	ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	if (ret < 0)
+		return ret;
+	else if (pkt == NULL)
+		return AUL_R_ECOMM;
 
 	for (pkt_data = (char *)pkt->data; ; pkt_data = NULL) {
 		token = strtok_r(pkt_data, ";", &saveptr1);
