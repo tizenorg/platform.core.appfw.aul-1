@@ -38,6 +38,7 @@
 #include "launch.h"
 #include "key.h"
 #include "aul_app_com.h"
+#include "aul_error.h"
 
 #define TEP_ISMOUNT_MAX_RETRY_CNT 20
 
@@ -127,52 +128,13 @@ static int app_prepare_to_wake()
 	return 0;
 }
 
-static int __get_aul_error(int res)
-{
-	int ret;
-
-	switch (res) {
-	case -EREJECTED:
-		ret = AUL_R_EREJECTED;
-		break;
-	case -ENOENT:
-		ret = AUL_R_ENOAPP;
-		break;
-	case -ENOLAUNCHPAD:
-		ret = AUL_R_ENOLAUNCHPAD;
-		break;
-	case -ETERMINATING:
-		ret = AUL_R_ETERMINATING;
-		break;
-	case -EILLEGALACCESS:
-		ret = AUL_R_EILLACC;
-		break;
-	case -ELOCALLAUNCH_ID:
-		ret = AUL_R_LOCAL;
-		break;
-	case -EAGAIN:
-		ret = AUL_R_ETIMEOUT;
-		break;
-	case -EINVAL:
-		ret = AUL_R_EINVAL;
-		break;
-	case -ECOMM:
-		ret = AUL_R_ECOMM;
-		break;
-	default:
-		ret = AUL_R_ERROR;
-	}
-
-	return ret;
-}
-
 static int __send_cmd_for_uid_opt(int pid, uid_t uid, int cmd, bundle *kb, int opt)
 {
 	int res;
 
 	res = aul_sock_send_bundle(pid, uid, cmd, kb, opt);
 	if (res < 0)
-		res = __get_aul_error(res);
+		res = aul_error(res);
 
 	return res;
 }
@@ -184,7 +146,7 @@ static int __send_cmd_async_for_uid_opt(int pid, uid_t uid,
 
 	res = aul_sock_send_bundle(pid, uid, cmd, kb, AUL_SOCK_NOREPLY);
 	if (res < 0)
-		res = __get_aul_error(res);
+		res = aul_error(res);
 
 	return res;
 }
