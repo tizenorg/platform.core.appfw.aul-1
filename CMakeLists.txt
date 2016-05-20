@@ -67,6 +67,7 @@ add_library(aul SHARED
 		src/aul_sock.c
 		src/aul_proc.c
 		src/app_com.c
+		src/aul_error.c
 		)
 TARGET_LINK_LIBRARIES(aul ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
