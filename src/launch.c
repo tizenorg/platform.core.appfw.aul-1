@@ -301,10 +301,18 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	bundle_add(kb, AUL_K_APPID, appid);
 	__set_stime(kb);
 
-	if (cmd == APP_START_ASYNC)
-		ret = app_send_cmd_with_queue_noreply_for_uid(AUL_UTIL_PID, uid, cmd, kb);
-	else
-		ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd, kb);
+	switch (cmd) {
+	case APP_START_ASYNC:
+	case APP_PAUSE:
+	case APP_PAUSE_BY_PID:
+		ret = app_send_cmd_with_queue_noreply_for_uid(AUL_UTIL_PID,
+				uid, cmd, kb);
+		break;
+	default:
+		ret = app_send_cmd_with_queue_for_uid(AUL_UTIL_PID, uid, cmd,
+				kb);
+		break;
+	}
 
 	_D("launch request result : %d", ret);
 	if (ret == AUL_R_LOCAL) {
