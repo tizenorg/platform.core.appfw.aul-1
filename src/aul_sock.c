@@ -23,7 +23,7 @@
 #include <sys/xattr.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 #include <tzplatform_config.h>
 #endif
 
@@ -33,7 +33,7 @@
 
 #define MAX_NR_OF_DESCRIPTORS 2
 
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 #define REGULAR_UID_MIN 5000
 static uid_t default_uid;
 static int default_uid_initialized;
@@ -164,7 +164,7 @@ static int __create_client_sock(int pid, uid_t uid)
 		}
 	}
 
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 	if (uid < REGULAR_UID_MIN) {
 		if (!default_uid_initialized) {
 			default_uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
@@ -658,7 +658,7 @@ int aul_sock_create_launchpad_client(const char *pad_type, uid_t uid)
 		}
 	}
 
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 	if (uid < REGULAR_UID_MIN) {
 		if (!default_uid_initialized) {
 			default_uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
