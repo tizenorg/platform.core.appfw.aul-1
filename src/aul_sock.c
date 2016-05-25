@@ -26,6 +26,10 @@
 #ifdef _APPFW_FEATURE_DEFAULT_USER
 #include <tzplatform_config.h>
 #endif
+#ifdef TIZEN_FEATURE_SOCKET_TIMEOUT
+#include <glib.h>
+#include <vconf.h>
+#endif
 
 #include "aul_api.h"
 #include "aul_sock.h"
@@ -46,6 +50,19 @@ static inline void __set_sock_option(int fd, int cli)
 {
 	int size;
 	struct timeval tv = { 5, 200 * 1000 };	/* 5.2 sec */
+#ifdef TIZEN_FEATURE_SOCKET_TIMEOUT
+	double sec = 5.2f;
+	char buf[128];
+	gchar *ptr = NULL;
+
+	if (vconf_get_dbl(VCONFKEY_AUL_SOCKET_TIMEOUT, &sec))
+		_E("Failed to get vconf: %s", VCONFKEY_AUL_SOCKET_TIMEOUT);
+
+	snprintf(buf, sizeof(buf), "%.3f", sec);
+	tv.tv_sec = g_ascii_strtoull(buf &ptr, 10);
+	tv.tv_usec = g_ascii_strtoull(ptr + 1, &ptr, 10);
+	_D("sec: %.3f, tv_sec: %ld, tv_usec: %ld", sec, tv.tv_sec, tv.tv_usec);
+#endif
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
