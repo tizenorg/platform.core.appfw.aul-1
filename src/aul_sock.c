@@ -26,6 +26,10 @@
 #ifdef TIZEN_FEATURE_DEFAULT_USER
 #include <tzplatform_config.h>
 #endif
+#ifdef TIZEN_FEATURE_SOCKET_TIMEOUT
+#include <glib.h>
+#include <vconf.h>
+#endif
 
 #include "aul_api.h"
 #include "aul_sock.h"
@@ -39,20 +43,88 @@
 static uid_t default_uid;
 static int default_uid_initialized;
 #endif
+#ifdef TIZEN_FEATURE_SOCKET_TIMEOUT
+static int socket_timeout_initialized;
+#endif
+
+static struct timeval tv = { 5, 200 * 1000 }; /* 5.2 */
 
 static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, socklen_t salen,
 		   int nsec);
 
-static inline void __set_sock_option(int fd, int cli)
+#ifdef TIZEN_FEATURE_SOCKET_TIMEOUT
+static void __set_timeval(double sec)
+{
+	char buf[12];
+	gchar *ptr = NULL;
+
+	snprintf(buf, sizeof(buf), "%.f", sec);
+	tv.tv_sec = g_ascii_strtoull(buf, &ptr, 10);
+	tv.tv_usec = g_ascii_strtoull(ptr + 1, &ptr, 10);
+}
+
+static void __socket_timeout_vconf_cb(keynode_t *key, void *data)
+{
+	const char *name;
+	double sec;
+
+	name = vconf_keynode_get_name(key);
+	if (name && strcmp(name, VCONFKEY_AUL_SOCKET_TIMEOUT) == 0) {
+		sec = vconf_keynode_get_dbl(key);
+		__set_timeval(sec);
+	}
+}
+
+static void __init_socket_timeout(void)
+{
+	int r;
+	double sec = 5.2f;
+
+	r = access("/run/amd/.socket_timeout", F_OK);
+	if (r < 0) {
+		socket_timeout_initialized = 1;
+		return;
+	}
+
+	r = vconf_get_dbl(VCONFKEY_AUL_SOCKET_TIMEOUT, &sec);
+	if (r < 0)
+		_D("Failed to get vconf: %s", VCONFKEY_AUL_SOCKET_TIMEOUT);
+
+	r = vconf_notify_key_changed(VCONFKEY_AUL_SOCKET_TIMEOUT,
+			__socket_timeout_vconf_cb, NULL);
+	if (r < 0) {
+		_E("Failed to register callback for %s",
+				VCONFKEY_AUL_SOCKET_TIMEOUT);
+		return;
+	}
+
+	__set_timeval(sec);
+	socket_timeout_initialized = 1;
+}
+#endif
+
+API struct timeval aul_sock_get_rcv_timeval(void)
+{
+	return tv;
+}
+
+API int aul_sock_set_sock_option(int fd, int cli)
 {
 	int size;
-	struct timeval tv = { 5, 200 * 1000 };	/* 5.2 sec */
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
 	setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
-	if (cli)
+
+	if (cli) {
+#ifdef TIZEN_FEATURE_SOCKET_TIMEOUT
+		if (!socket_timeout_initialized)
+			__init_socket_timeout();
+#endif
 		setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	}
+
+	return 0;
 }
 
 API int aul_sock_create_server(int pid, uid_t uid)
@@ -130,7 +202,7 @@ API int aul_sock_create_server(int pid, uid_t uid)
 		return -1;
 	}
 
-	__set_sock_option(fd, 0);
+	aul_sock_set_sock_option(fd, 0);
 
 	if (listen(fd, 128) == -1) {
 		_E("listen error");
@@ -215,7 +287,7 @@ retry_con:
 		return -1;
 	}
 
-	__set_sock_option(fd, 1);
+	aul_sock_set_sock_option(fd, 1);
 
 	return fd;
 }
@@ -436,7 +508,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 		return NULL;
 	}
 
-	__set_sock_option(*clifd, 1);
+	aul_sock_set_sock_option(*clifd, 1);
 
  retry_recv:
 	/* receive header(cmd, datalen) */
@@ -717,7 +789,7 @@ retry_con:
 		return -1;
 	}
 
-	__set_sock_option(fd, 1);
+	aul_sock_set_sock_option(fd, 1);
 
 	return fd;
 }
