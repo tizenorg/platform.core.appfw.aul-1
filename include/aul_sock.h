@@ -91,3 +91,14 @@ int aul_sock_recv_reply_sock_fd(int fd, int *ret_fd, int num_of_ret_fd);
  * This API is only for Appfw internally.
  */
 int aul_sock_recv_reply_pkt(int fd, app_pkt_t **pkt);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_sock_set_sock_option(int fd, int cli);
+
+/*
+ * This API is only for Appfw internally.
+ */
+struct timeval aul_sock_get_rcv_timeval(void);
+
