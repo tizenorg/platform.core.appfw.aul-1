@@ -41,8 +41,10 @@ BuildRequires:  pkgconfig(libxml-2.0)
 
 %if "%{?profile}" == "tv"
 %define tizen_feature_default_user 1
+%define tizen_feature_socket_timeout 1
 %else
 %define tizen_feature_default_user 0
+%define tizen_feature_socket_timeout 0
 %endif
 
 %description
@@ -77,6 +79,9 @@ CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %if 0%{?tizen_feature_default_user}
 TIZEN_FEATURE_DEFAULT_USER=ON
 %endif
+%if 0%{?tizen_feature_socket_timeout}
+TIZEN_FEATURE_SOCKET_TIMEOUT=ON
+%endif
 
 MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
 %cmake -DFULLVER=%{version} \
@@ -88,6 +93,7 @@ MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
 	-Dwith_x11=TRUE \
 %endif
 	-DTIZEN_FEATURE_DEFAULT_USER:BOOL=${TIZEN_FEATURE_DEFAULT_USER} \
+	-DTIZEN_FEATURE_SOCKET_TIMEOUT:BOOL=${TIZEN_FEATURE_SOCKET_TIMEOUT} \
 	.
 
 %__make %{?_smp_mflags}
