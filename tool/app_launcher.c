@@ -34,7 +34,7 @@
 #include <pkgmgr-info.h>
 #include <bundle.h>
 #include <bundle_internal.h>
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 #include <tzplatform_config.h>
 #endif
 
@@ -46,7 +46,7 @@
 #define LAUNCHPAD_PROCESS_POOL_SOCK ".launchpad-process-pool-sock"
 #define APP_TYPE_UI "uiapp"
 #define APP_TYPE_SERVICE "svcapp"
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 #define REGULAR_UID_MIN 5000
 #endif
 #define INOTIFY_BUF (1024 * ((sizeof(struct inotify_event)) + 16))
@@ -648,7 +648,7 @@ int main(int argc, char **argv)
 	if (argc == 1)
 		print_usage(argv[0]);
 
-#ifdef _APPFW_FEATURE_DEFAULT_USER
+#ifdef TIZEN_FEATURE_DEFAULT_USER
 	if (uid < REGULAR_UID_MIN)
 		uid = tzplatform_getuid(TZ_SYS_DEFAULT_USER);
 #endif

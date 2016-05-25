@@ -39,9 +39,9 @@ BuildRequires:  pkgconfig(libxml-2.0)
 %endif
 
 %if "%{?profile}" == "tv"
-%define appfw_feature_default_user 1
+%define tizen_feature_default_user 1
 %else
-%define appfw_feature_default_user 0
+%define tizen_feature_default_user 0
 %endif
 
 %description
@@ -73,8 +73,8 @@ cp %{SOURCE1001} .
 CFLAGS="%{optflags} -D__emul__"; export CFLAGS
 %endif
 
-%if 0%{?appfw_feature_default_user}
-_APPFW_FEATURE_DEFAULT_USER=ON
+%if 0%{?tizen_feature_default_user}
+TIZEN_FEATURE_DEFAULT_USER=ON
 %endif
 
 MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
@@ -86,7 +86,7 @@ MAJORVER=`echo %{version} | awk 'BEGIN {FS="."}{print $1}'`
 %if %{with x}
 	-Dwith_x11=TRUE \
 %endif
-	-D_APPFW_FEATURE_DEFAULT_USER:BOOL=${_APPFW_FEATURE_DEFAULT_USER} \
+	-DTIZEN_FEATURE_DEFAULT_USER:BOOL=${TIZEN_FEATURE_DEFAULT_USER} \
 	.
 
 %__make %{?_smp_mflags}
