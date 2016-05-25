@@ -344,7 +344,7 @@ end:
 	return ret;
 }
 
-API int aul_status_freezer_status(int pid, const char *type)
+API int aul_update_freezer_status(int pid, const char *type)
 {
 	int ret;
 	GVariant *param;
