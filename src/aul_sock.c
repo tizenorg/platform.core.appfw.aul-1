@@ -45,7 +45,16 @@ static int __connect_client_sock(int sockfd, const struct sockaddr *saptr, sockl
 static inline void __set_sock_option(int fd, int cli)
 {
 	int size;
+#ifndef TIZEN_FEATURE_SOCKET_TIMEOUT
 	struct timeval tv = { 5, 200 * 1000 };	/* 5.2 sec */
+#else
+	struct timeval tv = {
+		TIZEN_FEATURE_SOCKET_TIMEOUT_TV_SEC,
+		TIZEN_FEATURE_SOCKET_TIMEOUT_TV_USEC * 1000
+	};
+
+	_D("tv_sec: %ld, tv_usec: %ld", tv.tv_sec, tv.tv_usec);
+#endif
 
 	size = AUL_SOCK_MAXBUFF;
 	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
