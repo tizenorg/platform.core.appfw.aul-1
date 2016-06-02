@@ -108,7 +108,7 @@ API int aul_sock_create_server(int pid, uid_t uid)
 		return -1;
 	}
 
-	if (chmod(saddr.sun_path, (S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
+	if (fchmod(fd, (S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
 		/* Flawfinder: ignore*/
 		_E("failed to change the socket permission");
 		close(fd);
