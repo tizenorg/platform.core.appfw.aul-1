@@ -360,13 +360,16 @@ static void __watch_amd_ready(const char *appid, int pid)
 		return;
 
 	watch->appid = strdup(appid);
-	if (watch->appid == NULL)
+	if (watch->appid == NULL) {
+		free(watch);
 		return;
+	}
 
 	watch->pid = pid;
 
 	watch->fd = inotify_init();
 	if (watch->fd < 0) {
+		free(watch->appid);
 		free(watch);
 		return;
 	}
@@ -374,6 +377,7 @@ static void __watch_amd_ready(const char *appid, int pid)
 	watch->wd = inotify_add_watch(watch->fd, buf, IN_CREATE);
 	if (watch->wd < 0) {
 		close(watch->fd);
+		free(watch->appid);
 		free(watch);
 		return;
 	}
@@ -382,6 +386,7 @@ static void __watch_amd_ready(const char *appid, int pid)
 	if (watch->io == 0) {
 		inotify_rm_watch(watch->fd, watch->wd);
 		close(watch->fd);
+		free(watch->appid);
 		free(watch);
 		return;
 	}
