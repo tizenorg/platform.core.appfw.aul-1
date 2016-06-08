@@ -78,7 +78,8 @@ API int aul_sock_create_server(int pid, uid_t uid)
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path), "/run/user/%d/%d", uid, pid);
+	snprintf(saddr.sun_path, sizeof(saddr.sun_path), "/run/aul/apps/%d/%d",
+			uid, pid);
 	unlink(saddr.sun_path);
 
 	/* labeling to socket for SMACK */
@@ -123,7 +124,7 @@ API int aul_sock_create_server(int pid, uid_t uid)
 		pgid = getpgid(pid);
 		if (pgid > 1) {
 			snprintf(p_saddr.sun_path, sizeof(p_saddr.sun_path),
-					"/run/user/%d/%d", uid, pgid);
+					"/run/aul/apps/%d/%d", uid, pgid);
 			if (link(saddr.sun_path, p_saddr.sun_path) < 0) {
 				if (errno == EEXIST)
 					_D("pg path - already exists");
@@ -171,11 +172,11 @@ static int __create_client_sock(int pid, uid_t uid)
 	saddr.sun_family = AF_UNIX;
 	if (pid == AUL_UTIL_PID)
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
-				"/run/amd/%d", uid);
+				"/run/aul/daemons/%d/.amd-sock", uid);
 	else
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
-				"/run/user/%d/%d", uid, pid);
- retry_con:
+				"/run/aul/apps/%d/%d", uid, pid);
+retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
 	if (ret < -1) {
@@ -676,7 +677,7 @@ int aul_sock_create_launchpad_client(const char *pad_type, uid_t uid)
 
 	saddr.sun_family = AF_UNIX;
 	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
-				"/run/user/%d/%s", uid, pad_type);
+				"/run/aul/daemons/%d/%s", uid, pad_type);
 retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr,
 				sizeof(saddr), 100 * 1000);
