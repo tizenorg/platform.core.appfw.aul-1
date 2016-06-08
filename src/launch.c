@@ -514,16 +514,41 @@ int aul_register_init_callback(
 	return 0;
 }
 
+API void aul_set_listen_socket(int fd)
+{
+	char buf[MAX_PID_STR_BUFSZ];
+
+	snprintf(buf, sizeof(buf), "%d", fd);
+	setenv("AUL_LISTEN_SOCK", buf, 1);
+	aul_fd = fd;
+}
+
+API int aul_get_listen_socket(void)
+{
+	const char *sockfd;
+
+	sockfd = getenv("AUL_LISTEN_SOCK");
+	if (sockfd == NULL)
+		return -1;
+
+	return atoi(sockfd);
+}
+
 int aul_initialize()
 {
 	if (aul_initialized)
 		return AUL_R_ECANCELED;
 
-	aul_fd = aul_sock_create_server(getpid(), getuid());
-	if (aul_fd < 0) {
-		_E("aul_init create sock failed");
-		return AUL_R_ECOMM;
+	aul_fd = aul_get_listen_socket();
+	if (aul_fd <= 0) {
+		aul_fd = aul_sock_create_server(getpid(), getuid());
+		if (aul_fd < 0) {
+			_E("aul_init create sock failed");
+			return AUL_R_ECOMM;
+		}
 	}
+
+	unsetenv("AUL_LISTEN_SOCK");
 	aul_initialized = 1;
 
 	return aul_fd;
