@@ -141,6 +141,7 @@ static int __create_client_sock(int pid, uid_t uid)
 	struct sockaddr_un saddr = { 0, };
 	int retry = 1;
 	int ret = -1;
+	struct stat statbuf;
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
@@ -174,7 +175,21 @@ static int __create_client_sock(int pid, uid_t uid)
 	else
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
 				"/run/user/%d/%d", uid, pid);
- retry_con:
+
+	ret = stat(saddr.sun_path, &statbuf);
+	if (ret < 0) {
+		_E("Failed to get file status - %s", saddr.sun_path);
+		close(fd);
+		return -1;
+	}
+
+	if (S_ISSOCK(statbuf.st_mode) == 0 || S_ISLNK(statbuf.st_mode)) {
+		_E("%s is not a socket", saddr.sun_path);
+		close(fd);
+		return -1;
+	}
+
+retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
 	if (ret < -1) {
