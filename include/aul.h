@@ -2684,6 +2684,16 @@ int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid);
  */
 int aul_prepare_candidate_process(void);
 
+/*
+ * This API is only for Appfw internally.
+ */
+void aul_set_listen_socket(int fd);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_get_listen_socket(void);
+
 #ifdef __cplusplus
 	}
 #endif
