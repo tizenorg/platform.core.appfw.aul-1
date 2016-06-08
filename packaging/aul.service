@@ -1,0 +1,10 @@
+[Unit]
+Description=Initialize service for aul
+Before=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/mkdir -p -Z User::Home -m go+w /run/aul
+
+[Install]
+WantedBy=basic.target
