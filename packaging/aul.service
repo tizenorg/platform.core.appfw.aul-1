@@ -1,0 +1,11 @@
+[Unit]
+Description=Initialize service for aul
+DefaultDependencies=false
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/mkdir -p -m go+w /run/aul
+
+[Install]
+WantedBy=sysinit.target
