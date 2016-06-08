@@ -33,8 +33,12 @@
 
 #define ROOT_UID 0
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
-#define _EXTERNAL_APP_SPECIFIC_PATH \
-	tzplatform_mkpath(TZ_SYS_STORAGE, "sdcard/apps/")
+#define _EXTERNAL_APP_SPECIFIC_PATH(uid) ({ \
+	tzplatform_set_user(uid); \
+	const char *path = tzplatform_mkpath3(TZ_SYS_MEDIA, \
+		"SDCardA1/apps", tzplatform_getenv(TZ_USER_NAME)); \
+	tzplatform_reset_user(); \
+	path; })
 #define _APP_SPECIFIC_PATH tzplatform_getenv(TZ_USER_APP)
 
 static const char _DATA_DIR[] = "data/";
@@ -104,8 +108,9 @@ static int __get_external_path(char **path, const char *appid,
 	if (ret != AUL_R_OK)
 		return ret;
 
-	snprintf(buf, sizeof(buf), "%s%s/%s", _EXTERNAL_APP_SPECIFIC_PATH,
-			pkgid, dir_name ? dir_name : "");
+	snprintf(buf, sizeof(buf), "%s/%s/%s",
+		_EXTERNAL_APP_SPECIFIC_PATH(uid),
+		 pkgid, dir_name ? dir_name : "");
 
 	assert(path);
 	*path = strdup(buf);
@@ -350,7 +355,7 @@ API const char *aul_get_app_specific_path(void)
 
 API const char *aul_get_app_external_specific_path(void)
 {
-	return _EXTERNAL_APP_SPECIFIC_PATH;
+	return _EXTERNAL_APP_SPECIFIC_PATH(getuid());
 }
 
 API int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
