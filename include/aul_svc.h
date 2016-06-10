@@ -1108,6 +1108,18 @@ int aul_svc_set_loader_id(bundle *b, int loader_id);
 
 /**
  * @par Description:
+ * This function sets loader name into bundle. Launchpad will assign static slot to launch app
+ *
+ * @param[in] b Bundle object
+ * @param[in] loader_name Loader name to assign
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @remarks This API is only for Appfw internally.
+ */
+int aul_svc_set_loader_name(bundle *b, const char *loader_name);
+
+/**
+ * @par Description:
  * This API sets the background launch mode.
  * If the background launch mode is enabled, a window of the callee process doesn't appear on the screen.
  *
