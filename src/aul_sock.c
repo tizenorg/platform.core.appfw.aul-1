@@ -32,6 +32,7 @@
 #include "aul_util.h"
 
 #define MAX_NR_OF_DESCRIPTORS 2
+#define MAX_PAYLOAD_SIZE	(1024 * 1024 * 1)
 
 #ifdef TIZEN_FEATURE_DEFAULT_USER
 #define REGULAR_UID_MIN 5000
@@ -429,6 +430,11 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	memcpy(&datalen, buf + sizeof(int), sizeof(int));
 	memcpy(&opt, buf + sizeof(int) + sizeof(int), sizeof(int));
 
+	if (datalen <= 0 || datalen > MAX_PAYLOAD_SIZE) {
+		close(*clifd);
+		return NULL;
+	}
+
 	/* allocate for a null byte */
 	pkt = (app_pkt_t *)calloc(1, AUL_PKT_HEADER_SIZE + datalen + 1);
 	if (pkt == NULL) {
@@ -486,6 +492,12 @@ retry_recv:
 	memcpy(&cmd, buf, sizeof(int));
 	memcpy(&len, buf + sizeof(int), sizeof(int));
 	memcpy(&recv_opt, buf + sizeof(int) + sizeof(int), sizeof(int));
+
+	if (len <= 0 || len > MAX_PAYLOAD_SIZE) {
+		close(fd);
+		*ret_pkt = NULL;
+		return -ECOMM;
+	}
 
 	/* allocate for a null byte */
 	pkt = (app_pkt_t *)calloc(1, AUL_PKT_HEADER_SIZE + len + 1);
