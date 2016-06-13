@@ -430,7 +430,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	memcpy(&datalen, buf + sizeof(int), sizeof(int));
 	memcpy(&opt, buf + sizeof(int) + sizeof(int), sizeof(int));
 
-	if (datalen <= 0 || datalen > MAX_PAYLOAD_SIZE) {
+	if (datalen < 0 || datalen > MAX_PAYLOAD_SIZE) {
 		close(*clifd);
 		return NULL;
 	}
@@ -493,7 +493,7 @@ retry_recv:
 	memcpy(&len, buf + sizeof(int), sizeof(int));
 	memcpy(&recv_opt, buf + sizeof(int) + sizeof(int), sizeof(int));
 
-	if (len <= 0 || len > MAX_PAYLOAD_SIZE) {
+	if (len < 0 || len > MAX_PAYLOAD_SIZE) {
 		close(fd);
 		*ret_pkt = NULL;
 		return -ECOMM;
