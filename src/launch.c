@@ -557,7 +557,7 @@ API int aul_request_data_control_socket_pair(bundle *kb, int *fd)
 	}
 
 	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), APP_GET_DC_SOCKET_PAIR, b, AUL_SOCK_ASYNC);
-	if (ret) {
+	if (ret > 0) {
 		ret = aul_sock_recv_reply_sock_fd(ret, fds, 1);
 		if (ret == 0)
 			fd[0] = fds[0];
@@ -579,7 +579,7 @@ API int aul_request_message_port_socket_pair(int *fd)
 
 	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
 			APP_GET_MP_SOCKET_PAIR, NULL, 0, AUL_SOCK_ASYNC);
-	if (ret) {
+	if (ret > 0) {
 		ret = aul_sock_recv_reply_sock_fd(ret, fds, 2);
 		if (ret == 0) {
 			fd[0] = fds[0];
@@ -912,7 +912,7 @@ API int aul_add_loader_for_uid(const char *loader_path, bundle *kb, uid_t uid)
 {
 	int ret;
 	bundle *b;
-	bundle_raw *kb_raw;
+	bundle_raw *kb_raw = NULL;
 	int len;
 
 	if (loader_path == NULL)
