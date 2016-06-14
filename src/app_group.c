@@ -78,14 +78,13 @@ API void aul_app_group_get_leader_pids(int *cnt, int **pids)
 
 	*cnt = 0;
 	*pids = NULL;
-	fd = aul_sock_send_raw(AUL_UTIL_PID, getuid(), APP_GROUP_GET_LEADER_PIDS,
-				NULL, 0, AUL_SOCK_ASYNC);
-	if (fd > 0)
-		ret = aul_sock_recv_reply_pkt(fd, &pkt);
-	else
+	fd = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+			APP_GROUP_GET_LEADER_PIDS, NULL, 0, AUL_SOCK_ASYNC);
+	if (fd < 0)
 		return;
 
-	if (pkt == NULL || ret < 0)
+	ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	if (ret < 0 || pkt == NULL)
 		return;
 
 	c = pkt->len / sizeof(int);

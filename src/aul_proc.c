@@ -59,11 +59,13 @@ static int __find_pid_by_appid(const char *dname, const char *appid,
 {
 	int pid = 0;
 
-	if (appid && priv
-		&& strncmp(appid, (char *)priv, MAX_LOCAL_BUFSZ-1) == 0) {
+	if (appid && priv &&
+			strncmp(appid, (char *)priv, MAX_LOCAL_BUFSZ-1) == 0) {
 		pid = atoi(dname);
-		if (pid != getpgid(pid))
-			pid = 0;
+		if (pid > 0) {
+			if (pid != getpgid(pid))
+				pid = 0;
+		}
 	}
 
 	return pid;
