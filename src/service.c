@@ -366,47 +366,55 @@ static int __get_resolve_info(bundle *b, aul_svc_resolve_info_t *info)
 		info->scheme = strdup("NULL");
 	}
 
-	if (!info->mime)
+	if (!info->mime) {
 		info->mime = strdup("NULL");
-	else {
-		info->m_type = malloc(MAX_LOCAL_BUFSZ);
-		if (info->m_type == NULL) {
-			_E("ouf of memory");
-			return AUL_SVC_RET_ERROR;
-		}
-
-		info->s_type = malloc(MAX_LOCAL_BUFSZ);
-		if (info->s_type == NULL) {
-			_E("out of memory");
-			free(info->m_type);
-			return AUL_SVC_RET_ERROR;
-		}
-
-		tmp = strdup(info->mime);
-		strtok_buf = strtok_r(tmp, "/", &saveptr);
-		if (strtok_buf)
-			strncpy(info->m_type, strtok_buf, MAX_LOCAL_BUFSZ - 1);
-		strtok_buf = strtok_r(NULL, "/", &saveptr);
-		if (strtok_buf)
-			strncpy(info->s_type, strtok_buf, MAX_LOCAL_BUFSZ - 1);
-		free(tmp);
-
-		if (strncmp(info->m_type, "*", 1) == 0)
-			strncpy(info->m_type, "%", MAX_LOCAL_BUFSZ - 1);
-		if (strncmp(info->s_type, "*", 1) == 0)
-			strncpy(info->s_type, "%", MAX_LOCAL_BUFSZ - 1);
-
-		info->mime = malloc(MAX_MIME_STR_SIZE);
-		if (info->mime == NULL) {
-			_E("out of memory");
-			free(info->s_type);
-			free(info->m_type);
-			return AUL_SVC_RET_ERROR;
-		}
-
-		snprintf(info->mime, MAX_MIME_STR_SIZE - 1,
-					"%s/%s", info->m_type, info->s_type);
+		return 0;
 	}
+
+	info->m_type = calloc(1, MAX_LOCAL_BUFSZ);
+	if (info->m_type == NULL) {
+		_E("ouf of memory");
+		return AUL_SVC_RET_ERROR;
+	}
+
+	info->s_type = calloc(1, MAX_LOCAL_BUFSZ);
+	if (info->s_type == NULL) {
+		_E("out of memory");
+		free(info->m_type);
+		return AUL_SVC_RET_ERROR;
+	}
+
+	tmp = strdup(info->mime);
+	if (tmp == NULL) {
+		_E("out of memory");
+		free(info->s_type);
+		free(info->m_type);
+		return AUL_SVC_RET_ERROR;
+	}
+
+	strtok_buf = strtok_r(tmp, "/", &saveptr);
+	if (strtok_buf)
+		strncpy(info->m_type, strtok_buf, MAX_LOCAL_BUFSZ - 1);
+	strtok_buf = strtok_r(NULL, "/", &saveptr);
+	if (strtok_buf)
+		strncpy(info->s_type, strtok_buf, MAX_LOCAL_BUFSZ - 1);
+	free(tmp);
+
+	if (strncmp(info->m_type, "*", 1) == 0)
+		strncpy(info->m_type, "%", MAX_LOCAL_BUFSZ - 1);
+	if (strncmp(info->s_type, "*", 1) == 0)
+		strncpy(info->s_type, "%", MAX_LOCAL_BUFSZ - 1);
+
+	info->mime = malloc(MAX_MIME_STR_SIZE);
+	if (info->mime == NULL) {
+		_E("out of memory");
+		free(info->s_type);
+		free(info->m_type);
+		return AUL_SVC_RET_ERROR;
+	}
+
+	snprintf(info->mime, MAX_MIME_STR_SIZE - 1,
+			"%s/%s", info->m_type, info->s_type);
 
 	return 0;
 }
