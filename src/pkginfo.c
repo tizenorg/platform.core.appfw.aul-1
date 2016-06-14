@@ -198,6 +198,15 @@ API void aul_set_preinit_root_path(const char *root_path)
 
 API const char *aul_get_preinit_root_path(void)
 {
+	const char *root_path;
+
+	root_path = getenv("AUL_ROOT_PATH");
+	if (root_path) {
+		if (__root_path == NULL)
+			__root_path = strdup(root_path);
+		unsetenv("AUL_ROOT_PATH");
+	}
+
 	return __root_path;
 }
 
