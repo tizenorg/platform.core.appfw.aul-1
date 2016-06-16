@@ -113,13 +113,18 @@ static int __launch_app_dead_handler(int pid, void *data)
 static void __reply_cb_func(bundle *b, int request_code, aul_svc_result_val result, void *data)
 {
 	char* port = NULL;
+	const char* pid_str = NULL;
+	int pid = 0;
+
 	bundle_get_str(b, "port", &port);
+	pid_str = bundle_get_val(b, AUL_K_CALLEE_PID);
+	pid = atoi(pid_str);
 
 	if (port != NULL && strlen(port) > 0) {
-		printf("port: %s\n", port);
-		printf("result: %s\n", "launched");
+		printf("... successfully launched pid = %d with debug 1 port: %s\n",
+					pid, port);
 	} else {
-		printf("result: %s\n", "failed");
+		printf("... launch failed\n");
 	}
 
 	g_main_loop_quit(mainloop);
