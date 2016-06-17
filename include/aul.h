@@ -170,6 +170,8 @@ typedef enum _aul_type {
 /** AUL internal private key */
 #define AUL_K_LOADER_EXTRA	"__AUL_LOADER_EXTRA__"
 /** AUL internal private key */
+#define AUL_K_LOADER_NAME	"__AUL_LOADER_NAME__"
+/** AUL internal private key */
 #define AUL_K_WAYLAND_DISPLAY	"__AUL_WAYLAND_DISPLAY__"
 /** AUL internal private key */
 #define AUL_K_WAYLAND_WORKING_DIR "__AUL_WAYLAND_WORKING_DIR__"

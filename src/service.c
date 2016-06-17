@@ -1377,6 +1377,21 @@ API int aul_svc_set_loader_id(bundle *b, int loader_id)
 	return __set_bundle(b, AUL_K_LOADER_ID, tmp);
 }
 
+API int aul_svc_set_loader_name(bundle *b, const char *loader_name)
+{
+	if (b == NULL) {
+		_E("bundle for aul_svc_set_loader_name is NULL");
+		return AUL_SVC_RET_EINVAL;
+	}
+
+	if (!loader_name) {
+		_E("invalid loader name");
+		return AUL_SVC_RET_EINVAL;
+	}
+
+	return __set_bundle(b, AUL_K_LOADER_NAME, loader_name);
+}
+
 API int aul_svc_set_background_launch(bundle *b, int enabled)
 {
 	if (b == NULL)
