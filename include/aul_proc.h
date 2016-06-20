@@ -22,7 +22,8 @@
 /*
  * This API is only for Appfw internally.
  */
-int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid, void *priv, uid_t uid), void *priv);
+int aul_proc_iter_appid(int (*iterfunc)(const char *dname, const char *appid,
+			void *priv, uid_t uid), void *priv);
 
 /*
  * This API is only for Appfw internally.
@@ -33,3 +34,8 @@ char *aul_proc_get_appid_bypid(int pid);
  * This API is only for Appfw internally.
  */
 uid_t aul_proc_get_usr_bypid(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+char *aul_proc_get_cmdline_bypid(int pid);
