@@ -29,6 +29,11 @@
 
 #define MAX_CMD_BUFSZ 1024
 #define APP_LABEL_PREFIX "User::App::"
+#define BINSH_NAME "/bin/sh"
+#define BASH_NAME "/bin/bash"
+#define VALGRIND_NAME "/usr/bin/valgrind"
+#define OPROFILE_NAME "/usr/bin/oprofile_command"
+#define OPTION_VALGRIND_NAME "valgrind"
 
 static int __read_proc(const char *path, char *buf, int size)
 {
@@ -154,3 +159,38 @@ API char *aul_proc_get_appid_bypid(int pid)
 
 	return strdup(p);
 }
+
+API char *aul_proc_get_cmdline_bypid(int pid)
+{
+	char buf[MAX_CMD_BUFSZ];
+	char *p;
+	int ret;
+	int len;
+
+	snprintf(buf, sizeof(buf), "/prod/%d/cmdline", pid);
+	ret = __read_proc(buf, buf, sizeof(buf));
+	if (ret <= 0)
+		return NULL;
+
+	/* Support app launched by shell script */
+	if (!strncmp(buf, BINSH_NAME, strlen(BINSH_NAME))) {
+		return strdup(&buf[strlen(BINSH_NAME) + 1]);
+	} else if (!strncmp(buf, BASH_NAME, strlen(BASH_NAME))) {
+		len = strlen(BASH_NAME) + 1;
+		if (!strncmp(&buf[len], OPROFILE_NAME, strlen(OPROFILE_NAME))) {
+			len += strlen(OPROFILE_NAME) + 1;
+			if (!strncmp(&buf[len], OPTION_VALGRIND_NAME,
+						strlen(OPTION_VALGRIND_NAME))) {
+				len += strlen(OPTION_VALGRIND_NAME) + 1;
+				return strdup(&buf[len]);
+			}
+		}
+	} else {
+		p = strstr(buf, VALGRIND_NAME);
+		if (p)
+			return strdup(p + strlen(VALGRIND_NAME) + 1);
+	}
+
+	return strdup(buf);
+}
+

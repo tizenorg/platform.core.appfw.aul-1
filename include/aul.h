@@ -1057,6 +1057,7 @@ int aul_app_get_all_running_app_info_for_uid(aul_app_info_iter_fn iter_fn, void 
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a package name
+ * @retval      AUL_R_EINVAL    - invalid parameter
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -1090,6 +1091,7 @@ int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a appid
+ * @retval      AUL_R_EINVAL    - invalid parameter
  *
  * @code
  * #include <aul.h>
@@ -1125,6 +1127,7 @@ int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a appid
+ * @retval      AUL_R_EINVAL    - invalid parameter
  *
  * @remark
  *	This API is also available to System user.
@@ -1145,6 +1148,7 @@ int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a appid
+ * @retval      AUL_R_EINVAL    - invalid parameter
  * @code
  * #include <aul.h>
  * #include <bundle.h>
@@ -1179,6 +1183,7 @@ int aul_app_get_appid_bypid(int pid, char *appid, int len);
  * @return	0 if success, negative value(<0) if fail
  * @retval	AUL_R_OK	- success
  * @retval	AUL_R_ERROR	- no such a appid
+ * @retval      AUL_R_EINVAL    - invalid parameter
  * @remark
  *	This API is also available to System user.
 */
