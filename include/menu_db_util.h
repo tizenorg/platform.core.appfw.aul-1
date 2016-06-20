@@ -16,35 +16,22 @@
 
 #pragma once
 
-#include <pkgmgr-info.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <tzplatform_config.h>
+#include <pkgmgr-info.h>
 
 #include "aul_util.h"
 
-#define MAX_PATH_LEN	1024
-
-#define AUL_APP_INFO_FLD_PKG_NAME		"package"
-#define AUL_APP_INFO_FLD_APP_PATH		"exec"
-#define AUL_APP_INFO_FLD_APP_TYPE		"x_slp_packagetype"
-#define AUL_APP_INFO_FLD_WIDTH			"x_slp_baselayoutwidth"
-#define AUL_APP_INFO_FLD_HEIGHT			"x_slp_baselayoutheight"
-#define AUL_APP_INFO_FLD_VERTICAL		"x_slp_ishorizontalscale"
-#define AUL_APP_INFO_FLD_MULTIPLE		"x_slp_multiple"
-#define AUL_APP_INFO_FLD_TASK_MANAGE	"x_slp_taskmanage"
-#define AUL_APP_INFO_FLD_MIMETYPE		"mimetype"
-#define AUL_APP_INFO_FLD_SERVICE		"x_slp_service"
-
-#define AUL_RETRIEVE_PKG_NAME			"package = '?'"
-#define AUL_RETRIEVE_APP_PATH			"exec = '?'"
-#define AUL_RETRIEVE_MIMETYPE			"mimetype like '?'"
-#define AUL_RETRIEVE_SERVICE			"x_slp_service like '?'"
+#define REGULAR_UID_MIN 5000
 
 typedef struct {
 	char *appid;		/* appid */
 	char *app_path;		/* exec */
 	char *original_app_path;	/* exec */
-	char *pkg_type;		/* x_slp_packagetype */
+	char *apptype;		/* app type */
 	char *hwacc;		/* hwacceleration */
 	char *pkg_id;
 } app_info_from_db;
@@ -105,8 +92,8 @@ static inline void _free_app_info_from_db(app_info_from_db *menu_info)
 			free(menu_info->app_path);
 		if (menu_info->original_app_path != NULL)
 			free(menu_info->original_app_path);
-		if (menu_info->pkg_type != NULL)
-			free(menu_info->pkg_type);
+		if (menu_info->apptype != NULL)
+			free(menu_info->apptype);
 		if (menu_info->hwacc != NULL)
 			free(menu_info->hwacc);
 		if (menu_info->pkg_id != NULL)
@@ -161,7 +148,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_pkgname(
 		_E("fail to get apptype from appinfo handle");
 
 	if (apptype)
-		menu_info->pkg_type = strdup(apptype);
+		menu_info->apptype = strdup(apptype);
 
 	ret = pkgmgrinfo_appinfo_destroy_appinfo(handle);
 	if (ret != PMINFO_R_OK)
@@ -179,44 +166,57 @@ static inline int __appinfo_func(const pkgmgrinfo_appinfo_h appinfo,
 		void *user_data)
 {
 	app_info_from_db *menu_info = (app_info_from_db *)user_data;
-	char *apppath;
-	char *pkgid;
-	int ret = PMINFO_R_OK;
+	char *apppath = NULL;
+	char *pkgid = NULL;
+	char *appid = NULL;
+	char *apptype = NULL;
+	int ret;
 
 	if (!menu_info)
-		return ret;
+		return 0;
 
 	ret = pkgmgrinfo_appinfo_get_exec(appinfo, &apppath);
 	if (ret == PMINFO_R_OK && apppath) {
 		menu_info->app_path = strdup(apppath);
-		ret = PMINFO_R_ERROR;
+		if (menu_info->app_path) {
+			menu_info->original_app_path =
+				strdup(menu_info->app_path);
+		}
 	}
 
 	ret = pkgmgrinfo_appinfo_get_pkgid(appinfo, &pkgid);
 	if (ret == PMINFO_R_OK && pkgid)
 		menu_info->pkg_id = strdup(pkgid);
 
+	ret = pkgmgrinfo_appinfo_get_appid(appinfo, &appid);
+	if (ret == PMINFO_R_OK && appid)
+		menu_info->appid = strdup(appid);
+
+	ret = pkgmgrinfo_appinfo_get_apptype(appinfo, &apptype);
+	if (ret == PMINFO_R_OK && apptype)
+		menu_info->apptype = strdup(apptype);
+
 	return ret;
 }
 
-static inline app_info_from_db *_get_app_info_from_db_by_appid_user(
-		const char *appid, uid_t uid)
+static inline app_info_from_db *__get_app_info_from_db(const char *property,
+		const char *value, uid_t uid)
 {
 	app_info_from_db *menu_info;
 	pkgmgrinfo_appinfo_filter_h filter;
-	int ret = PMINFO_R_OK;
+	int ret;
 
-	if (uid == 0) {
-		_E("request from root, treat as global user");
-		uid = GLOBAL_USER;
-	}
+	if (uid < REGULAR_UID_MIN)
+		uid = tzplatform_getuid(TZ_SYS_GLOBALAPP_USER);
 
-	if (appid == NULL)
+	if (property == NULL || value == NULL)
 		return NULL;
 
 	menu_info = calloc(1, sizeof(app_info_from_db));
-	if (menu_info == NULL)
+	if (menu_info == NULL) {
+		_E("out of memory");
 		return NULL;
+	}
 
 	ret = pkgmgrinfo_appinfo_filter_create(&filter);
 	if (ret != PMINFO_R_OK) {
@@ -224,8 +224,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_appid_user(
 		return NULL;
 	}
 
-	ret = pkgmgrinfo_appinfo_filter_add_string(filter,
-			PMINFO_APPINFO_PROP_APP_ID, appid);
+	ret = pkgmgrinfo_appinfo_filter_add_string(filter, property, value);
 	if (ret != PMINFO_R_OK) {
 		pkgmgrinfo_appinfo_filter_destroy(filter);
 		_free_app_info_from_db(menu_info);
@@ -239,7 +238,7 @@ static inline app_info_from_db *_get_app_info_from_db_by_appid_user(
 		ret = pkgmgrinfo_appinfo_filter_foreach_appinfo(filter,
 				__appinfo_func, (void *)menu_info);
 
-	if ((ret != PMINFO_R_OK) || (menu_info->app_path == NULL)) {
+	if (ret != PMINFO_R_OK) {
 		pkgmgrinfo_appinfo_filter_destroy(filter);
 		_free_app_info_from_db(menu_info);
 		return NULL;
@@ -247,17 +246,36 @@ static inline app_info_from_db *_get_app_info_from_db_by_appid_user(
 
 	pkgmgrinfo_appinfo_filter_destroy(filter);
 
-	menu_info->appid = strdup(appid);
-	menu_info->original_app_path = strdup(menu_info->app_path);
+	if (menu_info->appid == NULL || menu_info->app_path == NULL) {
+		_free_app_info_from_db(menu_info);
+		return NULL;
+	}
 
 	return menu_info;
+}
 
+static inline app_info_from_db *_get_app_info_from_db_by_appid_user(
+		const char *appid, uid_t uid)
+{
+	return __get_app_info_from_db(PMINFO_APPINFO_PROP_APP_ID, appid, uid);
 }
 
 static inline app_info_from_db *_get_app_info_from_db_by_appid(
-							const char *appid)
+		const char *appid)
 {
-	return _get_app_info_from_db_by_appid_user(appid, GLOBAL_USER);
+	return _get_app_info_from_db_by_appid_user(appid, getuid());
 }
 
+static inline app_info_from_db *_get_app_info_from_db_by_app_path_user(
+		const char *app_path, uid_t uid)
+{
+	return __get_app_info_from_db(PMINFO_APPINFO_PROP_APP_EXEC, app_path,
+			uid);
+}
+
+static inline app_info_from_db *_get_app_info_from_db_by_app_path(
+		const char *app_path)
+{
+	return _get_app_info_from_db_by_app_path_user(app_path, getuid());
+}
 
