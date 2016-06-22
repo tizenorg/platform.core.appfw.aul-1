@@ -118,7 +118,10 @@ typedef enum _aul_type {
 #define AUL_K_RUA_PKGNAME "__K_RUA_PKGNAME"
 /** AUL public key - To support rua delete */
 #define AUL_K_RUA_APPPATH "__K_RUA_APPPATH"
-
+/** AUL public key - To support rua add */
+#define AUL_K_RUA_ARG "__K_RUA_ARG"
+/** AUL public key - To support rua add */
+#define AUL_K_RUA_TIME "__K_RUA_TIME"
 
 
 /** AUL internal private key */
@@ -2549,7 +2552,37 @@ int aul_app_get_pid_for_uid(const char *appid, uid_t uid);
 
  * @endcode
  **/
-int aul_delete_rua_history(bundle *b);
+int aul_add_rua_history_for_uid(bundle *b, uid_t);
+
+/**
+ * @par Description:
+ * This function delete rua history.
+ *
+ * @param[in] b Bundle object Target Package name or app path.
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @see None
+ * @remarks This API is only for Appfw internally.
+ *
+ * @par Sample code:
+ * @code
+#include <aul.h>
+
+...
+{
+    int r;
+    bundle *b = bundle_create();
+    if (pkg_name)
+        bundle_add_str(b, AUL_K_RUA_PKGNAME, pkg_name);
+    else if (app_path)
+        bundle_add_str(b, AUL_K_RUA_APPPATH, app_path);
+
+    r = aul_add_rua_history(b);
+}
+
+ * @endcode
+ **/
+int aul_delete_rua_history_for_uid(bundle *b, uid_t);
 
 
 /**
