@@ -357,7 +357,49 @@ API int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
 	return aul_app_get_pkgid_bypid_for_uid(pid, pkgid, len, getuid());
 }
 
-API int aul_delete_rua_history(bundle *b)
+API int aul_update_rua_stat_for_uid(bundle *b, uid_t uid)
+{
+	int ret;
+	bundle_raw *br = NULL;
+	int datalen = 0;
+
+	if (b == NULL) {
+		SECURE_LOGE("invalid param");
+		return AUL_R_EINVAL;
+	}
+
+	bundle_encode(b, &br, &datalen);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid,
+			APP_UPDATE_RUA_STAT, br, datalen, AUL_SOCK_NONE);
+
+	if (br != NULL)
+		free(br);
+
+	return ret;
+}
+
+API int aul_add_rua_history_for_uid(bundle *b, uid_t uid)
+{
+	int ret;
+	bundle_raw *br = NULL;
+	int datalen = 0;
+
+	if (b == NULL) {
+		SECURE_LOGE("invalid param");
+		return AUL_R_EINVAL;
+	}
+
+	bundle_encode(b, &br, &datalen);
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid,
+			APP_ADD_HISTORY, br, datalen, AUL_SOCK_NONE);
+
+	if (br != NULL)
+		free(br);
+
+	return ret;
+}
+
+API int aul_delete_rua_history_for_uid(bundle *b, uid_t uid)
 {
 	int ret;
 	bundle_raw *br = NULL;
@@ -367,7 +409,7 @@ API int aul_delete_rua_history(bundle *b)
 	if (b != NULL)
 		bundle_encode(b, &br, &datalen);
 
-	ret = aul_sock_send_raw(AUL_UTIL_PID, getuid(),
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid,
 			APP_REMOVE_HISTORY, br, datalen, AUL_SOCK_NONE);
 
 	if (br != NULL)
