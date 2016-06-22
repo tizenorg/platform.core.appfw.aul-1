@@ -120,7 +120,6 @@ typedef enum _aul_type {
 #define AUL_K_RUA_APPPATH "__K_RUA_APPPATH"
 
 
-
 /** AUL internal private key */
 #define AUL_K_PKG_NAME		"__AUL_PKG_NAME__"
 /** AUL internal private key */
@@ -2549,7 +2548,7 @@ int aul_app_get_pid_for_uid(const char *appid, uid_t uid);
 
  * @endcode
  **/
-int aul_delete_rua_history(bundle *b);
+int aul_delete_rua_history_for_uid(bundle *b, uid_t);
 
 
 /**
