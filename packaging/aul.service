@@ -5,6 +5,7 @@ DefaultDependencies=false
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+ExecStart=/usr/bin/mkdir -p -m 0755 /run/aul
 ExecStart=/usr/bin/mkdir -p -m go+w /run/aul/apps
 ExecStart=/usr/bin/mkdir -p -Z User::Home -m go+w /run/aul/daemons
 
