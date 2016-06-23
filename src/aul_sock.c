@@ -60,6 +60,7 @@ API int aul_sock_create_server(int pid, uid_t uid)
 	struct sockaddr_un saddr;
 	struct sockaddr_un p_saddr;
 	int fd;
+	int ret;
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	/*  support above version 2.6.27*/
@@ -78,8 +79,27 @@ API int aul_sock_create_server(int pid, uid_t uid)
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path), "/run/aul/apps/%d/%d",
-			uid, pid);
+	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
+			"/run/aul/apps/%d/%d", uid, pid);
+
+	ret = mkdir(saddr.sun_path, 0700);
+	if (ret != 0) {
+		if (errno == EEXIST) {
+			if (access(saddr.sun_path, R_OK) != 0) {
+				_E("Failed to access %s directory",
+						saddr.sun_path);
+				close(fd);
+				return -1;
+			}
+		} else {
+			_E("Failed to create %s directory", saddr.sun_path);
+			close(fd);
+			return -1;
+		}
+	}
+
+	snprintf(saddr.sun_path, sizeof(saddr.sun_path),
+			"/run/aul/apps/%d/%d/.app-sock", uid, pid);
 	unlink(saddr.sun_path);
 
 	/* labeling to socket for SMACK */
@@ -124,7 +144,8 @@ API int aul_sock_create_server(int pid, uid_t uid)
 		pgid = getpgid(pid);
 		if (pgid > 1) {
 			snprintf(p_saddr.sun_path, sizeof(p_saddr.sun_path),
-					"/run/aul/apps/%d/%d", uid, pgid);
+					"/run/aul/apps/%d/%d/.app-sock",
+					uid, pgid);
 			if (link(saddr.sun_path, p_saddr.sun_path) < 0) {
 				if (errno == EEXIST)
 					_D("pg path - already exists");
@@ -170,12 +191,14 @@ static int __create_client_sock(int pid, uid_t uid)
 	}
 #endif
 	saddr.sun_family = AF_UNIX;
-	if (pid == AUL_UTIL_PID)
+	if (pid == AUL_UTIL_PID) {
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
 				"/run/aul/daemons/%d/.amd-sock", uid);
-	else
+	} else {
 		snprintf(saddr.sun_path, sizeof(saddr.sun_path),
-				"/run/aul/apps/%d/%d", uid, pid);
+				"/run/aul/apps/%d/%d/.app-sock", uid, pid);
+	}
+
 retry_con:
 	ret = __connect_client_sock(fd, (struct sockaddr *)&saddr, sizeof(saddr),
 			100 * 1000);
