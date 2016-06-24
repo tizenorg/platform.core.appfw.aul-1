@@ -415,7 +415,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 	int sun_size;
 	app_pkt_t *pkt = NULL;
 	int cl = sizeof(struct ucred);
-	unsigned char buf[AUL_SOCK_MAXBUFF];
+	unsigned char buf[AUL_PKT_HEADER_SIZE];
 	int cmd;
 	int datalen;
 	int opt;
@@ -440,7 +440,7 @@ API app_pkt_t *aul_sock_recv_pkt(int fd, int *clifd, struct ucred *cr)
 
  retry_recv:
 	/* receive header(cmd, datalen) */
-	len = recv(*clifd, buf, AUL_PKT_HEADER_SIZE, 0);
+	len = recv(*clifd, buf, sizeof(buf), 0);
 	if (len < 0)
 		if (errno == EINTR)
 			goto retry_recv;
@@ -492,12 +492,12 @@ API int aul_sock_recv_reply_pkt(int fd, app_pkt_t **ret_pkt)
 	int ret;
 	int recv_opt;
 	app_pkt_t *pkt = NULL;
-	unsigned char buf[AUL_SOCK_MAXBUFF];
+	unsigned char buf[AUL_PKT_HEADER_SIZE];
 	char err_buf[1024];
 
 retry_recv:
 	/* receive header(cmd, datalen) */
-	len = recv(fd, buf, AUL_PKT_HEADER_SIZE, 0);
+	len = recv(fd, buf, sizeof(buf), 0);
 	if (len < 0)
 		if (errno == EINTR)
 			goto retry_recv;
