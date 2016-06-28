@@ -302,7 +302,6 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 	__set_stime(kb);
 
 	switch (cmd) {
-	case APP_START_ASYNC:
 	case APP_PAUSE:
 	case APP_PAUSE_BY_PID:
 		ret = app_send_cmd_with_queue_noreply_for_uid(AUL_UTIL_PID,
