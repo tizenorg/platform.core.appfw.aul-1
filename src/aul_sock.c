@@ -162,7 +162,7 @@ static int __create_client_sock(int pid, uid_t uid)
 {
 	int fd = -1;
 	struct sockaddr_un saddr = { 0, };
-	int retry = 1;
+	int retry = 2;
 	int ret = -1;
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
