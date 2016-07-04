@@ -202,6 +202,10 @@ typedef enum _aul_type {
 #define AUL_K_CHILD_PID		"__AUL_CHILD_PID__"
 /** AUL internal private key */
 #define AUL_K_WIDGET_VIEWER	"__AUL_WIDGET_VIEWER__"
+/** AUL internal private key */
+#define AUL_K_APP_DATA_KEY	"__AUL_APP_DATA_KEY__"
+/** AUL internal private key */
+#define AUL_K_TARGET_PID	"__AUL_TARGET_PID__"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -2748,6 +2752,104 @@ int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid);
  *	This API is only available in User Session.
  */
 int aul_prepare_candidate_process(void);
+
+
+/**
+ * @par Description:
+ *	This API requests amd to create bundle storage for caller packages.
+ *	Once the data has been created, any application in the same package can
+ *	load the bundle with given key.
+ * @par Typical use case:
+ *	If you have some data that need to share within package only,
+ *	you may use this APIs.
+ *
+ * @param[in]	appid		application id
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invalid parameter
+ *
+ * @remark
+ *	The app data only visible for the application that has same package id.
+ */
+int aul_app_data_new(const char *appid);
+
+/**
+ * @par Description
+ *	This API requests dump all data stored with given appid.
+ * @par Typical use case:
+ *	Derive instance list of given appid that AMD hold
+ *
+ * @param[in]	appid 		application id
+ * @param[out]	b		bundle to get data
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invalid parameter
+ * @retval	AUL_R_EILLACC	- illegal access (outside package)
+ * @retval	AUL_R_ENOAPP	- no application
+ *
+ * @remark
+ *	The app data only visible for the application that has same package id.
+ */
+int aul_app_data_get_raw(const char *appid, bundle **b);
+
+/**
+ * @par Description
+ *	This API requests to store given data_key and data_val
+ * @par Typical use case:
+ *	Store widget instance content info to AMD
+ *
+ * @param[in]	appid 		application id
+ * @param[in]	data_key	key
+ * @param[in]	data_val	value
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invalid parameter
+ * @retval	AUL_R_EILLACC	- illegal access (outside package)
+ * @retval	AUL_R_ENOAPP	- no application
+ *
+ * @remark
+ *	The app data only visible for the application that has same package id.
+ */
+int aul_app_data_put(const char *appid, const char *data_key, const char *data_val);
+
+/**
+ * @par Description
+ *	This API requests dump all data stored with given appid.
+ * @par Typical use case:
+ *	Retrive widget content info of given widget instance id
+ *
+ * @param[in]	appid 		application id
+ * @param[in]	data_key	key
+ * @param[out]	data_val	value of given key
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invalid parameter
+ * @retval	AUL_R_EILLACC	- illegal access (outside package)
+ * @retval	AUL_R_ENOAPP	- no application
+ *
+ * @remark
+ *	The app data only visible for the application that has same package id.
+ */
+int aul_app_data_get(const char *appid, const char *data_key, char **data_val);
+
+int aul_app_data_get_owner(const char *appid, const char *data_key, int *pid);
+
+/**
+ * @par Description
+ *	This API deletes single key and value in AMD.
+ *
+ * @param[in]	appid 		application id
+ * @param[in]	data_key	key
+ * @return	0 if success, negative value(<0) if fail
+ * @retval	AUL_R_OK	- success
+ * @retval	AUL_R_EINVAL	- invalid parameter
+ * @retval	AUL_R_EILLACC	- illegal access (outside package)
+ * @retval	AUL_R_ENOAPP	- no application
+ *
+ * @remark
+ *	The app data only visible for the application that has same package id.
+ */
+int aul_app_data_del(const char *appid, const char *data_key);
 
 #ifdef __cplusplus
 	}
