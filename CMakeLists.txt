@@ -68,6 +68,8 @@ add_library(aul SHARED
 		src/aul_proc.c
 		src/app_com.c
 		src/aul_error.c
+		src/app_data.c
+		src/widget.c
 		)
 TARGET_LINK_LIBRARIES(aul ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(aul PROPERTIES SOVERSION ${MAJORVER})
