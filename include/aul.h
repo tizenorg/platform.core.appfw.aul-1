@@ -202,6 +202,14 @@ typedef enum _aul_type {
 #define AUL_K_CHILD_PID		"__AUL_CHILD_PID__"
 /** AUL internal private key */
 #define AUL_K_WIDGET_VIEWER	"__AUL_WIDGET_VIEWER__"
+/** AUL internal private key */
+#define AUL_K_WIDGET_ID		"__AUL_WIDGET_ID__"
+/** AUL internal private key */
+#define AUL_K_WIDGET_INSTANCE_ID	"__AUL_WIDGET_INSTANCE_ID__"
+/** AUL internal private key */
+#define AUL_K_APP_DATA_KEY	"__AUL_APP_DATA_KEY__"
+/** AUL internal private key */
+#define AUL_K_TARGET_PID	"__AUL_TARGET_PID__"
 
 /**
  * @brief	This is callback function for aul_launch_init
@@ -2748,6 +2756,31 @@ int aul_launch_app_async_for_uid(const char *appid, bundle *kb, uid_t uid);
  *	This API is only available in User Session.
  */
 int aul_prepare_candidate_process(void);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_widget_instance_add(const char *widget_id, const char *instance_id);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_widget_instance_del(const char *widget_id, const char *instance_id);
+
+/*
+ * This API is only for Appfw internally.
+ */
+typedef void (*aul_widget_instance_foreach_cb)(const char *instance_id, void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_widget_instance_foreach(const char *widget_id, aul_widget_instance_foreach_cb cb, void *data);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_widget_instance_update(const char *widget_id, const char *instance_id, bundle *b);
 
 #ifdef __cplusplus
 	}
