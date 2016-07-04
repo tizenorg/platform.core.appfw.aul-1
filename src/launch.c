@@ -321,6 +321,7 @@ int app_request_to_launchpad_for_uid(int cmd, const char *appid, bundle *kb, uid
 		case APP_START:
 		case APP_START_RES:
 		case APP_START_ASYNC:
+		case WIDGET_UPDATE:
 			b = bundle_dup(kb);
 			ret = __app_launch_local(b);
 			break;
