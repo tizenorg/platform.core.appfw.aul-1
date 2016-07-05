@@ -691,6 +691,9 @@ API int aul_terminate_pid_for_uid(int pid, uid_t uid)
 	snprintf(pid_str, sizeof(pid_str), "%d", pid);
 	ret = app_request_to_launchpad_for_uid(APP_TERM_BY_PID,
 			pid_str, NULL, uid);
+	if (ret == pid)
+		ret = AUL_R_OK;
+
 	return ret;
 }
 
@@ -704,6 +707,9 @@ API int aul_terminate_bgapp_pid(int pid)
 
 	snprintf(pid_str, sizeof(pid_str), "%d", pid);
 	ret = app_request_to_launchpad(APP_TERM_BGAPP_BY_PID, pid_str, NULL);
+	if (ret == pid)
+		ret = AUL_R_OK;
+
 	return ret;
 }
 
