@@ -186,6 +186,20 @@ API void aul_set_preinit_appid(const char *appid)
 	__appid = appid;
 }
 
+const char *__get_preinit_appid(void)
+{
+	const char *appid;
+
+	appid = getenv("AUL_APPID");
+	if (appid) {
+		if (__appid == NULL)
+			__appid = strdup(appid);
+		unsetenv("AUL_APPID");
+	}
+
+	return __appid;
+}
+
 API void aul_set_preinit_pkgid(const char *pkgid)
 {
 	__pkgid = pkgid;
@@ -210,92 +224,45 @@ API const char *aul_get_preinit_root_path(void)
 	return __root_path;
 }
 
-static int __get_info_bypid(int pid, char *appid, int len, int cmd)
-{
-	char *result;
-	app_info_from_db *menu_info;
-	uid_t uid;
-	result = aul_proc_get_appid_bypid(pid);
-	if (result == NULL)
-		return -1;
-	uid = aul_proc_get_usr_bypid(pid);
-
-	if ((menu_info = _get_app_info_from_db_by_appid_user(result, uid)) == NULL) {
-		free(result);
-		return -1;
-	} else {
-		if (cmd == APP_GET_APPID_BYPID)
-			snprintf(appid, len, "%s", _get_appid(menu_info));
-		else
-			snprintf(appid, len, "%s", _get_pkgid(menu_info));
-	}
-
-	free(result);
-	_free_app_info_from_db(menu_info);
-
-	return 0;
-}
-
 API int aul_app_get_pkgname_bypid(int pid, char *pkgname, int len)
 {
 	return aul_app_get_appid_bypid(pid, pkgname, len);
 }
 
-static int __get_appid_bypid(int pid, char *appid, int len)
-{
-	char *result;
-
-	result = aul_proc_get_appid_bypid(pid);
-	if (result == NULL)
-		return -1;
-
-	snprintf(appid, len, "%s", result);
-	free(result);
-
-	return 0;
-}
-
-API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len, uid_t uid)
+API int aul_app_get_appid_bypid_for_uid(int pid, char *appid, int len,
+		uid_t uid)
 {
 	app_pkt_t *pkt = NULL;
-	int pgid;
-	int ret;
 	int fd;
+	int ret;
+	const char *preinit_appid;
 
-	if (pid != getpid()) {
-		fd = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_APPID_BYPID,
-				(unsigned char *)&pid,
-				sizeof(pid), AUL_SOCK_ASYNC);
-		if (fd > 0)
-			ret = aul_sock_recv_reply_pkt(fd, &pkt);
-		else
-			return fd;
+	if (pid <= 0 || appid == NULL) {
+		_E("Invalid parameter");
+		return AUL_R_EINVAL;
+	}
 
-		if (pkt == NULL || ret < 0)
-			return AUL_R_ERROR;
-
-		if (pkt->cmd == APP_GET_INFO_ERROR) {
-			free(pkt);
-			return AUL_R_ERROR;
+	if (getpid() == pid) {
+		preinit_appid = __get_preinit_appid();
+		if (preinit_appid) {
+			snprintf(appid, len, "%s", preinit_appid);
+			return AUL_R_OK;
 		}
+	}
 
+	fd = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_APPID_BYPID,
+			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_ASYNC);
+	if (fd <= 0)
+		return AUL_R_ERROR;
+
+	ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	if (ret < 0 || pkt == NULL)
+		return AUL_R_ERROR;
+
+	if (pkt->cmd == APP_GET_INFO_OK) {
 		snprintf(appid, len, "%s", pkt->data);
 		free(pkt);
 		return AUL_R_OK;
-	} else {
-		if (__appid) {
-			snprintf(appid, len, "%s", __appid);
-			return AUL_R_OK;
-		}
-
-		ret = __get_appid_bypid(pid, appid, len);
-		if (ret == 0)
-			return AUL_R_OK;
-
-		pgid = getpgid(pid);
-		if (pgid <= 1)
-			return AUL_R_ERROR;
-		return __get_appid_bypid(pid, appid, len);
 	}
 
 	return AUL_R_ERROR;
@@ -306,59 +273,62 @@ API int aul_app_get_appid_bypid(int pid, char *appid, int len)
 	return aul_app_get_appid_bypid_for_uid(pid, appid, len, getuid());
 }
 
-API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len, uid_t uid)
+static int __get_pkginfo(int pid, char *buf, int len, uid_t uid)
+{
+	const char *appid;
+	app_info_from_db *menu_info;
+
+	appid = __get_preinit_appid();
+	if (appid == NULL) {
+		_E("Failed to get preinit appid - %d", pid);
+		return -1;
+	}
+
+	menu_info = _get_app_info_from_db_by_appid_user(appid, uid);
+	if (menu_info == NULL) {
+		_E("Failed to get app info - %s", appid);
+		return -1;
+	}
+
+	snprintf(buf, len, "%s", _get_pkgid(menu_info));
+	_free_app_info_from_db(menu_info);
+
+	return 0;
+}
+
+API int aul_app_get_pkgid_bypid_for_uid(int pid, char *pkgid, int len,
+		uid_t uid)
 {
 	app_pkt_t *pkt = NULL;
-	int pgid;
-	int ret;
-	int cmd = APP_GET_PKGID_BYPID;
-	int cpid = getpid();
 	int fd;
+	int ret;
 
-	if (pid == cpid && __pkgid) {
-		snprintf(pkgid, len, "%s", __pkgid);
+	if (pid <= 0 || pkgid == NULL) {
+		_E("Invalid parameter");
+		return AUL_R_EINVAL;
+	}
+
+	fd = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_PKGID_BYPID,
+			(unsigned char *)&pid, sizeof(pid), AUL_SOCK_ASYNC);
+	if (fd <= 0)
+		return AUL_R_ERROR;
+
+	ret = aul_sock_recv_reply_pkt(fd, &pkt);
+	if (ret < 0 || pkt == NULL)
+		return AUL_R_ERROR;
+
+	if (pkt->cmd == APP_GET_INFO_OK) {
+		snprintf(pkgid, len, "%s", pkt->data);
+		free(pkt);
 		return AUL_R_OK;
 	}
 
-	if (pid == cpid || getuid() == 0 || geteuid() == 0) {
-		if (__get_info_bypid(pid, pkgid, len, cmd) == 0) {
-			SECURE_LOGD("pkgid for %d is %s", pid, pkgid);
-			return AUL_R_OK;
-		}
-		/* support app launched by shell script*/
-
-		pgid = getpgid(pid);
-		if (pgid <= 1)
-			return AUL_R_ERROR;
-
-		_D("second change pgid = %d, pid = %d", pgid, pid);
-		if (__get_info_bypid(pgid, pkgid, len, cmd) == 0)
-			return AUL_R_OK;
-
-		return AUL_R_ERROR;
+	if (getpid() == pid) {
+		__get_pkginfo(pid, pkgid, len, uid);
+		return AUL_R_OK;
 	}
 
-	if (pkgid == NULL)
-		return AUL_R_EINVAL;
-
-	fd = aul_sock_send_raw(AUL_UTIL_PID, uid, cmd, (unsigned char *)&pid, sizeof(pid), AUL_SOCK_ASYNC);
-
-	if (fd > 0)
-		ret = aul_sock_recv_reply_pkt(fd, &pkt);
-	else
-		return fd;
-
-	if (pkt == NULL || ret < 0)
-		return AUL_R_ERROR;
-
-	if (pkt->cmd == APP_GET_INFO_ERROR) {
-		free(pkt);
-		return AUL_R_ERROR;
-	}
-
-	snprintf(pkgid, len, "%s", pkt->data);
-	free(pkt);
-	return AUL_R_OK;
+	return AUL_R_ERROR;
 }
 
 API int aul_app_get_pkgid_bypid(int pid, char *pkgid, int len)
