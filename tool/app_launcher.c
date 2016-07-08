@@ -118,7 +118,8 @@ static void __reply_cb_func(bundle *b, int request_code, aul_svc_result_val resu
 
 	bundle_get_str(b, "port", &port);
 	pid_str = bundle_get_val(b, AUL_K_CALLEE_PID);
-	pid = atoi(pid_str);
+	if (pid_str)
+		pid = atoi(pid_str);
 
 	if (port != NULL && strlen(port) > 0) {
 		printf("... successfully launched pid = %d with debug 1 port: %s\n",
