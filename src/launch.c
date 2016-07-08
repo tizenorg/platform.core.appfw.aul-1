@@ -369,7 +369,7 @@ int aul_sock_handler(int fd)
 	struct ucred cr;
 
 	const char *pid_str;
-	int pid;
+	int pid = -1;
 	int ret;
 
 	if ((pkt = aul_sock_recv_pkt(fd, &clifd, &cr)) == NULL) {
@@ -423,7 +423,8 @@ int aul_sock_handler(int fd)
 	case APP_RESULT:	/* run in caller */
 	case APP_CANCEL:
 		pid_str = bundle_get_val(kbundle, AUL_K_CALLEE_PID);
-		pid = atoi(pid_str);
+		if (pid_str)
+			pid = atoi(pid_str);
 
 		app_result(pkt->cmd, kbundle, pid);
 		break;
