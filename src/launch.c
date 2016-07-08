@@ -423,9 +423,11 @@ int aul_sock_handler(int fd)
 	case APP_RESULT:	/* run in caller */
 	case APP_CANCEL:
 		pid_str = bundle_get_val(kbundle, AUL_K_CALLEE_PID);
-		pid = atoi(pid_str);
-
-		app_result(pkt->cmd, kbundle, pid);
+		if (pid_str) {
+			pid = atoi(pid_str);
+			if (pid > 0)
+				app_result(pkt->cmd, kbundle, pid);
+		}
 		break;
 
 	case APP_KEY_EVENT:	/* run in caller */
