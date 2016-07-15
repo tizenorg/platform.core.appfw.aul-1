@@ -1065,3 +1065,56 @@ API int aul_terminate_pid_sync_for_uid(int pid, uid_t uid)
 	return ret;
 }
 
+API unsigned char *aul_get_extra_data(void)
+{
+	int fd;
+	const char *pipe_fd;
+	ssize_t ret;
+	ssize_t len;
+	unsigned char *data;
+	unsigned int datalen;
+
+	pipe_fd = getenv("AUL_EXTRA_DATA_FD");
+	if (pipe_fd == NULL) {
+		_E("Failed to get an environment variable");
+		return NULL;
+	}
+	unsetenv("AUL_EXTRA_DATA_FD");
+
+	fd = atoi(pipe_fd);
+	if (fd < 0)
+		return NULL;
+
+	ret = read(fd, &datalen, sizeof(datalen));
+	if (ret < 0) {
+		_E("Failed to read %d", fd);
+		close(fd);
+		return NULL;
+	}
+
+	data = (unsigned char *)calloc(1,
+			sizeof(unsigned char) * (datalen + 1));
+	if (data == NULL) {
+		_E("out of memory");
+		close(fd);
+		return NULL;
+	}
+
+	len = 0;
+	while (len != datalen) {
+		ret = read(fd, data, datalen - len);
+		if (ret < 0) {
+			_E("Failed to read %d", fd);
+			free(data);
+			close(fd);
+			return NULL;
+		}
+		len += ret;
+	}
+	close(fd);
+
+	_D("extra_data: %s", data);
+
+	return data;
+}
+
