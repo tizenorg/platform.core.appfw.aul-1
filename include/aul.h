@@ -2328,6 +2328,11 @@ void aul_app_group_lower(int *exit);
  */
 void aul_app_group_get_idle_pids(int *cnt, int **pids);
 
+/*
+ * This API is only for Appfw internally.
+ */
+unsigned char *aul_get_extra_data(void);
+
 /**
  * @par Description:
  *	This API puts some app below the caller app
