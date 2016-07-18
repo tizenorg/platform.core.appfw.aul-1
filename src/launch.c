@@ -410,6 +410,7 @@ int aul_sock_handler(int fd)
 	case APP_TERM_BY_PID:	/* run in callee */
 	case APP_TERM_BY_PID_ASYNC:
 	case APP_TERM_BY_PID_SYNC:
+	case WIDGET_RESTART:
 		app_terminate();
 		break;
 
