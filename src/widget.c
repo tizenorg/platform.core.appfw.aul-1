@@ -15,6 +15,7 @@
  */
 
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
 #include <glib.h>
 #include <bundle.h>
@@ -188,6 +189,22 @@ API int aul_widget_instance_update(const char *widget_id,
 
 	if (param == NULL)
 		bundle_free(kb);
+
+	return ret;
+}
+
+
+API int aul_widget_app_restart(int pid)
+{
+
+	char pid_str[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pid_str, sizeof(pid_str), "%d", pid);
+	ret = app_request_to_launchpad_for_uid(WIDGET_RESTART, pid_str,	NULL, getuid());
 
 	return ret;
 }
