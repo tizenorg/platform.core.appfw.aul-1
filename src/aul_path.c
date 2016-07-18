@@ -26,6 +26,7 @@
 
 #include <tzplatform_config.h>
 #include <pkgmgr-info.h>
+#include <storage-internal.h>
 
 #include "aul_api.h"
 #include "aul_util.h"
@@ -33,13 +34,6 @@
 
 #define ROOT_UID 0
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
-#define _EXTERNAL_APP_SPECIFIC_PATH(uid) ({ \
-	tzplatform_set_user(uid); \
-	const char *path = tzplatform_mkpath3(TZ_SYS_MEDIA, \
-		"SDCardA1/apps", tzplatform_getenv(TZ_USER_NAME)); \
-	tzplatform_reset_user(); \
-	path; })
-#define _APP_SPECIFIC_PATH tzplatform_getenv(TZ_USER_APP)
 
 static const char _DATA_DIR[] = "data/";
 static const char _CACHE_DIR[] = "cache/";
@@ -48,6 +42,8 @@ static const char _TEP_RESOURCE_DIR[] = "tep/mount/";
 static const char _SHARED_DATA_DIR[] = "shared/data/";
 static const char _SHARED_TRUSTED_DIR[] = "shared/trusted/";
 static const char _SHARED_RESOURCE_DIR[] = "shared/res/";
+
+char ext_specific_path[PATH_MAX];
 
 static const char * __get_specific_path(const char *pkgid, uid_t uid)
 {
@@ -97,25 +93,63 @@ static int __get_pkgid(char *pkgid, int len, const char *appid, uid_t uid)
 	return AUL_R_OK;
 }
 
+/* return value should be freed after use. */
+static char *__get_sdcard_path(void)
+{
+	char *sdpath = NULL;
+	char *result_path = NULL;
+	int storage_id = 0;
+	int ret;
+
+	ret = storage_get_primary_sdcard(&storage_id, &sdpath);
+	if (ret != STORAGE_ERROR_NONE) {
+		_E("failed to get primary sdcard (%d)", ret);
+		if (sdpath)
+			free(sdpath);
+		return NULL;
+	}
+
+	if (sdpath)
+		result_path = sdpath;
+	else
+		result_path = NULL;
+
+	return result_path;
+}
+
 static int __get_external_path(char **path, const char *appid,
 		const char *dir_name, uid_t uid)
 {
 	char buf[PATH_MAX];
 	char pkgid[NAME_MAX];
+	char *ext_path;
 	int ret;
 
 	ret = __get_pkgid(pkgid, sizeof(pkgid), appid, uid);
 	if (ret != AUL_R_OK)
 		return ret;
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s",
-		_EXTERNAL_APP_SPECIFIC_PATH(uid),
-		 pkgid, dir_name ? dir_name : "");
-
 	assert(path);
-	*path = strdup(buf);
 
-	return AUL_R_OK;
+	ext_path = __get_sdcard_path();
+	if (ext_path) {
+		tzplatform_set_user(uid);
+		snprintf(buf, sizeof(buf), "%s/apps/%s/%s/%s",
+			ext_path, tzplatform_getenv(TZ_USER_NAME),
+			pkgid, dir_name ? dir_name : "");
+		tzplatform_reset_user();
+		free(ext_path);
+		ext_path = NULL;
+
+		*path = strdup(buf);
+		ret = AUL_R_OK;
+	} else {
+		/* FIXME */
+		*path = NULL;
+		ret = AUL_R_ENOAPP;
+	}
+
+	return ret;
 }
 
 static int __get_path(char **path, const char *appid, const char *dir_name,
@@ -355,7 +389,22 @@ API const char *aul_get_app_specific_path(void)
 
 API const char *aul_get_app_external_specific_path(void)
 {
-	return _EXTERNAL_APP_SPECIFIC_PATH(getuid());
+	char *ext_path;
+	char *result_path = NULL;
+
+	ext_path = __get_sdcard_path();
+	if (ext_path) {
+		tzplatform_set_user(getuid());
+		snprintf(ext_specific_path, sizeof(ext_specific_path),
+			"%s/apps/%s", ext_path,
+			tzplatform_getenv(TZ_USER_NAME));
+		tzplatform_reset_user();
+		result_path = ext_specific_path;
+		free(ext_path);
+		ext_path = NULL;
+	}
+
+	return result_path;
 }
 
 API int aul_get_app_shared_data_path_by_appid(const char *appid, char **path)
