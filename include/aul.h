@@ -2782,6 +2782,11 @@ int aul_widget_instance_foreach(const char *widget_id, aul_widget_instance_forea
  */
 int aul_widget_instance_update(const char *widget_id, const char *instance_id, bundle *b);
 
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_widget_app_restart(char *viewer_id);
+
 #ifdef __cplusplus
 	}
 #endif

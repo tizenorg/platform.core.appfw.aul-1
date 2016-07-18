@@ -15,6 +15,7 @@
  */
 
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
 #include <glib.h>
 #include <bundle.h>
@@ -189,6 +190,17 @@ API int aul_widget_instance_update(const char *widget_id,
 	if (param == NULL)
 		bundle_free(kb);
 
+	return ret;
+}
+
+API int aul_widget_app_restart(char *viewer_id)
+{
+	int ret;
+	bundle *kb = bundle_create();
+
+	bundle_add_str(kb, AUL_K_WIDGET_VIEWER, viewer_id);
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), WIDGET_RESTART, kb, AUL_SOCK_NONE);
+	bundle_free(kb);
 	return ret;
 }
 
