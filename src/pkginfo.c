@@ -437,3 +437,27 @@ API int aul_unset_default_app_by_operation(const char *app_id)
 
 	return AUL_R_OK;
 }
+
+API int aul_app_get_last_caller_pid(int pid)
+{
+	return aul_app_get_last_caller_pid_for_uid(pid, getuid());
+}
+
+API int aul_app_get_last_caller_pid_for_uid(int pid, uid_t uid)
+{
+	int ret;
+
+	if (pid < 0) {
+		_E("Invalid parameter");
+		return AUL_R_EINVAL;
+	}
+
+	ret = aul_sock_send_raw(AUL_UTIL_PID, uid, APP_GET_LAST_CALLER_PID,
+			(unsigned char *)&pid, sizeof(int),
+			AUL_SOCK_NONE);
+	if (ret < 0)
+		return aul_error_convert(ret);
+
+	return ret;
+}
+

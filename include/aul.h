@@ -2782,6 +2782,35 @@ int aul_widget_instance_foreach(const char *widget_id, aul_widget_instance_forea
  */
 int aul_widget_instance_update(const char *widget_id, const char *instance_id, bundle *b);
 
+/**
+ * @par Description:
+ *	This API gets the last caller process id of specified application process id.
+ * @par Purpose:
+ *	This API's purpose is to get the application's last caller process id.
+ *
+ * @param[in]	pid	pid of application
+ * @return	caller pid if success, nagative value if fail
+ *
+ * @remark
+ *	This API is only available in User Session.
+ */
+int aul_app_get_last_caller_pid(int pid);
+
+/**
+ * @par Description:
+ *	This API gets the last caller process id of specified application process id.
+ * @par Purpose:
+ *	This API's purpose is to get the last caller process id of the application.
+ *
+ * @param[in]	pid	pid of application
+ * @param[in]   uid     User ID
+ * @return	caller pid if success, nagative value if fail
+ *
+ * @remark
+ *	This API is only available in System users.
+ */
+int aul_app_get_last_caller_pid_for_uid(int pid, uid_t uid);
+
 #ifdef __cplusplus
 	}
 #endif

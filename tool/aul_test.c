@@ -650,6 +650,22 @@ static int get_status_test_for_uid(void)
 	return 0;
 }
 
+static int get_last_caller_pid_test(void)
+{
+	static int num;
+
+	printf("[aul_app_get_last_caller_pid %d test] %d \n", num++, apn_pid);
+	return aul_app_get_last_caller_pid(apn_pid);
+}
+
+static int get_last_caller_pid_test_for_uid(void)
+{
+	static int num;
+
+	printf("[aul_app_get_last_caller_pid_for_uid %d test] %d \n", num++, apn_pid);
+	return aul_app_get_last_caller_pid_for_uid(apn_pid, atoi(gargv[3]));
+}
+
 static int test_regex()
 {
 	char *token;
@@ -781,6 +797,10 @@ static test_func_t test_func[] = {
 		"[usage] get_status <appid>"},
 	{"get_status_for_uid", get_status_test_for_uid, "aul_app_get_status_for_uid test",
 		"[usage] get_status_for_uid <appid> <uid>"},
+	{"get_last_caller_pid", get_last_caller_pid_test, "aul_app_get_last_caller_pid test",
+		"[usage] get_last_caller_pid <pid>"},
+	{"get_last_caller_pid_for_uid", get_last_caller_pid_test_for_uid, "aul_app_get_last_caller_pid_for_uid test",
+		"[usage] get_last_caller_pid_for_uid <pid> <uid"},
 };
 
 int callfunc(char *testname)
