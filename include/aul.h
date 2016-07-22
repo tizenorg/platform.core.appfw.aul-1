@@ -2017,6 +2017,16 @@ int aul_terminate_pid_without_restart(int pid);
 /*
  * This API is only for Appfw internally.
  */
+int aul_terminate_pid_sync_without_restart(int pid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_terminate_pid_sync_without_restart_for_uid(int pid, uid_t uid);
+
+/*
+ * This API is only for Appfw internally.
+ */
 const char *aul_get_app_external_root_path(void);
 
 /*

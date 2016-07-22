@@ -729,6 +729,25 @@ API int aul_terminate_pid_without_restart(int pid)
 	return ret;
 }
 
+API int aul_terminate_pid_sync_without_restart(int pid)
+{
+	return aul_terminate_pid_sync_without_restart_for_uid(pid, getuid());
+}
+
+API int aul_terminate_pid_sync_without_restart_for_uid(int pid, uid_t uid)
+{
+	char pid_str[MAX_PID_STR_BUFSZ];
+	int ret;
+
+	if (pid <= 0)
+		return AUL_R_EINVAL;
+
+	snprintf(pid_str, sizeof(pid_str), "%d", pid);
+	ret = app_request_to_launchpad_for_uid(APP_TERM_BY_PID_SYNC_WITHOUT_RESTART,
+			pid_str, NULL, uid);
+	return ret;
+}
+
 API int aul_terminate_pid_async(int pid)
 {
 	return aul_terminate_pid_async_for_uid(pid, getuid());
