@@ -9,7 +9,6 @@ Group:      Application Framework/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 Source1001: %{name}.manifest
-Source1002: %{name}.service
 
 Requires(post):   /sbin/ldconfig
 Requires(post):   /usr/bin/systemctl
@@ -105,10 +104,6 @@ install -m 0644 .appsvc.db %{buildroot}%{_sysconfdir}/skel/.applications/dbspace
 mkdir -p %{buildroot}%{_datadir}/appsvc
 cp -R %{_builddir}/%{name}-%{version}/alias/* %{buildroot}%{_datadir}/appsvc
 
-mkdir -p %{buildroot}%{_unitdir}/sysinit.target.wants
-install -m 0644 %SOURCE1002 %{buildroot}%{_unitdir}/aul.service
-ln -sf ../aul.service %{buildroot}%{_unitdir}/sysinit.target.wants/aul.service
-
 %preun
 
 %post
@@ -134,8 +129,6 @@ chsmack -a 'User::Home' %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
 %{_datadir}/aul/preexec_list.txt
 %{_datadir}/appsvc/*
 %{_sysconfdir}/skel/.applications/dbspace/.appsvc.db
-%{_unitdir}/aul.service
-%{_unitdir}/sysinit.target.wants/aul.service
 
 %files test
 %{_bindir}/open_app
