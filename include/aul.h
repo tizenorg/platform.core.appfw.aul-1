@@ -67,6 +67,7 @@ typedef enum _aul_type {
 	AUL_PAUSE,
 	AUL_WAKE,
 	AUL_SUSPEND,
+	AUL_WIDGET_CONTENT,
 } aul_type;
 
 typedef enum aul_widget_lifecycle_event {
@@ -233,7 +234,7 @@ typedef enum aul_widget_instance_event {
 /** AUL internal private key */
 #define AUL_K_WIDGET_STATUS		"__AUL_WIDGET_STATUS__"
 /** AUL internal private key */
-#define AUL_K_APP_DATA_KEY	"__AUL_APP_DATA_KEY__"
+#define AUL_K_WIDGET_CONTENT_INFO	"__AUL_WIDGET_CONTENT_INFO__"
 /** AUL internal private key */
 #define AUL_K_TARGET_PID	"__AUL_TARGET_PID__"
 
@@ -2846,6 +2847,11 @@ int aul_app_get_last_caller_pid(int pid);
  *	This API is only available in System users.
  */
 int aul_app_get_last_caller_pid_for_uid(int pid, uid_t uid);
+
+/*
+ * This API is only for Appfw internally.
+ */
+int aul_widget_instance_get_content(const char *widget_id, const char *instance_id, char **content);
 
 #ifdef __cplusplus
 	}

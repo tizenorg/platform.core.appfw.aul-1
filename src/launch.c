@@ -359,6 +359,48 @@ static int __send_result_to_launchpad(int fd, int res)
 	return 0;
 }
 
+static int widget_get_content(int clifd, bundle *kb)
+{
+	int ret;
+	int fd[1] = {0};
+	char *widget_id = NULL;
+	char *instance_id = NULL;
+	char *content_info = NULL;
+
+	bundle_get_str(kb, AUL_K_WIDGET_ID, &widget_id);
+	bundle_get_str(kb, AUL_K_WIDGET_INSTANCE_ID, &instance_id);
+
+	ret = aul_sock_recv_reply_sock_fd(clifd, fd, 1);
+
+	if (ret < 0) {
+		_E("failed to recv sock fd");
+		return ret;
+	}
+
+	if (!widget_id || !instance_id) {
+		ret = aul_sock_send_raw_with_fd(fd[0], -EINVAL, 0, 0,
+							AUL_SOCK_NOREPLY);
+		return 0;
+	}
+
+	__call_aul_handler(AUL_WIDGET_CONTENT, kb);
+
+	bundle_get_str(kb, AUL_K_WIDGET_CONTENT_INFO, &content_info);
+	if (content_info) {
+		ret = aul_sock_send_raw_with_fd(fd[0], 0,
+			(unsigned char *)content_info,
+			strlen(content_info) + 1, AUL_SOCK_NOREPLY);
+	} else {
+		ret = aul_sock_send_raw_with_fd(fd[0], -ENOENT,
+			NULL, 0, AUL_SOCK_NOREPLY);
+	}
+
+	if (ret < 0)
+		_E("failed to send content %d (%d)", fd[0], ret);
+
+	return ret;
+}
+
 /**
  * @brief	caller & callee's sock handler
  */
@@ -380,7 +422,7 @@ int aul_sock_handler(int fd)
 
 	if (pkt->opt & AUL_SOCK_NOREPLY) {
 		close(clifd);
-	} else {
+	} else if (pkt->cmd != WIDGET_GET_CONTENT) {
 		ret = __send_result_to_launchpad(clifd, 0);
 		if (ret < 0) {
 			free(pkt);
@@ -445,6 +487,9 @@ int aul_sock_handler(int fd)
 		break;
 	case APP_SUSPEND:
 		app_prepare_to_suspend();
+		break;
+	case WIDGET_GET_CONTENT:
+		widget_get_content(clifd, kbundle);
 		break;
 	default:
 		_E("no support packet");
@@ -1083,4 +1128,5 @@ API int aul_terminate_pid_sync_for_uid(int pid, uid_t uid)
 			NULL, uid);
 	return ret;
 }
+
 
