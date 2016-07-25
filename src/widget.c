@@ -192,3 +192,53 @@ API int aul_widget_instance_update(const char *widget_id,
 	return ret;
 }
 
+API int aul_widget_instance_get_content(const char *widget_id,
+		const char *instance_id, char **content)
+{
+	int ret;
+	bundle *kb;
+	int fd[1] = {0};
+	app_pkt_t *pkt = NULL;
+
+	if (widget_id == NULL || instance_id == NULL)
+		return AUL_R_EINVAL;
+
+	kb = bundle_create();
+	if (kb == NULL) {
+		_E("out of memory");
+		return AUL_R_ERROR;
+	}
+
+	bundle_add_str(kb, AUL_K_WIDGET_ID, widget_id);
+	bundle_add_str(kb, AUL_K_WIDGET_INSTANCE_ID, instance_id);
+
+	ret = aul_sock_send_bundle(AUL_UTIL_PID, getuid(), WIDGET_GET_CONTENT,
+		kb, AUL_SOCK_ASYNC);
+
+	if (ret > 0) {
+		ret = aul_sock_recv_reply_sock_fd(ret, fd, 1);
+		if (ret == 0 && fd[0]) {
+			ret = aul_sock_recv_reply_pkt(fd[0], &pkt);
+			if (ret == 0 && pkt && pkt->cmd == 0) {
+				*content = strdup((const char *)pkt->data);
+				_D("recieved content: %s", *content);
+			} else {
+				if (pkt)
+					ret = pkt->cmd;
+
+				_E("failed to get content");
+			}
+		} else {
+			_E("failed to get socket fd:%d", ret);
+		}
+	}
+
+	bundle_free(kb);
+
+	if (ret < 0)
+		ret = aul_error_convert(ret);
+
+	return ret;
+}
+
+
