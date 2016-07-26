@@ -191,4 +191,3 @@ API int aul_widget_instance_update(const char *widget_id,
 
 	return ret;
 }
-
