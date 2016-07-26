@@ -69,6 +69,28 @@ typedef enum _aul_type {
 	AUL_SUSPEND,
 } aul_type;
 
+typedef enum aul_widget_lifecycle_event {
+	AUL_WIDGET_LIFE_CYCLE_EVENT_APP_DEAD = 0,
+	AUL_WIDGET_LIFE_CYCLE_EVENT_CREATE  = 1,    /**< The widget is created */
+	AUL_WIDGET_LIFE_CYCLE_EVENT_DESTROY = 2,    /**< The widget is destroyed */
+	AUL_WIDGET_LIFE_CYCLE_EVENT_PAUSE   = 3,    /**< The widget is paused */
+	AUL_WIDGET_LIFE_CYCLE_EVENT_RESUME  = 4    /**< The widget is resumed */
+} aul_widget_lifecycle_event_e;
+
+typedef enum aul_widget_instance_event {
+	AUL_WIDGET_INSTANCE_EVENT_CREATE = 0,
+	AUL_WIDGET_INSTANCE_EVENT_DESTROY = 1,
+	AUL_WIDGET_INSTANCE_EVENT_TERMINATE = 2,
+	AUL_WIDGET_INSTANCE_EVENT_PAUSE = 3,
+	AUL_WIDGET_INSTANCE_EVENT_RESUME = 4,
+	AUL_WIDGET_INSTANCE_EVENT_UPDATE = 5,
+	AUL_WIDGET_INSTANCE_EVENT_PERIOD_CHANGED = 6,
+	AUL_WIDGET_INSTANCE_EVENT_SIZE_CHANGED = 7,
+	AUL_WIDGET_INSTANCE_EVENT_EXTRA_UPDATED = 8,
+	AUL_WIDGET_INSTANCE_EVENT_FAULT = 9,
+	AUL_WIDGET_INSTANCE_EVENT_APP_RESTART_REQUEST = 10
+} aul_widget_instance_event_e;
+
 /** AUL public key - To check caller's secuirty */
 #define AUL_K_CALLER_PID	"__AUL_CALLER_PID__"
 /** AUL public key - To check callee's secuirty */
@@ -179,6 +201,8 @@ typedef enum _aul_type {
 /** AUL internal private key */
 #define AUL_K_WAYLAND_WORKING_DIR "__AUL_WAYLAND_WORKING_DIR__"
 /** AUL internal private key */
+#define AUL_K_COM_SENDER_PID	"__AUL_COM_SENDER_PID__"
+/** AUL internal private key */
 #define AUL_K_COM_ENDPOINT	"__AUL_COM_ENDPOINT__"
 /** AUL internal private key */
 #define AUL_K_COM_PRIVILEGE	"__AUL_COM_PRIVILEGE__"
@@ -206,6 +230,8 @@ typedef enum _aul_type {
 #define AUL_K_WIDGET_ID		"__AUL_WIDGET_ID__"
 /** AUL internal private key */
 #define AUL_K_WIDGET_INSTANCE_ID	"__AUL_WIDGET_INSTANCE_ID__"
+/** AUL internal private key */
+#define AUL_K_WIDGET_STATUS		"__AUL_WIDGET_STATUS__"
 /** AUL internal private key */
 #define AUL_K_APP_DATA_KEY	"__AUL_APP_DATA_KEY__"
 /** AUL internal private key */
