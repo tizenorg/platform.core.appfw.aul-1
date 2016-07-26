@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <tzplatform_config.h>
+#include <pkgmgr-info.h>
 
 #include "aul_svc_db.h"
 #include "aul_util.h"
@@ -146,36 +147,6 @@ static const char *__get_svc_db(uid_t uid)
 	return appsvc_db;
 }
 
-
-static const char *__get_app_info_db(uid_t uid)
-{
-	const char *app_info_db = NULL;
-	const char *db_path = NULL;
-	uid_t uid_caller = getuid();
-	gid_t gid = ROOT_UID;
-
-	if (uid == ROOT_UID) {
-		_E("Fail to get appsvc db. root is not allowed");
-		return NULL;
-	}
-
-	if (uid != tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)) {
-		tzplatform_set_user(uid);
-		app_info_db = tzplatform_mkpath(TZ_USER_DB, ".pkgmgr_parser.db");
-		db_path = tzplatform_getenv(TZ_USER_DB);
-		gid = tzplatform_getgid(TZ_USER_NAME);
-		tzplatform_reset_user();
-	} else {
-		app_info_db = tzplatform_mkpath(TZ_SYS_DB, ".pkgmgr_parser.db");
-		db_path = tzplatform_getenv(TZ_SYS_DB);
-	}
-
-	if (uid_caller == ROOT_UID || uid_caller == uid)
-		__mkdir_for_user(db_path, uid, gid);
-
-	return app_info_db;
-}
-
 /**
  * db initialize
  */
@@ -284,13 +255,21 @@ static int __collate_appsvc(void *ucol, int str1_len, const void *str1,
 static int __init_app_info_db(uid_t uid)
 {
 	int rc;
+	char *db_path;
 
 	if (app_info_db) {
 		_D("Already initialized\n");
 		return 0;
 	}
 
-	rc = sqlite3_open_v2(__get_app_info_db(uid), &app_info_db, SQLITE_OPEN_READONLY, NULL);
+	db_path = getUserPkgParserDBPathUID(uid);
+	if (db_path == NULL) {
+		_E("Failed to get pkg parser db path - %d", uid);
+		return -1;
+	}
+
+	rc = sqlite3_open_v2(db_path, &app_info_db, SQLITE_OPEN_READONLY, NULL);
+	free(db_path);
 	if (rc) {
 		_E("Can't open database: %d, %s, extended: %d", rc, sqlite3_errmsg(app_info_db),
 		   sqlite3_extended_errcode(app_info_db));
