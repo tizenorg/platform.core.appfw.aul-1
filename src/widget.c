@@ -15,6 +15,7 @@
  */
 
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
 #include <glib.h>
 #include <bundle.h>
@@ -191,4 +192,3 @@ API int aul_widget_instance_update(const char *widget_id,
 
 	return ret;
 }
-
