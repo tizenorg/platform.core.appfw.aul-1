@@ -201,36 +201,17 @@ static int __get_gles(void)
 	return gles;
 }
 
-static void __set_pkg_api_version(bundle *kb, const char *pkgid)
-{
-	int ret;
-	char *api_version;
-	pkgmgrinfo_pkginfo_h handle;
-
-	ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &handle);
-	if (ret != PMINFO_R_OK)
-		return;
-
-	ret = pkgmgrinfo_pkginfo_get_api_version(handle, &api_version);
-	if (ret != PMINFO_R_OK) {
-		pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
-		return;
-	}
-
-	printf("pkg api_version: %s\n", api_version);
-	bundle_add(kb, AUL_K_API_VERSION, api_version);
-	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
-}
-
 static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 {
 	pkgmgrinfo_appinfo_h handle;
 	int ret;
-	char *pkgid;
-	char *exec;
-	char *apptype;
-	char *pkgtype;
-	char *component_type;
+	char *pkgid = NULL;
+	char *exec = NULL;
+	char *apptype = NULL;
+	char *pkgtype = NULL;
+	char *component_type = NULL;
+	char *root_path = NULL;
+	char *api_version = NULL;
 	pkgmgrinfo_app_hwacceleration hwacc = PMINFO_HWACCELERATION_OFF;
 	const char *hwacc_str = "NOT_USE";
 	bool process_pool = false;
@@ -285,6 +266,12 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 			hwacc_str = "SYS";
 	}
 
+	ret = pkgmgrinfo_appinfo_get_root_path(handle, &root_path);
+	if (ret != PMINFO_R_OK)
+		goto end;
+
+	ret = pkgmgrinfo_appinfo_get_api_version(handle, &api_version);
+
 	bundle_add(kb, AUL_K_APPID, appid);
 	bundle_add(kb, AUL_K_HWACC, hwacc_str);
 	bundle_add(kb, AUL_K_EXEC, exec);
@@ -293,9 +280,10 @@ static int __set_appinfo_for_launchpad(bundle *kb, const char *appid)
 	bundle_add(kb, AUL_K_INTERNAL_POOL, process_pool ? "true" : "false");
 	bundle_add(kb, AUL_K_COMP_TYPE, component_type);
 	bundle_add(kb, AUL_K_PACKAGETYPE, pkgtype);
+	bundle_add(kb, AUL_K_ROOT_PATH, root_path);
+	bundle_add(kb, AUL_K_API_VERSION, api_version);
 
 	aul_svc_set_loader_id(kb, PAD_LOADER_ID_DIRECT);
-	__set_pkg_api_version(kb, pkgid);
 
 end:
 	pkgmgrinfo_appinfo_destroy_appinfo(handle);
