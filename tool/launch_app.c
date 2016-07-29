@@ -97,22 +97,24 @@ static int __launch_app_dead_handler(int pid, void *data)
 	return 0;
 }
 
-static gboolean run_func(void *data)
+static gboolean run_func(gpointer data)
 {
 	int pid;
 	const char *str;
 
-	if ((pid = launch()) > 0) {
+	pid = launch();
+	if (pid > 0) {
 		printf("... successfully launched\n");
 		str = bundle_get_val(kb, "__LAUNCH_APP_MODE__");
-
-		if (str && strcmp(str, "SYNC") == 0)
-			aul_listen_app_dead_signal(__launch_app_dead_handler, (void *)(intptr_t)pid);
-		else
-			g_main_loop_quit(mainloop);
+		if (str && strcmp(str, "SYNC") == 0) {
+			aul_listen_app_dead_signal(__launch_app_dead_handler,
+					(void *)(intptr_t)pid);
+			bundle_free(kb);
+			kb = NULL;
+			return FALSE;
+		}
 	} else {
 		printf("... launch failed\n");
-		g_main_loop_quit(mainloop);
 	}
 
 	if (kb) {
@@ -120,7 +122,9 @@ static gboolean run_func(void *data)
 		kb = NULL;
 	}
 
-	return TRUE;
+	g_main_loop_quit(mainloop);
+
+	return FALSE;
 }
 
 int main(int argc, char **argv)
